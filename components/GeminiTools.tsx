@@ -54,7 +54,30 @@ DO NOT add any introductory text. Start directly with the "Clinical Script" head
                 throw new Error(data.error || `API Error: ${response.status}`);
             }
 
-            setScriptOutput(data.text || "No response generated.");
+            // Strip any AI introduction/preamble
+            let cleanedText = data.text || "No response generated.";
+            
+            // Remove common AI introductions
+            const introPatterns = [
+                /^.*?Of course[.,!].*?(?=\n|$)/i,
+                /^.*?Here(?:'s| is).*?(?=\n|$)/i,
+                /^.*?Let me.*?(?=\n|$)/i,
+                /^.*?I'll.*?(?=\n|$)/i,
+                /^.*?This is.*?(?=\n|$)/i,
+                /^.*?Certainly.*?(?=\n|$)/i,
+            ];
+            
+            introPatterns.forEach(pattern => {
+                cleanedText = cleanedText.replace(pattern, '');
+            });
+            
+            // Find the actual start of the clinical script
+            const scriptStart = cleanedText.search(/(?:##\s*Clinical\s*Script|\*\*What to Say:\*\*)/i);
+            if (scriptStart > 0) {
+                cleanedText = cleanedText.substring(scriptStart);
+            }
+
+            setScriptOutput(cleanedText.trim());
             setIsModalOpen(true);
         } catch (error) {
             console.error("Error generating script:", error);
@@ -200,7 +223,36 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                 throw new Error(data.error || `API Error: ${response.status}`);
             }
 
-            setSoapOutput(data.text || "No response generated.");
+            // Strip any AI introduction/preamble - find where the actual SOAP note starts
+            let cleanedText = data.text || "No response generated.";
+            
+            // Remove common AI introductions
+            const introPatterns = [
+                /^.*?Of course[.,!].*?(?=\n|$)/i,
+                /^.*?Here(?:'s| is).*?(?=\n|$)/i,
+                /^.*?Let me.*?(?=\n|$)/i,
+                /^.*?I'll.*?(?=\n|$)/i,
+                /^.*?This is.*?(?=\n|$)/i,
+                /^.*?Certainly.*?(?=\n|$)/i,
+            ];
+            
+            introPatterns.forEach(pattern => {
+                cleanedText = cleanedText.replace(pattern, '');
+            });
+            
+            // Find the actual start of the SOAP note (either # Psychiatric or **Patient:**)
+            const soapStart = cleanedText.search(/(?:#\s*Psychiatric\s*SOAP\s*Note|\*\*Patient:\*\*)/i);
+            if (soapStart > 0) {
+                cleanedText = cleanedText.substring(soapStart);
+            }
+            
+            // Remove any trailing explanations after the Plan section
+            const planEndMatch = cleanedText.match(/(\*\*P \(Plan\):\*\*[\s\S]*?)(?:\n\n(?:Note:|This|I hope|Let me know))/i);
+            if (planEndMatch) {
+                cleanedText = cleanedText.substring(0, planEndMatch.index! + planEndMatch[1].length);
+            }
+
+            setSoapOutput(cleanedText.trim());
             setIsModalOpen(true);
         } catch (error) {
             console.error("Error generating SOAP note:", error);
