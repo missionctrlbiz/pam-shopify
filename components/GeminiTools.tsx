@@ -23,10 +23,24 @@ Keep your tone professional, calm, and supportive. Use simple language, avoid co
             const prompt = `${systemPrompt}
             
 The student is facing this situation: "${scriptInput}"
-            
-Please provide:
-1. A direct, empathetic script they can say word-for-word.
-2. A brief explanation of WHY this script works (clinical reasoning).`;
+
+CRITICAL INSTRUCTIONS:
+- Start IMMEDIATELY with the clinical script
+- NO introduction, NO "Of course" or "Here's what you can say"
+- NO explanations before the script
+- Format as direct dialogue they can use word-for-word
+- After the script, provide brief clinical reasoning
+
+Output Format (start directly with this):
+## Clinical Script
+
+**What to Say:**
+"[Exact words to use, formatted as direct quotes]"
+
+**Why This Works:**
+[Brief 2-3 sentence explanation of the clinical reasoning]
+
+DO NOT add any introductory text. Start directly with the "Clinical Script" heading.`;
 
             const response = await fetch("/api/gemini", {
                 method: "POST",
@@ -126,19 +140,53 @@ Provide professional, educational guidance with clinical reasoning.`;
         if (!soapInput.trim()) return;
         setIsSoapLoading(true);
         try {
+            const currentDate = new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
             const prompt = `${systemPrompt}
             
 Take the following rough notes and format them into a standard Psychiatric SOAP Note structure.
             
 Rough Notes: "${soapInput}"
+
+CRITICAL INSTRUCTIONS:
+- Start IMMEDIATELY with "Psychiatric SOAP Note" as the title
+- Use today's date: ${currentDate}
+- NO introduction, NO preamble, NO explanations before or after the SOAP note
+- Make it look like an authentic clinical note generated in real-time
+- Use professional clinical language throughout
+- Include patient age and gender if mentioned in notes
             
-Output Format:
-**S (Subjective):** Patient quotes, HPI elements.
-**O (Objective):** Observable data, MSE elements.
-**A (Assessment):** Summary, differential diagnosis consideration, risk.
-**P (Plan):** Next steps, safety plan.
-            
-If critical safety info (SI/HI) is missing, add a note in the Plan to "Assess Safety".`;
+Output Format (start directly with this):
+# Psychiatric SOAP Note
+**Patient:** [age]-year-old [gender] **Date of Encounter:** ${currentDate}
+
+**S (Subjective):**
+Chief Complaint: [in patient's words]
+History of Present Illness (HPI): [detailed narrative]
+Psychiatric ROS/Safety: [SI/HI assessment]
+
+**O (Objective):**
+Mental Status Exam (MSE):
+- Appearance: [observed details]
+- Behavior: [observed behaviors]
+- Speech: [quality and rate]
+- Mood: [patient's stated mood]
+- Affect: [observed affect]
+- Thought Process: [organized, tangential, etc.]
+- Thought Content: [delusions, hallucinations, SI/HI]
+- Cognition: [orientation, memory, insight]
+
+**A (Assessment):**
+[Clinical summary, diagnostic considerations, risk assessment]
+
+**P (Plan):**
+[Treatment plan, interventions, follow-up, safety planning]
+
+DO NOT add any text before the title or after the Plan section. Output ONLY the SOAP note.`;
 
             const response = await fetch("/api/gemini", {
                 method: "POST",

@@ -78,7 +78,7 @@ export function ResponseModal({
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full max-w-4xl max-h-[85vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                    className="relative w-full max-w-4xl max-h-[85vh] bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
                 >
                     {/* Header */}
                     <div className={`${colorScheme.bg} text-white px-6 py-4 flex items-center justify-between`}>
@@ -109,15 +109,15 @@ export function ResponseModal({
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex-1 overflow-y-auto p-8 bg-slate-900">
                         <div
-                            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:leading-relaxed prose-ul:my-4 prose-li:my-2 prose-code:text-sm prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-strong:text-[#041f50] dark:prose-strong:text-white"
+                            className="prose prose-invert max-w-none prose-headings:text-white prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-white prose-p:leading-relaxed prose-ul:text-white prose-li:text-white prose-li:my-2 prose-code:text-sm prose-code:bg-slate-800 prose-code:text-white prose-code:px-2 prose-code:py-1 prose-code:rounded prose-strong:text-white prose-strong:font-bold"
                             dangerouslySetInnerHTML={{ __html: marked.parse(initialContent) }}
                         />
                     </div>
 
                     {/* Footer */}
-                    <div className="border-t border-slate-200 dark:border-slate-700 px-6 py-4 bg-slate-50 dark:bg-slate-800">
+                    <div className="border-t border-slate-700 px-6 py-4 bg-slate-800">
                         <button
                             onClick={onClose}
                             className={`w-full ${colorScheme.bg} ${colorScheme.hover} text-white px-6 py-3 rounded-lg font-semibold transition`}
