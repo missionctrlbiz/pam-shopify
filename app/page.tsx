@@ -24,7 +24,6 @@ import { motion } from "framer-motion";
 
 export default function Home() {
   const [loadingProduct, setLoadingProduct] = useState<string | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
   const [variantIds, setVariantIds] = useState<{ [key: string]: string }>({});
 
   const PRODUCT_IDS = {
@@ -40,7 +39,6 @@ export default function Home() {
         console.log('Domain:', process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN);
         const fetchedProducts = await getProducts();
         console.log('Products fetched:', fetchedProducts.length);
-        setProducts(fetchedProducts);
 
         const newVariantIds: { [key: string]: string } = {};
         fetchedProducts.forEach((p: any) => {
@@ -83,7 +81,7 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans selection:bg-teal-200 min-h-screen flex flex-col">
+    <div className="bg-slate-50 text-slate-800 font-sans selection:bg-[#041f50]/20 min-h-screen flex flex-col">
 
       {/* Navigation */}
       <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200 transaction-colors duration-500">
@@ -103,16 +101,16 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-6">
               <div className="hidden md:flex space-x-8 items-center">
-                <a href="#clinical-ai" className="text-teal-700 font-bold hover:text-teal-900 transition flex items-center gap-1">
+                <a href="#clinical-ai" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
                   <SparklesIcon className="w-4 h-4" /> AI Tools
                 </a>
-                <a href="#problem" className="text-slate-600 hover:text-teal-600 font-medium transition">Why This Workbook?</a>
-                <a href="#pricing" className="text-slate-600 hover:text-teal-600 font-medium transition">Pricing</a>
+                <a href="#problem" className="text-slate-600 hover:text-[#041f50] font-medium transition">Why This Workbook?</a>
+                <a href="#pricing" className="text-slate-600 hover:text-[#041f50] font-medium transition">Pricing</a>
               </div>
               {/* ThemeToggle Removed */}
               <button
                 onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-                className="hidden md:block bg-teal-600 text-white px-6 py-2 rounded-full font-bold hover:bg-teal-700 transition shadow-lg transform hover:-translate-y-0.5"
+                className="hidden md:block bg-[#041f50] text-white px-6 py-2 rounded-full font-bold hover:bg-[#052647] transition shadow-lg transform hover:-translate-y-0.5"
               >
                 Start Practicing
               </button>
@@ -126,8 +124,8 @@ export default function Home() {
         <div className="absolute inset-0 bg-white z-0"></div>
 
         {/* Subtle nice background element */}
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-teal-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-60"></div>
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-50 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none opacity-60"></div>
+        <div className="absolute top-0 right-0 w-200 h-200 bg-[#041f50]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-60"></div>
+        <div className="absolute bottom-0 left-0 w-150 h-150 bg-blue-50 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none opacity-60"></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
@@ -138,22 +136,22 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               className="text-center lg:text-left mb-12 lg:mb-0 relative z-30"
             >
-              <div className="inline-flex items-center px-4 py-1.5 bg-teal-50 text-teal-700 rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-teal-100">
+              <div className="inline-flex items-center px-4 py-1.5 bg-[#041f50]/10 text-[#041f50] rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-[#041f50]/20">
                 <PenTool className="w-3 h-3 mr-2" /> Interactive Workbook Edition
               </div>
               <h1 className="text-5xl lg:text-7xl font-extrabold leading-tight mb-6 text-slate-900 tracking-tight">
                 Master Your<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Clinical Assessment.</span>
+                <span className="text-[#041f50]">Clinical Assessment.</span>
               </h1>
               <p className="text-xl text-slate-600 mb-8 font-serif leading-relaxed max-w-lg mx-auto lg:mx-0">
-                The "Write-In" Clinical Companion for PMHNP Students. Includes <span className="text-teal-700 font-bold inline-flex items-center gap-1"><SparklesIcon className="w-4 h-4" /> AI Clinical Tools</span> to generate scripts and structure notes instantly.
+                The "Write-In" Clinical Companion for PMHNP Students. Includes <span className="text-[#041f50] font-bold inline-flex items-center gap-1"><SparklesIcon className="w-4 h-4" /> AI Clinical Tools</span> to generate scripts and structure notes instantly.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <a href="#clinical-ai" className="bg-slate-900 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition shadow-xl flex items-center justify-center gap-2 border border-transparent">
+                <a href="#clinical-ai" className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#052647] transition shadow-xl flex items-center justify-center gap-2 border border-transparent">
                   Try AI Tools <SparklesIcon className="w-5 h-5" />
                 </a>
-                <a href="#pricing" className="bg-white text-teal-700 border-2 border-teal-100 px-8 py-4 rounded-xl font-bold text-lg hover:border-teal-600 hover:text-teal-600 transition flex items-center justify-center shadow-sm">
+                <a href="#pricing" className="bg-white text-[#041f50] border-2 border-[#041f50] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#041f50] hover:text-white transition flex items-center justify-center shadow-sm">
                   Get the Workbook
                 </a>
               </div>
@@ -192,7 +190,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative">
-              <div className="absolute -inset-4 bg-teal-200 rounded-3xl transform -rotate-2"></div>
+              <div className="absolute -inset-4 bg-[#041f50]/10 rounded-3xl transform -rotate-2"></div>
               <div className="relative rounded-2xl overflow-hidden shadow-xl border border-slate-200">
                 <Image
                   src="/student-with-pam-in-library.png"
@@ -220,7 +218,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-orange-100 text-orange-600 rounded-lg">
+                  <div className="p-3 bg-[#041f50]/10 text-[#041f50] rounded-lg">
                     <CheckSquare className="w-6 h-6" />
                   </div>
                   <div>
@@ -250,7 +248,7 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
-            <span className="text-teal-600 font-bold tracking-widest uppercase text-sm mb-2 block">AI Clinical Assistant</span>
+            <span className="text-[#041f50] font-bold tracking-widest uppercase text-sm mb-2 block">AI Clinical Assistant</span>
             <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Never Be at a Loss for Words</h2>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">Instant, empathetic scripts for difficult clinical encounters.</p>
           </div>
@@ -262,9 +260,9 @@ export default function Home() {
                 Whether it's de-escalating an angry patient or asking sensitive questions about trauma, The Script Doctor provides you with the exact words to use (and explains the clinical reasoning behind them).
               </p>
               <ul className="space-y-3 mb-8">
-                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-teal-500 mr-2" /> <span>Trauma-informed phrasing</span></li>
-                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-teal-500 mr-2" /> <span>De-escalation techniques</span></li>
-                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-teal-500 mr-2" /> <span>Motivational Interviewing cues</span></li>
+                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-[#041f50] mr-2" /> <span>Trauma-informed phrasing</span></li>
+                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-[#041f50] mr-2" /> <span>De-escalation techniques</span></li>
+                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-[#041f50] mr-2" /> <span>Motivational Interviewing cues</span></li>
               </ul>
             </div>
             <div>
@@ -314,9 +312,9 @@ export default function Home() {
               <motion.div
                 whileHover={{ y: -5 }}
                 key={i}
-                className="bg-slate-50 p-8 rounded-2xl border border-slate-100 hover:border-teal-400 transition duration-300"
+                className="bg-slate-50 p-8 rounded-2xl border border-slate-100 hover:border-[#041f50] transition duration-300"
               >
-                <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-teal-600 mb-6 shadow-sm">
+                <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-[#041f50] mb-6 shadow-sm">
                   <feature.icon className="w-6 h-6" />
                 </div>
                 <h3 className="font-bold text-xl mb-3 text-slate-900">{feature.title}</h3>
@@ -332,7 +330,7 @@ export default function Home() {
               <div className="max-w-lg">
                 <h3 className="text-white text-3xl md:text-5xl font-extrabold mb-6 leading-tight">Stop Guessing.<br />Start Assessing.</h3>
                 <p className="text-slate-200 mb-8 text-lg">Join thousands of students who have mastered their clinical rotations with PAM.</p>
-                <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="bg-teal-500 text-white px-8 py-4 rounded-xl font-bold hover:bg-teal-600 transition shadow-lg transform hover:-translate-y-1">Get Your Copy</button>
+                <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#052647] transition shadow-lg transform hover:-translate-y-1">Get Your Copy</button>
               </div>
             </div>
           </div>
@@ -361,14 +359,14 @@ export default function Home() {
                 <span className="ml-2 text-slate-400">USD</span>
               </div>
               <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-amber-500 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Everything</strong> in Physical & Digital</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-amber-500 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Instant Access while you wait</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-amber-500 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Save vs buying separately</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Everything</strong> in Physical & Digital</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Instant Access while you wait</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Save vs buying separately</span></li>
               </ul>
               <button
                 onClick={() => handleBuy('BUNDLE')}
                 disabled={loadingProduct === 'BUNDLE'}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2 transform hover:-translate-y-1"
+                className="w-full bg-[#041f50] hover:bg-[#052647] text-white font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2 transform hover:-translate-y-1"
               >
                 {loadingProduct === 'BUNDLE' ? <Loader2 className="animate-spin" /> : <Package />}
                 Get The Bundle
@@ -386,14 +384,14 @@ export default function Home() {
                 <span className="ml-2 text-slate-400">USD</span>
               </div>
               <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-teal-500 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Write-in Worksheets</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-teal-500 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Desk Reference</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-teal-500 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Standard Shipping</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Write-in Worksheets</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Desk Reference</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Standard Shipping</span></li>
               </ul>
               <button
                 onClick={() => handleBuy('PHYSICAL')}
                 disabled={loadingProduct === 'PHYSICAL'}
-                className="w-full bg-teal-600 text-white font-bold py-4 rounded-xl hover:bg-teal-700 transition shadow-lg flex items-center justify-center gap-2"
+                className="w-full bg-[#041f50] text-white font-bold py-4 rounded-xl hover:bg-[#052647] transition shadow-lg flex items-center justify-center gap-2"
               >
                 {loadingProduct === 'PHYSICAL' ? <Loader2 className="animate-spin" /> : <ShoppingCart />}
                 Ship to Me
@@ -411,14 +409,14 @@ export default function Home() {
                 <span className="ml-2 text-slate-400">USD</span>
               </div>
               <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-slate-400 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Instant Download</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-slate-400 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Searchable Text</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-slate-400 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Printable Pages</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Instant Download</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Searchable Text</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Printable Pages</span></li>
               </ul>
               <button
                 onClick={() => handleBuy('DIGITAL')}
                 disabled={loadingProduct === 'DIGITAL'}
-                className="w-full bg-slate-100 text-slate-900 font-bold py-4 rounded-xl hover:bg-slate-200 transition flex items-center justify-center gap-2"
+                className="w-full bg-white border-2 border-[#041f50] text-[#041f50] font-bold py-4 rounded-xl hover:bg-[#041f50] hover:text-white transition flex items-center justify-center gap-2"
               >
                 {loadingProduct === 'DIGITAL' ? <Loader2 className="animate-spin" /> : <Download />}
                 Download Now

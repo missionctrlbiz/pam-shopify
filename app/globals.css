@@ -24,3 +24,16 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Animation delays for loading dots */
+.animate-bounce-1 {
+  animation-delay: 0ms;
+}
+
+.animate-bounce-2 {
+  animation-delay: 150ms;
+}
+
+.animate-bounce-3 {
+  animation-delay: 300ms;
+}

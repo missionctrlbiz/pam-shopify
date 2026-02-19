@@ -229,7 +229,7 @@ Please provide a helpful, detailed response that builds on our previous conversa
                                                     } prose-headings:font-bold prose-headings:mb-3 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-base prose-p:leading-relaxed prose-p:mb-3 prose-strong:font-bold prose-strong:text-[#041f50] dark:prose-strong:text-white prose-ul:my-2 prose-li:my-1 prose-li:text-base prose-code:text-sm prose-code:bg-slate-200 dark:prose-code:bg-slate-700 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:font-mono`}
                                                 dangerouslySetInnerHTML={{
                                                     __html: message.role === "user"
-                                                        ? `<p class="!text-white">${message.content}</p>`
+                                                        ? `<p class="text-white">${message.content}</p>`
                                                         : marked.parse(message.content)
                                                 }}
                                             />
@@ -245,9 +245,9 @@ Please provide a helpful, detailed response that builds on our previous conversa
                                         <div className={`${colorScheme.msgBg} border-l-4 ${colorScheme.msgBorder} rounded-lg p-4 shadow-sm`}>
                                             <div className="flex items-center gap-2">
                                                 <div className="flex gap-1">
-                                                    <div className="w-2 h-2 bg-slate-600 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                                                    <div className="w-2 h-2 bg-slate-600 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                                                    <div className="w-2 h-2 bg-slate-600 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                                                    <div className="w-2 h-2 bg-slate-600 dark:bg-slate-400 rounded-full animate-bounce animate-bounce-1"></div>
+                                                    <div className="w-2 h-2 bg-slate-600 dark:bg-slate-400 rounded-full animate-bounce animate-bounce-2"></div>
+                                                    <div className="w-2 h-2 bg-slate-600 dark:bg-slate-400 rounded-full animate-bounce animate-bounce-3"></div>
                                                 </div>
                                                 <span className="text-sm text-slate-600 dark:text-slate-400">Thinking...</span>
                                             </div>
