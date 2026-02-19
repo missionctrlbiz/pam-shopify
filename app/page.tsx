@@ -6,6 +6,7 @@ import Image from "next/image";
 import { createCheckout, getProducts } from "@/lib/shopify";
 import { ScriptDoctor, SoapArchitect } from "@/components/GeminiTools";
 import { LeadMagnet } from "@/components/LeadMagnet";
+import { PDFPreview } from "@/components/PDFPreview";
 // ThemeToggle removed
 import {
   CheckCircle2,
@@ -19,12 +20,14 @@ import {
   Download,
   Sparkles,
   Package,
+  BookOpen,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Home() {
   const [loadingProduct, setLoadingProduct] = useState<string | null>(null);
   const [variantIds, setVariantIds] = useState<{ [key: string]: string }>({});
+  const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
 
   const PRODUCT_IDS = {
     DIGITAL: "gid://shopify/Product/8121253003343",
@@ -101,6 +104,12 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-6">
               <div className="hidden md:flex space-x-8 items-center">
+                <button
+                  onClick={() => setIsPDFPreviewOpen(true)}
+                  className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1"
+                >
+                  <BookOpen className="w-4 h-4" /> Preview Sample
+                </button>
                 <a href="#clinical-ai" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
                   <SparklesIcon className="w-4 h-4" /> AI Tools
                 </a>
@@ -432,6 +441,13 @@ export default function Home() {
       <footer className="bg-slate-900 text-slate-500 py-12 text-center border-t border-slate-800 mt-auto">
         <p>&copy; 2026 Tonia Ojomo. All Rights Reserved.</p>
       </footer>
+
+      {/* PDF Preview Modal */}
+      <PDFPreview
+        isOpen={isPDFPreviewOpen}
+        onClose={() => setIsPDFPreviewOpen(false)}
+        maxPreviewPages={10}
+      />
     </div>
   );
 }
