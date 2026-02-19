@@ -201,8 +201,8 @@ Please provide a helpful, detailed response that builds on our previous conversa
                                         className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                                     >
                                         <div className={`max-w-[85%] ${message.role === "user"
-                                                ? `${colorScheme.userBg} rounded-2xl rounded-br-md shadow-md`
-                                                : `${colorScheme.msgBg} border-l-4 ${colorScheme.msgBorder} rounded-lg shadow-sm`
+                                            ? `${colorScheme.userBg} rounded-2xl rounded-br-md shadow-md`
+                                            : `${colorScheme.msgBg} border-l-4 ${colorScheme.msgBorder} rounded-lg shadow-sm`
                                             } p-5`}>
                                             {message.role === "assistant" && (
                                                 <div className="flex items-center justify-between mb-2">
@@ -224,8 +224,8 @@ Please provide a helpful, detailed response that builds on our previous conversa
                                             )}
                                             <div
                                                 className={`prose prose-base max-w-none ${message.role === "user"
-                                                        ? "prose-invert"
-                                                        : "prose-slate dark:prose-invert"
+                                                    ? "prose-invert"
+                                                    : "prose-slate dark:prose-invert"
                                                     } prose-headings:font-bold prose-headings:mb-3 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-base prose-p:leading-relaxed prose-p:mb-3 prose-strong:font-bold prose-strong:text-[#041f50] dark:prose-strong:text-white prose-ul:my-2 prose-li:my-1 prose-li:text-base prose-code:text-sm prose-code:bg-slate-200 dark:prose-code:bg-slate-700 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:font-mono`}
                                                 dangerouslySetInnerHTML={{
                                                     __html: message.role === "user"
