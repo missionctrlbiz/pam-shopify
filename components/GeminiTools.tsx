@@ -56,7 +56,7 @@ DO NOT add any introductory text. Start directly with the "Clinical Script" head
 
             // Strip any AI introduction/preamble
             let cleanedText = data.text || "No response generated.";
-            
+
             // Remove common AI introductions
             const introPatterns = [
                 /^.*?Of course[.,!].*?(?=\n|$)/i,
@@ -66,11 +66,11 @@ DO NOT add any introductory text. Start directly with the "Clinical Script" head
                 /^.*?This is.*?(?=\n|$)/i,
                 /^.*?Certainly.*?(?=\n|$)/i,
             ];
-            
+
             introPatterns.forEach(pattern => {
                 cleanedText = cleanedText.replace(pattern, '');
             });
-            
+
             // Find the actual start of the clinical script
             const scriptStart = cleanedText.search(/(?:##\s*Clinical\s*Script|\*\*What to Say:\*\*)/i);
             if (scriptStart > 0) {
@@ -163,12 +163,12 @@ Provide professional, educational guidance with clinical reasoning.`;
         if (!soapInput.trim()) return;
         setIsSoapLoading(true);
         try {
-            const currentDate = new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            const currentDate = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             });
-            
+
             const prompt = `${systemPrompt}
             
 Take the following rough notes and format them into a standard Psychiatric SOAP Note structure.
@@ -225,7 +225,7 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
 
             // Strip any AI introduction/preamble - find where the actual SOAP note starts
             let cleanedText = data.text || "No response generated.";
-            
+
             // Remove common AI introductions
             const introPatterns = [
                 /^.*?Of course[.,!].*?(?=\n|$)/i,
@@ -235,17 +235,17 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                 /^.*?This is.*?(?=\n|$)/i,
                 /^.*?Certainly.*?(?=\n|$)/i,
             ];
-            
+
             introPatterns.forEach(pattern => {
                 cleanedText = cleanedText.replace(pattern, '');
             });
-            
+
             // Find the actual start of the SOAP note (either # Psychiatric or **Patient:**)
             const soapStart = cleanedText.search(/(?:#\s*Psychiatric\s*SOAP\s*Note|\*\*Patient:\*\*)/i);
             if (soapStart > 0) {
                 cleanedText = cleanedText.substring(soapStart);
             }
-            
+
             // Remove any trailing explanations after the Plan section
             const planEndMatch = cleanedText.match(/(\*\*P \(Plan\):\*\*[\s\S]*?)(?:\n\n(?:Note:|This|I hope|Let me know))/i);
             if (planEndMatch) {
