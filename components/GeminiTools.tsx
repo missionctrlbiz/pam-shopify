@@ -104,10 +104,9 @@ Please provide:
             <ResponseModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="Script Doctor Chat 💬"
+                title="Script Doctor 💬"
                 initialContent={scriptOutput}
                 accentColor="teal"
-                systemPrompt={systemPrompt}
             />
         </motion.div>
     );
@@ -218,10 +217,9 @@ If critical safety info (SI/HI) is missing, add a note in the Plan to "Assess Sa
             <ResponseModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="SOAP Architect Chat 💬"
+                title="SOAP Architect 💬"
                 initialContent={soapOutput}
                 accentColor="blue"
-                systemPrompt={systemPrompt}
             />
         </motion.div>
     );
