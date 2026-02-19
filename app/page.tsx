@@ -36,7 +36,10 @@ export default function Home() {
   useEffect(() => {
     async function loadProducts() {
       try {
+        console.log('Fetching products from Shopify...');
+        console.log('Domain:', process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN);
         const fetchedProducts = await getProducts();
+        console.log('Products fetched:', fetchedProducts.length);
         setProducts(fetchedProducts);
 
         const newVariantIds: { [key: string]: string } = {};
@@ -52,6 +55,7 @@ export default function Home() {
         setVariantIds(newVariantIds);
       } catch (error) {
         console.error("Failed to fetch products", error);
+        console.error("Error details:", error instanceof Error ? error.message : String(error));
       }
     }
     loadProducts();
