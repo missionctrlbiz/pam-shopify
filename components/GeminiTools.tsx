@@ -12,19 +12,21 @@ export function ScriptDoctor() {
     const [isScriptLoading, setIsScriptLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    const systemPrompt = `You are Tonia Ojomo, a PMHNP mentor and author of "Psychiatric Assessment Mastery". 
+Your goal is to provide specific, plain-English clinical scripts for student nurses and PMHNP students.
+Keep your tone professional, calm, and supportive. Use simple language, avoid complex jargon.`;
+
     async function generateScript() {
         if (!scriptInput.trim()) return;
         setIsScriptLoading(true);
         try {
-            const prompt = `You are Tonia Ojomo, a PMHNP mentor and author of "Psychiatric Assessment Mastery". 
-            Your goal is to provide a specific, plain-English clinical script for a student nurse or PMHNP student.
+            const prompt = `${systemPrompt}
             
-            The student is facing this situation: "${scriptInput}"
+The student is facing this situation: "${scriptInput}"
             
-            Please provide:
-            1. A direct, empathetic script they can say word-for-word.
-            2. A brief explanation of WHY this script works (clinical reasoning).
-            3. Keep the tone professional, calm, and supportive. Use simple language, no complex jargon.`;
+Please provide:
+1. A direct, empathetic script they can say word-for-word.
+2. A brief explanation of WHY this script works (clinical reasoning).`;
 
             const response = await fetch("/api/gemini", {
                 method: "POST",
@@ -102,9 +104,10 @@ export function ScriptDoctor() {
             <ResponseModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="Script Doctor Result ✨"
-                content={scriptOutput}
+                title="Script Doctor Chat 💬"
+                initialContent={scriptOutput}
                 accentColor="teal"
+                systemPrompt={systemPrompt}
             />
         </motion.div>
     );
@@ -116,22 +119,27 @@ export function SoapArchitect() {
     const [isSoapLoading, setIsSoapLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    const systemPrompt = `You are a clinical preceptor helping students structure their psychiatric notes.
+You format rough notes into standard Psychiatric SOAP Note structure with clear sections.
+Provide professional, educational guidance with clinical reasoning.`;
+
     async function generateSoap() {
         if (!soapInput.trim()) return;
         setIsSoapLoading(true);
         try {
-            const prompt = `You are a clinical preceptor helping a student structure their notes.
-            Take the following rough notes and format them into a standard Psychiatric SOAP Note structure.
+            const prompt = `${systemPrompt}
             
-            Rough Notes: "${soapInput}"
+Take the following rough notes and format them into a standard Psychiatric SOAP Note structure.
             
-            Output Format:
-            **S (Subjective):** Patient quotes, HPI elements.
-            **O (Objective):** Observable data, MSE elements.
-            **A (Assessment):** Summary, differential diagnosis consideration, risk.
-            **P (Plan):** Next steps, safety plan.
+Rough Notes: "${soapInput}"
             
-            If critical safety info (SI/HI) is missing, add a note in the Plan to "Assess Safety".`;
+Output Format:
+**S (Subjective):** Patient quotes, HPI elements.
+**O (Objective):** Observable data, MSE elements.
+**A (Assessment):** Summary, differential diagnosis consideration, risk.
+**P (Plan):** Next steps, safety plan.
+            
+If critical safety info (SI/HI) is missing, add a note in the Plan to "Assess Safety".`;
 
             const response = await fetch("/api/gemini", {
                 method: "POST",
@@ -210,9 +218,10 @@ export function SoapArchitect() {
             <ResponseModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="SOAP Note Result ✨"
-                content={soapOutput}
+                title="SOAP Architect Chat 💬"
+                initialContent={soapOutput}
                 accentColor="blue"
+                systemPrompt={systemPrompt}
             />
         </motion.div>
     );
