@@ -2,14 +2,15 @@
 "use client";
 
 import { useState } from "react";
-import { marked } from "marked";
 import { Loader2, Sparkles, Wand2, FileText } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { ResponseModal } from "./ResponseModal";
 
 export function ScriptDoctor() {
     const [scriptInput, setScriptInput] = useState("");
     const [scriptOutput, setScriptOutput] = useState("");
     const [isScriptLoading, setIsScriptLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     async function generateScript() {
         if (!scriptInput.trim()) return;
@@ -32,10 +33,18 @@ export function ScriptDoctor() {
             });
 
             const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || `API Error: ${response.status}`);
+            }
+
             setScriptOutput(data.text || "No response generated.");
+            setIsModalOpen(true);
         } catch (error) {
             console.error("Error generating script:", error);
-            setScriptOutput("Error: Could not generate response. Please try again.");
+            const errorMsg = error instanceof Error ? error.message : "Could not generate response. Please try again.";
+            setScriptOutput(`❌ **Error:** ${errorMsg}\n\nPlease check:\n- Your internet connection\n- API key is configured correctly\n- Try again in a moment`);
+            setIsModalOpen(true);
         } finally {
             setIsScriptLoading(false);
         }
@@ -90,21 +99,13 @@ export function ScriptDoctor() {
                 )}
             </button>
 
-            <AnimatePresence>
-                {scriptOutput && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-600 dark:border-teal-500 p-6 rounded-r-lg overflow-hidden"
-                    >
-                        <div
-                            className="prose prose-sm prose-teal dark:prose-invert max-w-none text-slate-800 dark:text-slate-200"
-                            dangerouslySetInnerHTML={{ __html: marked.parse(scriptOutput) }}
-                        />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <ResponseModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="Script Doctor Result ✨"
+                content={scriptOutput}
+                accentColor="teal"
+            />
         </motion.div>
     );
 }
@@ -113,6 +114,7 @@ export function SoapArchitect() {
     const [soapInput, setSoapInput] = useState("");
     const [soapOutput, setSoapOutput] = useState("");
     const [isSoapLoading, setIsSoapLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     async function generateSoap() {
         if (!soapInput.trim()) return;
@@ -138,10 +140,18 @@ export function SoapArchitect() {
             });
 
             const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || `API Error: ${response.status}`);
+            }
+
             setSoapOutput(data.text || "No response generated.");
+            setIsModalOpen(true);
         } catch (error) {
             console.error("Error generating SOAP note:", error);
-            setSoapOutput("Error: Could not generate response. Please try again.");
+            const errorMsg = error instanceof Error ? error.message : "Could not generate response. Please try again.";
+            setSoapOutput(`❌ **Error:** ${errorMsg}\n\nPlease check:\n- Your internet connection\n- API key is configured correctly\n- Try again in a moment`);
+            setIsModalOpen(true);
         } finally {
             setIsSoapLoading(false);
         }
@@ -197,21 +207,13 @@ export function SoapArchitect() {
                 )}
             </button>
 
-            <AnimatePresence>
-                {soapOutput && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-600 dark:border-blue-500 p-6 rounded-r-lg overflow-hidden"
-                    >
-                        <div
-                            className="prose prose-sm prose-blue dark:prose-invert max-w-none text-slate-800 dark:text-slate-200"
-                            dangerouslySetInnerHTML={{ __html: marked.parse(soapOutput) }}
-                        />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <ResponseModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="SOAP Note Result ✨"
+                content={soapOutput}
+                accentColor="blue"
+            />
         </motion.div>
     );
 }
