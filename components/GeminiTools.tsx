@@ -1,0 +1,217 @@
+
+"use client";
+
+import { useState } from "react";
+import { marked } from "marked";
+import { Loader2, Sparkles, Wand2, FileText } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+export function ScriptDoctor() {
+    const [scriptInput, setScriptInput] = useState("");
+    const [scriptOutput, setScriptOutput] = useState("");
+    const [isScriptLoading, setIsScriptLoading] = useState(false);
+
+    async function generateScript() {
+        if (!scriptInput.trim()) return;
+        setIsScriptLoading(true);
+        try {
+            const prompt = `You are Tonia Ojomo, a PMHNP mentor and author of "Psychiatric Assessment Mastery". 
+            Your goal is to provide a specific, plain-English clinical script for a student nurse or PMHNP student.
+            
+            The student is facing this situation: "${scriptInput}"
+            
+            Please provide:
+            1. A direct, empathetic script they can say word-for-word.
+            2. A brief explanation of WHY this script works (clinical reasoning).
+            3. Keep the tone professional, calm, and supportive. Use simple language, no complex jargon.`;
+
+            const response = await fetch("/api/gemini", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt }),
+            });
+
+            const data = await response.json();
+            setScriptOutput(data.text || "No response generated.");
+        } catch (error) {
+            console.error("Error generating script:", error);
+            setScriptOutput("Error: Could not generate response. Please try again.");
+        } finally {
+            setIsScriptLoading(false);
+        }
+    }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl hover:border-teal-400 dark:hover:border-teal-600 transition-all duration-300 p-8"
+        >
+            <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center text-teal-700 dark:text-teal-400">
+                    <Wand2 className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="font-bold text-xl text-slate-900 dark:text-white">
+                        The Script Doctor ✨
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Stuck on what to say? Generate an empathetic script.
+                    </p>
+                </div>
+            </div>
+
+            <div className="mb-4">
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    Describe the situation:
+                </label>
+                <textarea
+                    value={scriptInput}
+                    onChange={(e) => setScriptInput(e.target.value)}
+                    className="w-full p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-600 dark:focus:border-teal-500 transition-colors bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
+                    rows={3}
+                    placeholder="e.g. Patient is angry about waiting, or I need to ask about trauma history..."
+                />
+            </div>
+            <button
+                onClick={generateScript}
+                disabled={isScriptLoading || !scriptInput.trim()}
+                className="w-full bg-teal-600 dark:bg-teal-500 text-white font-bold py-3 rounded-lg hover:bg-teal-700 dark:hover:bg-teal-600 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {isScriptLoading ? (
+                    <>
+                        <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+                    </>
+                ) : (
+                    <>
+                        <span>Generate Script</span> <Wand2 className="w-4 h-4" />
+                    </>
+                )}
+            </button>
+
+            <AnimatePresence>
+                {scriptOutput && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4 bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-600 dark:border-teal-500 p-6 rounded-r-lg overflow-hidden"
+                    >
+                        <div
+                            className="prose prose-sm prose-teal dark:prose-invert max-w-none text-slate-800 dark:text-slate-200"
+                            dangerouslySetInnerHTML={{ __html: marked.parse(scriptOutput) }}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+}
+
+export function SoapArchitect() {
+    const [soapInput, setSoapInput] = useState("");
+    const [soapOutput, setSoapOutput] = useState("");
+    const [isSoapLoading, setIsSoapLoading] = useState(false);
+
+    async function generateSoap() {
+        if (!soapInput.trim()) return;
+        setIsSoapLoading(true);
+        try {
+            const prompt = `You are a clinical preceptor helping a student structure their notes.
+            Take the following rough notes and format them into a standard Psychiatric SOAP Note structure.
+            
+            Rough Notes: "${soapInput}"
+            
+            Output Format:
+            **S (Subjective):** Patient quotes, HPI elements.
+            **O (Objective):** Observable data, MSE elements.
+            **A (Assessment):** Summary, differential diagnosis consideration, risk.
+            **P (Plan):** Next steps, safety plan.
+            
+            If critical safety info (SI/HI) is missing, add a note in the Plan to "Assess Safety".`;
+
+            const response = await fetch("/api/gemini", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt }),
+            });
+
+            const data = await response.json();
+            setSoapOutput(data.text || "No response generated.");
+        } catch (error) {
+            console.error("Error generating SOAP note:", error);
+            setSoapOutput("Error: Could not generate response. Please try again.");
+        } finally {
+            setIsSoapLoading(false);
+        }
+    }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl hover:border-blue-400 dark:hover:border-blue-600 transition-all duration-300 p-8"
+        >
+            <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-700 dark:text-blue-400">
+                    <FileText className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="font-bold text-xl text-slate-900 dark:text-white">
+                        SOAP Architect ✨
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Turn messy notes into a structured SOAP note.
+                    </p>
+                </div>
+            </div>
+
+            <div className="mb-4">
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    Paste your rough notes:
+                </label>
+                <textarea
+                    value={soapInput}
+                    onChange={(e) => setSoapInput(e.target.value)}
+                    className="w-full p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 transition-colors bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
+                    rows={3}
+                    placeholder="e.g. 45yo male, sad for 2 weeks, not sleeping, denies SI, looks disheveled..."
+                />
+            </div>
+            <button
+                onClick={generateSoap}
+                disabled={isSoapLoading || !soapInput.trim()}
+                className="w-full bg-blue-600 dark:bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {isSoapLoading ? (
+                    <>
+                        <Loader2 className="w-4 h-4 animate-spin" /> Structuring...
+                    </>
+                ) : (
+                    <>
+                        <span>Structure My Note</span> <Sparkles className="w-4 h-4" />
+                    </>
+                )}
+            </button>
+
+            <AnimatePresence>
+                {soapOutput && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-600 dark:border-blue-500 p-6 rounded-r-lg overflow-hidden"
+                    >
+                        <div
+                            className="prose prose-sm prose-blue dark:prose-invert max-w-none text-slate-800 dark:text-slate-200"
+                            dangerouslySetInnerHTML={{ __html: marked.parse(soapOutput) }}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+}
