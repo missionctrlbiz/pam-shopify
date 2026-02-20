@@ -3,10 +3,15 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { createCheckout, getProducts } from "@/lib/shopify";
 import { ScriptDoctor, SoapArchitect } from "@/components/GeminiTools";
 import { LeadMagnet } from "@/components/LeadMagnet";
-import { PDFPreview } from "@/components/PDFPreview";
+// Dynamically import PDFPreview to avoid SSR issues
+const PDFPreview = dynamic(
+  () => import("@/components/PDFPreview").then(mod => ({ default: mod.PDFPreview })),
+  { ssr: false }
+);
 // ThemeToggle removed
 import {
   CheckCircle2,
