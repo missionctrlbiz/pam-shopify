@@ -65,7 +65,7 @@ const PDFContent = ({ onClose, maxPreviewPages }: Omit<PDFPreviewProps, 'isOpen'
                         </button>
                     </div>
                 </div>
-                <div className="flex-1 overflow-auto bg-slate-800 relative p-8">
+                <div className="flex-1 overflow-auto bg-slate-800 flex items-center justify-center relative p-8">
                     {isLoading && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-50">
                             <div className="relative mb-6">
@@ -76,18 +76,14 @@ const PDFContent = ({ onClose, maxPreviewPages }: Omit<PDFPreviewProps, 'isOpen'
                         </div>
                     )}
                     <motion.div 
-                        animate={{ 
-                            width: `${zoomLevel}%`,
-                            height: `${(zoomLevel >= 100 ? zoomLevel : 100)}%` 
-                        }}
-                        className="shadow-2xl transition-all duration-200 ease-in-out mx-auto"
-                        style={{ minHeight: '100%' }}
+                        className="shadow-2xl transition-all duration-200 ease-in-out"
+                        style={{ width: `${zoomLevel}%`, height: `${zoomLevel}%` }}
                     >
-                        <iframe
-                            src="/pam-workbook-sample.pdf#toolbar=1&navpanes=0&scrollbar=1&view=FitH"
-                            className="w-full h-full border-0 rounded-lg bg-white"
-                            title="Workbook Preview"
-                            onLoad={() => setIsLoading(false)}
+                        <iframe 
+                            src={`/pam-workbook-sample.pdf#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+                            className="w-full h-full border-0 rounded-lg bg-white" 
+                            title="Workbook Preview" 
+                            onLoad={() => setIsLoading(false)} 
                         />
                     </motion.div>
                 </div>
