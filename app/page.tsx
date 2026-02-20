@@ -123,8 +123,12 @@ export default function Home() {
                 <a href="#clinical-ai" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
                   <SparklesIcon className="w-4 h-4" /> AI Tools
                 </a>
-                <a href="#problem" className="text-slate-600 hover:text-[#041f50] font-medium transition">Why This Workbook?</a>
-                <a href="#pricing" className="text-slate-600 hover:text-[#041f50] font-medium transition">Pricing</a>
+                <a href="#problem" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
+                  <Target className="w-4 h-4" /> Why This Workbook?
+                </a>
+                <a href="#pricing" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
+                  <Tag className="w-4 h-4" /> Pricing
+                </a>
               </div>
               {/* ThemeToggle Removed */}
               <button
