@@ -26,6 +26,10 @@ import {
   Sparkles,
   Package,
   BookOpen,
+  Menu,
+  X,
+  Target,
+  Tag,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -33,6 +37,7 @@ export default function Home() {
   const [loadingProduct, setLoadingProduct] = useState<string | null>(null);
   const [variantIds, setVariantIds] = useState<{ [key: string]: string }>({});
   const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const PRODUCT_IDS = {
     DIGITAL: "gid://shopify/Product/8121253003343",
@@ -92,7 +97,7 @@ export default function Home() {
     <div className="bg-slate-50 text-slate-800 font-sans selection:bg-[#041f50]/20 min-h-screen flex flex-col">
 
       {/* Navigation */}
-      <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200 transaction-colors duration-500">
+      <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200 transition-colors duration-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-3">
@@ -128,9 +133,63 @@ export default function Home() {
               >
                 Start Practicing
               </button>
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden text-[#041f50] p-2 hover:bg-slate-100 rounded-lg transition"
+              >
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-white border-b border-slate-200 shadow-xl absolute w-full top-20 left-0">
+            <div className="px-4 py-4 space-y-3">
+              <button
+                onClick={() => {
+                  setIsPDFPreviewOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full text-left flex items-center gap-3 text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
+              >
+                <BookOpen className="w-5 h-5 text-[#041f50]" /> Preview Sample
+              </button>
+              <a
+                href="#clinical-ai"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition flex items-center gap-3"
+              >
+                <SparklesIcon className="w-5 h-5 text-[#041f50]" /> AI Tools
+              </a>
+              <a
+                href="#problem"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition flex items-center gap-3"
+              >
+                <Target className="w-5 h-5 text-[#041f50]" /> Why This Workbook?
+              </a>
+              <a
+                href="#pricing"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition flex items-center gap-3"
+              >
+                <Tag className="w-5 h-5 text-[#041f50]" /> Pricing
+              </a>
+              <button
+                onClick={() => {
+                  document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full bg-[#041f50] text-white px-6 py-3.5 mt-2 rounded-xl font-bold hover:bg-[#052647] transition shadow-md"
+              >
+                Start Practicing
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
@@ -176,15 +235,16 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex justify-center items-center relative z-20"
+              className="flex justify-center items-center relative z-20 py-8"
             >
-              <div className="relative w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border-4 border-white ring-1 ring-slate-100">
+              <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[3/4] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] border-[6px] border-white ring-1 ring-slate-200 bg-white transform rotate-[-2deg] hover:rotate-0 transition-transform duration-500">
                 <video
                   autoPlay
                   loop
                   muted
                   playsInline
-                  className="w-full h-auto bg-white"
+                  className="absolute inset-0 w-full h-full object-cover bg-white"
+                  style={{ objectPosition: 'center' }}
                   poster="/pam-book-mockup.png" // Fallback
                 >
                   <source src="/HERO-splash.webm" type="video/webm" />
@@ -338,9 +398,9 @@ export default function Home() {
           </div>
 
           {/* Visual Break */}
-          <div className="mt-24 relative h-64 md:h-96 rounded-3xl overflow-hidden shadow-2xl">
+          <div className="my-16 md:my-24 relative min-h-[400px] md:h-96 rounded-3xl overflow-hidden shadow-2xl">
             <Image src="/psych-cover.png" alt="Workbook Spread" fill className="object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/50 to-transparent flex items-center p-8 md:p-16">
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/50 to-transparent flex items-center p-8 py-16 md:p-16">
               <div className="max-w-lg">
                 <h3 className="text-white text-3xl md:text-5xl font-extrabold mb-6 leading-tight">Stop Guessing.<br />Start Assessing.</h3>
                 <p className="text-slate-200 mb-8 text-lg">Join thousands of students who have mastered their clinical rotations with PAM.</p>
@@ -373,9 +433,11 @@ export default function Home() {
                 <span className="ml-2 text-slate-400">USD</span>
               </div>
               <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Everything</strong> in Physical & Digital</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Instant Access while you wait</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Save vs buying separately</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Physical Paperback Workbook</strong> mailed directly to you</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Instant Digital PDF Access</strong> for all your devices</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Full AI Clinical Assistant Access</strong> to generate notes instantly</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Bonus Reference PDFs</strong> to support your clinical practice</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Lifetime Access</strong> to the Clinical Scripts Library updates</span></li>
               </ul>
               <button
                 onClick={() => handleBuy('BUNDLE')}
@@ -398,9 +460,11 @@ export default function Home() {
                 <span className="ml-2 text-slate-400">USD</span>
               </div>
               <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Write-in Worksheets</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Desk Reference</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Standard Shipping</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Physical Paperback Workbook</strong> shipped right to your door</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Durable Write-In Worksheets</strong> for your daily clinical notes</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Quick-Reference Desk Guide</strong> for fast clinical decisions</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Free Standard Shipping</strong> included with your purchase</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Perfect for Offline Use</strong> during any clinical encounter</span></li>
               </ul>
               <button
                 onClick={() => handleBuy('PHYSICAL')}
@@ -423,9 +487,11 @@ export default function Home() {
                 <span className="ml-2 text-slate-400">USD</span>
               </div>
               <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Instant Download</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Searchable Text</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm">Printable Pages</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Instant PDF Download</strong> compatible with any device</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Complete Assessment Framework</strong> for quick reference</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>"Script Doctor" Reference Charts</strong> and fillable templates</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Fully Searchable Text</strong> to find what you need instantly</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Easily Printable Pages</strong> for your specific clinical shifts</span></li>
               </ul>
               <button
                 onClick={() => handleBuy('DIGITAL')}

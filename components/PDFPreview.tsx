@@ -75,15 +75,15 @@ const PDFContent = ({ onClose, maxPreviewPages }: Omit<PDFPreviewProps, 'isOpen'
                             <div className="text-white/60 text-sm">Please wait while we load the workbook...</div>
                         </div>
                     )}
-                    <motion.div 
+                    <motion.div
                         className="shadow-2xl transition-all duration-200 ease-in-out"
                         style={{ width: `${zoomLevel}%`, height: `${zoomLevel}%` }}
                     >
-                        <iframe 
+                        <iframe
                             src={`/pam-workbook-sample.pdf#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
-                            className="w-full h-full border-0 rounded-lg bg-white" 
-                            title="Workbook Preview" 
-                            onLoad={() => setIsLoading(false)} 
+                            className="w-full h-full border-0 rounded-lg bg-white"
+                            title="Workbook Preview"
+                            onLoad={() => setIsLoading(false)}
                         />
                     </motion.div>
                 </div>
