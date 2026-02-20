@@ -105,8 +105,13 @@ export function PDFPreview({ isOpen, onClose, maxPreviewPages = 10 }: PDFPreview
                     {/* PDF Viewer */}
                     <div className="flex-1 overflow-auto bg-slate-800 flex items-center justify-center relative">
                         {isLoading && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="text-white text-lg">Loading preview...</div>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-50">
+                                <div className="relative mb-6">
+                                    {/* Spinner */}
+                                    <div className="w-16 h-16 border-4 border-white/20 border-t-[#041f50] rounded-full animate-spin"></div>
+                                </div>
+                                <div className="text-white text-xl font-semibold mb-2">Loading Preview</div>
+                                <div className="text-white/60 text-sm">Please wait while we load the workbook...</div>
                             </div>
                         )}
 
@@ -114,15 +119,30 @@ export function PDFPreview({ isOpen, onClose, maxPreviewPages = 10 }: PDFPreview
                             <Document
                                 file="/pam-workbook-sample.pdf"
                                 onLoadSuccess={onDocumentLoadSuccess}
-                                loading={<div className="text-white">Loading PDF...</div>}
-                                error={<div className="text-red-400">Failed to load PDF</div>}
+                                loading={
+                                    <div className="flex flex-col items-center justify-center p-12">
+                                        <div className="w-12 h-12 border-4 border-white/20 border-t-[#041f50] rounded-full animate-spin mb-4"></div>
+                                        <div className="text-white text-lg">Loading PDF...</div>
+                                    </div>
+                                }
+                                error={
+                                    <div className="flex flex-col items-center justify-center p-12">
+                                        <div className="text-red-400 text-lg mb-2">Failed to load PDF</div>
+                                        <div className="text-white/60 text-sm">Please try again later</div>
+                                    </div>
+                                }
                             >
                                 <Page
                                     pageNumber={pageNumber}
                                     scale={scale}
-                                    renderTextLayer={true}
-                                    renderAnnotationLayer={true}
+                                    renderTextLayer={false}
+                                    renderAnnotationLayer={false}
                                     className="shadow-2xl"
+                                    loading={
+                                        <div className="flex items-center justify-center p-12">
+                                            <div className="w-8 h-8 border-4 border-white/20 border-t-[#041f50] rounded-full animate-spin"></div>
+                                        </div>
+                                    }
                                 />
                             </Document>
 
