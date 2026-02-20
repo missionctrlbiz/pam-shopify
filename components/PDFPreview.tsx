@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
+import { pdfjs } from "react-pdf";
 
 // Dynamically import react-pdf to avoid SSR issues
 const Document = dynamic(
@@ -15,12 +16,8 @@ const Page = dynamic(
     { ssr: false }
 );
 
-// Configure PDF.js worker on client side only
-if (typeof window !== "undefined") {
-    import("pdfjs-dist/legacy/build/pdf.min.mjs").then((pdfjs) => {
-        pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.mjs`;
-    });
-}
+// Configure PDF.js worker - use CDN for reliability
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PDFPreviewProps {
     isOpen: boolean;
