@@ -1,9 +1,37 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
+// Simple in-memory cache to prevent identical prompts from consuming the API key
+const responseCache = new Map<string, string>();
+
+// Simple in-memory rate limiter per IP address
+const rateLimitCache = new Map<string, { count: number, resetTime: number }>();
+const RATE_LIMIT_MAX = 5; // max 5 requests per IP
+const RATE_LIMIT_WINDOW = 60 * 1000; // per 1 minute
+
 export async function POST(req: Request) {
     try {
+        // 1. Basic Rate Limiting
+        const ip = req.headers.get("x-forwarded-for") || "anonymous";
+        const now = Date.now();
+        const userRate = rateLimitCache.get(ip);
+
+        if (userRate) {
+            if (now > userRate.resetTime) {
+                // reset if time window passed
+                rateLimitCache.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+            } else if (userRate.count >= RATE_LIMIT_MAX) {
+                return NextResponse.json(
+                    { error: "Too many AI requests. Please wait a moment before trying again." },
+                    { status: 429 }
+                );
+            } else {
+                userRate.count += 1;
+            }
+        } else {
+            rateLimitCache.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+        }
+
         // Check if API key is configured
         const apiKey = process.env.GEMINI_API_KEY;
 
@@ -24,12 +52,26 @@ export async function POST(req: Request) {
             );
         }
 
+        // 2. Check Cache
+        const cacheKey = prompt.trim().toLowerCase();
+        if (responseCache.has(cacheKey)) {
+            console.log("Serving AI response from cache");
+            return NextResponse.json({ text: responseCache.get(cacheKey) });
+        }
+
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
+
+        // Save to cache (limit cache size to prevent memory leaks)
+        if (responseCache.size > 1000) {
+            const firstKey = responseCache.keys().next().value;
+            if (firstKey) responseCache.delete(firstKey);
+        }
+        responseCache.set(cacheKey, text);
 
         return NextResponse.json({ text });
     } catch (error) {
