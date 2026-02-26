@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { createCheckout, getProducts } from "@/lib/shopify";
-import { ScriptDoctor, SoapArchitect } from "@/components/GeminiTools";
+import { SoapArchitect } from "@/components/GeminiTools";
 import { LeadMagnet } from "@/components/LeadMagnet";
 // Dynamically import PDFPreview to avoid SSR issues
 const PDFPreview = dynamic(
@@ -114,20 +114,20 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-6">
               <div className="hidden md:flex space-x-8 items-center">
-                <button
-                  onClick={() => setIsPDFPreviewOpen(true)}
-                  className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1"
-                >
-                  <BookOpen className="w-4 h-4" /> Preview Sample
-                </button>
-                <a href="#clinical-ai" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
-                  <SparklesIcon className="w-4 h-4" /> AI Tools
+                <a href="/" className="text-[#041f50] font-bold hover:text-[#052647] transition">
+                  Home
                 </a>
-                <a href="#problem" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
-                  <Target className="w-4 h-4" /> Why This Workbook?
+                <a href="#problem" className="text-[#041f50] font-bold hover:text-[#052647] transition">
+                  The Gap
                 </a>
-                <a href="#pricing" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
-                  <Tag className="w-4 h-4" /> Pricing
+                <a href="#soap-architect" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
+                  SOAP Architect™ <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">New</span>
+                </a>
+                <a href="#pricing" className="text-[#041f50] font-bold hover:text-[#052647] transition">
+                  Pricing
+                </a>
+                <a href="#contact" className="text-[#041f50] font-bold hover:text-[#052647] transition">
+                  Contact
                 </a>
               </div>
               {/* ThemeToggle Removed */}
@@ -152,35 +152,40 @@ export default function Home() {
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-slate-200 shadow-xl absolute w-full top-20 left-0">
             <div className="px-4 py-4 space-y-3">
-              <button
-                onClick={() => {
-                  setIsPDFPreviewOpen(true);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="w-full text-left flex items-center gap-3 text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
-              >
-                <BookOpen className="w-5 h-5 text-[#041f50]" /> Preview Sample
-              </button>
               <a
-                href="#clinical-ai"
+                href="/"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition flex items-center gap-3"
+                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
               >
-                <SparklesIcon className="w-5 h-5 text-[#041f50]" /> AI Tools
+                Home
               </a>
               <a
                 href="#problem"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition flex items-center gap-3"
+                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
               >
-                <Target className="w-5 h-5 text-[#041f50]" /> Why This Workbook?
+                The Gap
+              </a>
+              <a
+                href="#soap-architect"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-2 text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
+              >
+                SOAP Architect™ <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">New</span>
               </a>
               <a
                 href="#pricing"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition flex items-center gap-3"
+                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
               >
-                <Tag className="w-5 h-5 text-[#041f50]" /> Pricing
+                Pricing
+              </a>
+              <a
+                href="#contact"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
+              >
+                Contact
               </a>
               <button
                 onClick={() => {
@@ -214,22 +219,23 @@ export default function Home() {
               className="text-center lg:text-left mb-12 lg:mb-0 relative z-30"
             >
               <div className="inline-flex items-center px-4 py-1.5 bg-[#041f50]/10 text-[#041f50] rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-[#041f50]/20">
-                <PenTool className="w-3 h-3 mr-2" /> Interactive Workbook Edition
+                <PenTool className="w-3 h-3 mr-2" /> Simple English · ESL Friendly
               </div>
               <h1 className="text-5xl lg:text-7xl font-extrabold leading-tight mb-6 text-slate-900 tracking-tight">
-                Master Your<br />
-                <span className="text-[#041f50]">Clinical Assessment.</span>
+                Pysch Assessment<br />
+                <span className="text-[#041f50]">the  Simple Guide.</span>
               </h1>
-              <p className="text-xl text-slate-600 mb-8 font-serif leading-relaxed max-w-lg mx-auto lg:mx-0">
-                The "Write-In" Clinical Companion for PMHNP Students. Includes <span className="text-[#041f50] font-bold inline-flex items-center gap-1"><SparklesIcon className="w-4 h-4" /> AI Clinical Tools</span> to generate scripts and structure notes instantly.
+              <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-lg mx-auto lg:mx-0">
+                Beginner-friendly mental health resources written in clear, plain English — ideal for nursing students, PMHNP learners, psych techs, and ESL users. The complete step-by-step guide for learning psychiatric assessment with confidence —
+even if you’re brand new.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <a href="#clinical-ai" className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#052647] transition shadow-xl flex items-center justify-center gap-2 border border-transparent">
-                  Try AI Tools <SparklesIcon className="w-5 h-5" />
+                <a href="#pricing" className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#052647] transition shadow-xl flex items-center justify-center gap-2">
+                  Get the Mastery Bundle →
                 </a>
-                <a href="#pricing" className="bg-white text-[#041f50] border-2 border-[#041f50] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#041f50] hover:text-white transition flex items-center justify-center shadow-sm">
-                  Get the Workbook
+                <a href="#soap-architect" className="bg-white text-[#041f50] border-2 border-[#041f50] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#041f50] hover:text-white transition flex items-center justify-center shadow-sm gap-2">
+                  <SparklesIcon className="w-5 h-5" /> Try SOAP Architect™
                 </a>
               </div>
             </motion.div>
@@ -263,6 +269,40 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-slate-50 to-transparent z-10"></div>
       </header>
 
+      {/* What We Do Section */}
+      <section className="py-20 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="text-[#041f50] font-bold tracking-widest uppercase text-xs mb-3 block">Our Mission</span>
+            <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 mb-4">What We Do</h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Psychiatric Assessment Mastery™ creates clear, practical, and easy-to-understand psychiatric education tools.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+            {[
+              { label: "Mental Status Exams", icon: "🧠" },
+              { label: "SOAP Notes", icon: "📋" },
+              { label: "Psych Evaluations", icon: "🔍" },
+              { label: "Differential Diagnosis", icon: "⚕️" },
+              { label: "PMHNP Training", icon: "🎓" },
+              { label: "Case Studies", icon: "📚" },
+              { label: "Psych Med Cheat Sheets", icon: "💊" },
+              { label: "Documentation Phrases", icon: "✍️" },
+              { label: "Risk Assessment Tools", icon: "🛡️" },
+            ].map(({ label, icon }) => (
+              <div key={label} className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-5 py-4 shadow-sm">
+                <span className="text-xl">{icon}</span>
+                <span className="font-semibold text-slate-700">{label}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-slate-500 text-sm">
+            All written in simple, 12th-grade English so you learn faster and feel more confident in clinical settings.
+          </p>
+        </div>
+      </section>
+
       {/* Problem Section */}
       <section id="problem" className="py-24 bg-slate-50 relative">
         <div className="max-w-7xl mx-auto px-4">
@@ -280,7 +320,8 @@ export default function Home() {
               </div>
             </div>
             <div>
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">The "Textbook Gap" is Real.</h2>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">The "Textbook Gap" is Real.</h2>
+              <p className="text-base font-semibold text-[#041f50] mb-4">Simple English. 12th Grade Reading Level. ESL Friendly.</p>
               <p className="text-lg text-slate-600 mb-8 leading-relaxed">
                 You know the theory. You've memorized the pharmacology. But when you walk into that exam room, do you freeze? We call it the "Textbook Gap".
               </p>
@@ -291,8 +332,8 @@ export default function Home() {
                     <AlertCircle className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-lg">Imposter Syndrome</h3>
-                    <p className="text-slate-600">Feeling like you're "faking it" because you lack structured interview techniques.</p>
+                    <h3 className="font-bold text-slate-900 text-lg">Preceptor Red Flags</h3>
+                    <p className="text-slate-600">A guide to common mistakes preceptors hate (and how to avoid them).</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -300,8 +341,8 @@ export default function Home() {
                     <CheckSquare className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-lg">Documentation Dread</h3>
-                    <p className="text-slate-600">Staring at a blank screen, terrified of missing critical details in your notes.</p>
+                    <h3 className="font-bold text-slate-900 text-lg">Phrase Banks</h3>
+                    <p className="text-slate-600">Exact scripts for trauma, substance use, and redirecting chatty patients.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -309,8 +350,8 @@ export default function Home() {
                     <Flag className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-lg">Safety Blindspots</h3>
-                    <p className="text-slate-600">Worrying you'll miss a subtle sign of suicide risk or mania.</p>
+                    <h3 className="font-bold text-slate-900 text-lg">Step-by-Step Teaching</h3>
+                    <p className="text-slate-600">"I break down complex concepts into bite-sized pieces."</p>
                   </div>
                 </div>
               </div>
@@ -319,84 +360,105 @@ export default function Home() {
         </div>
       </section>
 
-      {/* AI Tools Section 1: Clinical Scripting */}
-      <section id="clinical-ai" className="py-24 bg-white relative overflow-hidden">
-        {/* Decorative BG */}
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px] opacity-50"></div>
-
-        <div className="max-w-7xl mx-auto px-4 relative z-10">
-          <div className="text-center mb-16">
-            <span className="text-[#041f50] font-bold tracking-widest uppercase text-sm mb-2 block">AI Clinical Assistant</span>
-            <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Never Be at a Loss for Words</h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">Instant, empathetic scripts for difficult clinical encounters.</p>
-          </div>
-
+      {/* SOAP Architect™ Teaser */}
+      <section id="soap-architect" className="py-20 bg-[#041f50] relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:24px_24px]" />
+        <div className="max-w-5xl mx-auto px-4 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-4">The Script Doctor</h3>
-              <p className="text-slate-600 mb-6 leading-relaxed">
-                Whether it's de-escalating an angry patient or asking sensitive questions about trauma, The Script Doctor provides you with the exact words to use (and explains the clinical reasoning behind them).
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 border border-white/20 text-blue-200 rounded-full text-xs font-bold tracking-widest uppercase mb-5">
+                <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase">New</span>
+                AI Documentation Tool
+              </div>
+              <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-4 leading-tight">SOAP Architect™</h2>
+              <p className="text-blue-200 text-lg mb-3 font-semibold">Structured Psychiatric Documentation. Instantly Organized.</p>
+              <p className="text-blue-300 mb-8 leading-relaxed">
+                Paste raw psychiatric notes. Generate a structured, safety-aware SOAP note using the Psychiatric Assessment Mastery™ framework.
               </p>
               <ul className="space-y-3 mb-8">
-                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-[#041f50] mr-2" /> <span>Trauma-informed phrasing</span></li>
-                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-[#041f50] mr-2" /> <span>De-escalation techniques</span></li>
-                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-[#041f50] mr-2" /> <span>Motivational Interviewing cues</span></li>
+                {[
+                  "Applies structured psychiatric SOAP format.",
+                  "Highlights commonly documented safety domains.",
+                  "Enhances clarity of MSE terminology.",
+                  "Preserves your clinician judgment and voice.",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-blue-100">
+                    <CheckCircle2 className="w-5 h-5 text-blue-300 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm">{item}</span>
+                  </li>
+                ))}
               </ul>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <a
+                  href="/soap-architect"
+                  className="inline-block bg-white text-[#041f50] px-8 py-3.5 rounded-xl font-bold hover:bg-blue-50 transition shadow-xl text-center"
+                >
+                  Access SOAP Architect™ →
+                </a>
+                <span className="flex items-center text-blue-300 text-xs px-4">No auto-diagnosis. Structural support only.</span>
+              </div>
             </div>
-            <div>
-              <ScriptDoctor />
+            <div className="hidden lg:block">
+              {/* Before/After preview */}
+              <div className="space-y-4">
+                <div className="bg-white/10 border border-white/20 rounded-2xl p-5 backdrop-blur-sm">
+                  <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">Input — Raw Notes</span>
+                  <p className="mt-2 text-blue-100 font-mono text-sm italic">&ldquo;45yo male. Sad 2 weeks. Poor sleep. Denies SI. Disheveled. Slow speech.&rdquo;</p>
+                </div>
+                <div className="text-center text-white/40 text-2xl">↓</div>
+                <div className="bg-white rounded-2xl p-5 shadow-xl">
+                  <span className="text-xs font-bold text-[#041f50] uppercase tracking-wider">Output — Structured SOAP</span>
+                  <div className="mt-2 text-slate-700 text-xs space-y-1.5">
+                    <p><strong className="text-[#041f50]">Subjective:</strong> 45-year-old male, 2-week depressed mood, insomnia, decreased appetite. Denies SI.</p>
+                    <p><strong className="text-[#041f50]">Objective (MSE):</strong> Disheveled. Speech slowed. Mood: &ldquo;Sad.&rdquo; Affect: Constricted.</p>
+                    <p><strong className="text-[#041f50]">Assessment:</strong> Depressive episode; safety denied; monitoring indicated.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* AI Tools Section 2: Documentation */}
-      <section className="py-24 bg-slate-50 relative">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center lg:flex-row-reverse">
-            <div className="lg:order-2">
-              <h3 className="text-2xl font-bold text-slate-900 mb-4">The SOAP Architect</h3>
-              <p className="text-slate-600 mb-6 leading-relaxed">
-                Don't let documentation burnout steal your evening. Paste your rough notes, brain dump, or dictation snippets, and watch them transform into a structured, professional note instantly.
-              </p>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-blue-500 mr-2" /> <span>Standard Psychiatric Assessment format</span></li>
-                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-blue-500 mr-2" /> <span>Identifies missing safety risks</span></li>
-                <li className="flex items-center text-slate-700"><CheckCircle2 className="w-5 h-5 text-blue-500 mr-2" /> <span>MSE vocabulary enhancement</span></li>
-              </ul>
-            </div>
-            <div className="lg:order-1">
-              <SoapArchitect />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
+      {/* Why Students Love Us */}
       <section id="features" className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Inside the Workbook</h2>
-            <p className="text-slate-600 text-lg">More than just reading. It's a toolkit you'll use every single day.</p>
+            <span className="text-[#041f50] font-bold tracking-widest uppercase text-xs mb-3 block">Student Love</span>
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">Why Students Love Us</h2>
+            <p className="text-slate-600 text-lg">Built for real learning — simple, practical, and confidence-building.</p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-10">
             {[
-              { icon: Quote, title: "Phrase Banks", desc: "Exact scripts for trauma, substance use, and redirecting chatty patients." },
-              { icon: Flag, title: "Preceptor Red Flags", desc: "A guide to common mistakes preceptors hate (and how to avoid them)." },
-              { icon: PenTool, title: "SOAP Templates", desc: "Fill-in-the-blank frameworks for HPI, MSE, and Assessment sections." },
-              { icon: CheckSquare, title: "Capstone Toolkit", desc: "The 'One-Page Workflow' and self-checklists." }
-            ].map((feature, i) => (
+              {
+                emoji: "💡",
+                title: "Clear",
+                desc: "We remove the jargon and make every psychiatric concept easy to understand. If we use a clinical word, we define it.",
+                tag: "Plain English",
+              },
+              {
+                emoji: "📋",
+                title: "Practical",
+                desc: "Our templates are copy-and-paste friendly, perfect for documentation. Every topic includes examples, scripts, and scenarios.",
+                tag: "Ready to Use",
+              },
+              {
+                emoji: "🌍",
+                title: "Beginner-Friendly",
+                desc: "Ideal for new nurses, NP students, and learners whose first language is not English. No slang. No complex metaphors.",
+                tag: "ESL Friendly",
+              },
+            ].map(({ emoji, title, desc, tag }) => (
               <motion.div
                 whileHover={{ y: -5 }}
-                key={i}
-                className="bg-slate-50 p-8 rounded-2xl border border-slate-100 hover:border-[#041f50] transition duration-300"
+                key={title}
+                className="bg-slate-50 p-10 rounded-3xl border border-slate-100 hover:border-[#041f50] hover:shadow-xl transition duration-300 text-center"
               >
-                <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-[#041f50] mb-6 shadow-sm">
-                  <feature.icon className="w-6 h-6" />
-                </div>
-                <h3 className="font-bold text-xl mb-3 text-slate-900">{feature.title}</h3>
-                <p className="text-slate-500 leading-relaxed">{feature.desc}</p>
+                <div className="text-5xl mb-5">{emoji}</div>
+                <div className="inline-block px-3 py-1 bg-[#041f50]/10 text-[#041f50] rounded-full text-xs font-bold mb-4 tracking-widest uppercase">{tag}</div>
+                <h3 className="font-extrabold text-2xl mb-4 text-slate-900">{title}</h3>
+                <p className="text-slate-500 leading-relaxed">{desc}</p>
               </motion.div>
             ))}
           </div>
@@ -429,19 +491,19 @@ export default function Home() {
             <div className="lg:col-span-1 lg:scale-105 z-10 border-2 border-amber-500 rounded-2xl p-8 bg-white shadow-2xl relative flex flex-col">
               <div className="absolute top-0 right-0 bg-amber-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl uppercase tracking-wider">Most Popular</div>
               <div className="mb-6">
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">Mastery Bundle</h3>
-                <p className="text-sm text-slate-500">Physical + Digital + Bonus</p>
+                <h3 className="text-2xl font-bold text-slate-900 mb-1">Mastery Bundle</h3>
+                <p className="text-sm text-slate-500">Physical + Digital + AI</p>
               </div>
               <div className="flex items-baseline mb-8">
                 <span className="text-5xl font-extrabold text-slate-900">$49.99</span>
                 <span className="ml-2 text-slate-400">USD</span>
               </div>
               <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Physical Paperback Workbook</strong> mailed directly to you</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Instant Digital PDF Access</strong> for all your devices</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Full AI Clinical Assistant Access</strong> to generate notes instantly</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Bonus Reference PDFs</strong> to support your clinical practice</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Lifetime Access</strong> to the Clinical Scripts Library updates</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>The Physical Workbook</strong> — shipped directly to you</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Digital PDF Edition</strong> — instant access on all devices</span></li>
+                <li className="flex items-start border border-amber-200 bg-amber-50 rounded-lg px-3 py-2"><CheckCircle2 className="text-amber-600 mr-2 w-5 h-5 flex-shrink-0 mt-0.5" /> <span className="text-slate-700 text-sm"><strong>1-Year Access to SOAP Architect™</strong> <span className="ml-1 text-amber-700 text-[10px] font-bold uppercase tracking-wider">New!</span></span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Script Doctor AI Tool</strong> — instant clinical scripts</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>5-Page Cheat Sheet</strong> (Lead Magnet, included free)</span></li>
               </ul>
               <button
                 onClick={() => handleBuy('BUNDLE')}
@@ -460,7 +522,7 @@ export default function Home() {
                 <p className="text-sm text-slate-500">Paperback (Shipped)</p>
               </div>
               <div className="flex items-baseline mb-8">
-                <span className="text-4xl font-bold text-slate-900">$29.99</span>
+                <span className="text-4xl font-bold text-slate-900">$17.99</span>
                 <span className="ml-2 text-slate-400">USD</span>
               </div>
               <ul className="space-y-4 mb-8 flex-grow">
@@ -484,23 +546,23 @@ export default function Home() {
             <div className="border border-slate-200 rounded-2xl p-8 bg-white shadow-xl relative flex flex-col">
               <div className="mb-6">
                 <h3 className="text-xl font-bold text-slate-900 mb-2">Digital Edition</h3>
-                <p className="text-sm text-slate-500">Kindle / PDF / eBook</p>
+                <p className="text-sm text-slate-500">PDF + AI Tool Access</p>
               </div>
               <div className="flex items-baseline mb-8">
-                <span className="text-4xl font-bold text-slate-900">$9.99</span>
+                <span className="text-4xl font-bold text-slate-900">$17.99</span>
                 <span className="ml-2 text-slate-400">USD</span>
               </div>
               <ul className="space-y-4 mb-8 flex-grow">
                 <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Instant PDF Download</strong> compatible with any device</span></li>
                 <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Complete Assessment Framework</strong> for quick reference</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>"Script Doctor" Reference Charts</strong> and fillable templates</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Fully Searchable Text</strong> to find what you need instantly</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Easily Printable Pages</strong> for your specific clinical shifts</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Fully Searchable &amp; Printable</strong> PDF for any device</span></li>
+                <li className="flex items-start border border-blue-200 bg-blue-50 rounded-lg px-3 py-2"><CheckCircle2 className="text-blue-600 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>SOAP Architect™ AI Tool Access</strong> — 5 structured notes included</span></li>
+                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>5-Page Cheat Sheet</strong> (Bonus, included free)</span></li>
               </ul>
               <button
                 onClick={() => handleBuy('DIGITAL')}
                 disabled={loadingProduct === 'DIGITAL'}
-                className="w-full bg-white border-2 border-[#041f50] text-[#041f50] font-bold py-4 rounded-xl hover:bg-[#041f50] hover:text-white transition flex items-center justify-center gap-2"
+                className="w-full bg-[#041f50] text-white font-bold py-4 rounded-xl hover:bg-[#052647] transition flex items-center justify-center gap-2 shadow-lg"
               >
                 {loadingProduct === 'DIGITAL' ? <Loader2 className="animate-spin" /> : <Download />}
                 Download Now
@@ -513,8 +575,12 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="bg-slate-900 text-slate-500 py-12 text-center border-t border-slate-800 mt-auto">
-        <p>&copy; 2026 Tonia Ojomo. All Rights Reserved.</p>
+      <footer id="contact" className="bg-slate-900 text-slate-400 py-16 text-center border-t border-slate-800 mt-auto">
+        <p className="text-slate-300 font-semibold mb-2">Psychiatric Assessment Mastery™</p>
+        <p className="mb-6">&copy; 2026 Tonia Ojomo. All Rights Reserved.</p>
+        <p className="max-w-2xl mx-auto text-xs leading-relaxed text-slate-600 px-6">
+          Educational content only. Not a substitute for clinical supervision or professional judgment. SOAP Architect™ provides structural support only and does not offer medical advice or diagnosis.
+        </p>
       </footer>
 
       {/* PDF Preview Modal */}
