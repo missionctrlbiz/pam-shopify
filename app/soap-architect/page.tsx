@@ -25,16 +25,16 @@ export default function SoapArchitectPage() {
       <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center gap-2 text-[#041f50] font-bold hover:opacity-80 transition">
+            <Link href="/" className="flex items-center gap-2 text-psych-navy font-bold hover:opacity-80 transition">
               <ArrowLeft className="w-4 h-4" />
               Back to Home
             </Link>
-            <Link href="/" className="text-sm font-bold text-slate-500 tracking-widest uppercase hover:text-[#041f50] transition">
+            <Link href="/" className="text-sm font-bold text-slate-500 tracking-widest uppercase hover:text-psych-navy transition">
               {global.brandName}
             </Link>
             <Link
               href="/#pricing"
-              className="bg-[#041f50] text-white px-5 py-2 rounded-full text-sm font-bold hover:bg-[#052647] transition shadow-md"
+              className="bg-psych-navy text-white px-5 py-2 rounded-full text-sm font-bold hover:opacity-90 transition shadow-md"
             >
               Get the Bundle
             </Link>
@@ -48,19 +48,15 @@ export default function SoapArchitectPage() {
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#041f50]/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 opacity-60 pointer-events-none" />
 
         <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
+          <div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-xs font-bold tracking-widest uppercase mb-6">
               <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">New</span>
               {content.hero.badge}
             </div>
-            <h1 className="text-5xl lg:text-7xl font-extrabold text-slate-900 mb-5 tracking-tight leading-tight">
+            <h1 className="text-5xl lg:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-psych mb-5 tracking-tight leading-tight">
               {content.hero.headline}
             </h1>
-            <p className="text-2xl text-[#041f50] font-semibold mb-6">
+            <p className="text-2xl text-psych-navy font-semibold mb-6">
               {content.hero.subheadline}
             </p>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -69,18 +65,19 @@ export default function SoapArchitectPage() {
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-full text-sm font-semibold mb-8 border border-slate-200">
               {content.hero.authTrigger}
             </div>
-            <div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group inline-block">
+              <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
               <a
                 href="#soap-tool"
-                className="inline-block bg-[#041f50] text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-[#052647] transition shadow-xl transform hover:-translate-y-0.5"
+                className="relative inline-block bg-gradient-psych text-white px-10 py-4 rounded-xl font-bold text-lg transition shadow-xl w-full"
               >
                 {content.hero.ctaLabel}
               </a>
-              <p className="mt-3 text-sm text-slate-400 italic">
+              <p className="mt-4 text-sm text-slate-400 italic">
                 {content.hero.disclaimer}
               </p>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-slate-50 to-transparent" />
       </header>
@@ -88,12 +85,7 @@ export default function SoapArchitectPage() {
       {/* B. "The Real Problem" Block */}
       <section className="py-20 bg-slate-50">
         <div className="max-w-4xl mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="bg-red-50 border border-red-100 rounded-3xl p-10"
-          >
+          <div className="bg-red-50 border border-red-100 rounded-3xl p-10">
             <h2 className="text-3xl font-bold text-slate-900 mb-6">
               {content.problemBlock.headline}
             </h2>
@@ -108,7 +100,7 @@ export default function SoapArchitectPage() {
             <p className="text-slate-600 italic border-l-4 border-red-400 pl-4 text-base">
               {content.problemBlock.blockquote}
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -118,11 +110,7 @@ export default function SoapArchitectPage() {
           <div className="grid lg:grid-cols-2 gap-16 items-start">
 
             {/* C. What It Does */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
+            <div>
               <h2 className="text-3xl font-bold text-slate-900 mb-6">
                 {content.whatItDoes.headline}
               </h2>
@@ -137,14 +125,10 @@ export default function SoapArchitectPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-blue-800 text-sm leading-relaxed">
                 <strong>Important:</strong> {content.whatItDoes.importantNote}
               </div>
-            </motion.div>
+            </div>
 
             {/* D. How It Works */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
+            <div>
               <h2 className="text-3xl font-bold text-slate-900 mb-6">{content.howItWorks.headline}</h2>
               <div className="space-y-6">
                 {content.howItWorks.steps.map(({ step, label, desc }) => (
@@ -159,7 +143,7 @@ export default function SoapArchitectPage() {
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
@@ -172,28 +156,17 @@ export default function SoapArchitectPage() {
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             {/* Input */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="bg-slate-100 rounded-2xl p-8 border border-slate-200"
-            >
+            <div className="bg-slate-100 rounded-2xl p-8 border border-slate-200">
               <span className="inline-block mb-5 px-3 py-1 bg-slate-300 text-slate-700 rounded-full text-xs font-bold uppercase tracking-wider">
                 {content.beforeAfterDemo.input.label}
               </span>
               <p className="text-slate-700 font-mono text-sm leading-relaxed italic bg-white rounded-xl p-5 border border-slate-200">
                 {content.beforeAfterDemo.input.text}
               </p>
-            </motion.div>
+            </div>
             {/* Output */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.15 }}
-              className="bg-white rounded-2xl p-8 border-2 border-[#041f50] shadow-xl"
-            >
-              <span className="inline-block mb-5 px-3 py-1 bg-[#041f50] text-white rounded-full text-xs font-bold uppercase tracking-wider">
+            <div className="bg-white rounded-2xl p-8 border-2 border-psych-purple shadow-xl shadow-psych-purple/10">
+              <span className="inline-block mb-5 px-3 py-1 bg-gradient-psych text-white rounded-full text-xs font-bold uppercase tracking-wider">
                 {content.beforeAfterDemo.output.label}
               </span>
               <div className="text-sm text-slate-700 space-y-4 leading-relaxed">
@@ -214,7 +187,7 @@ export default function SoapArchitectPage() {
                   <p>{content.beforeAfterDemo.output.assessment}</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>

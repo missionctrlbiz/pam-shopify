@@ -12,6 +12,27 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  --color-psych-navy: #041f50;
+  --color-psych-blue: #1f6cb9;
+  --color-psych-blue-light: #6ea2d6;
+  --color-psych-red: #ed415b;
+  --color-psych-pink: #ec5185;
+  --color-psych-purple: #af5ce9;
+  --color-psych-purple-dark: #8d39c5;
+  --color-psych-brain-glow: #f8cf5d;
+  --color-psych-brain-core: #ea4c3b;
+  --color-psych-brain-aura: #4db2e7;
+
+  --background-image-gradient-psych: linear-gradient(135deg, #ed415b, #ec5185, #af5ce9);
+  --background-image-gradient-brain: linear-gradient(135deg, #af5ce9, #1f6cb9);
+  
+  --animate-border-spin: border-spin 4s linear infinite;
+
+  @keyframes border-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 }
 
 @media (prefers-color-scheme: dark) {

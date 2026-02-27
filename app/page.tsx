@@ -224,42 +224,38 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
 
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              className="text-center lg:text-left mb-12 lg:mb-0 relative z-30"
-            >
+            <div className="text-center lg:text-left mb-12 lg:mb-0 relative z-30">
               <div className="inline-flex items-center px-4 py-1.5 bg-[#041f50]/10 text-[#041f50] rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-[#041f50]/20">
                 <PenTool className="w-3 h-3 mr-2" /> {content.hero.badge}
               </div>
               <h1 className="text-5xl lg:text-7xl font-extrabold leading-tight mb-6 text-slate-900 tracking-tight">
                 {content.hero.headline}<br />
-                <span className="text-[#041f50]">{content.hero.headlineAccent}</span>
+                <span className="text-transparent bg-clip-text bg-gradient-brain drop-shadow-sm">{content.hero.headlineAccent}</span>
               </h1>
               <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-lg mx-auto lg:mx-0">
                 {content.hero.subheadline}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <a href={content.hero.primaryCTA.href} className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#052647] transition shadow-xl flex items-center justify-center gap-2">
-                  {content.hero.primaryCTA.label}
-                </a>
-                <a href={content.hero.secondaryCTA.href} className="bg-white text-[#041f50] border-2 border-[#041f50] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#041f50] hover:text-white transition flex items-center justify-center shadow-sm gap-2">
-                  <SparklesIcon className="w-5 h-5" /> {content.hero.secondaryCTA.label}
-                </a>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                  <a href={content.hero.primaryCTA.href} className="relative bg-gradient-psych text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                    {content.hero.primaryCTA.label}
+                  </a>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative p-[2px] rounded-xl bg-gradient-brain group hover:shadow-lg hover:shadow-psych-blue/20 transition">
+                  <a href={content.hero.secondaryCTA.href} className="bg-white text-psych-navy px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-50 transition flex items-center justify-center gap-2 h-full w-full">
+                    <SparklesIcon className="w-5 h-5 text-psych-purple" /> {content.hero.secondaryCTA.label}
+                  </a>
+                </motion.div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Video Hero */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex justify-center items-center relative z-20 py-8"
-            >
+            <div className="flex justify-center items-center relative z-20 py-8">
               <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[3/4] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] border-[6px] border-white ring-1 ring-slate-200 bg-white transform rotate-[-2deg] hover:rotate-0 transition-transform duration-500">
                 <video
+                  suppressHydrationWarning
                   autoPlay
                   loop
                   muted
@@ -272,7 +268,7 @@ export default function Home() {
                   Your browser does not support the video tag.
                 </video>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
 
@@ -350,7 +346,7 @@ export default function Home() {
       </section>
 
       {/* SOAP Architect Teaser */}
-      <section id="soap-architect" className="py-20 bg-[#041f50] relative overflow-hidden">
+      <section id="soap-architect" className="py-20 bg-psych-navy relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:24px_24px]" />
         <div className="max-w-5xl mx-auto px-4 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -372,13 +368,16 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <a
-                  href={content.soapArchitectTeaser.ctaHref}
-                  className="inline-block bg-white text-[#041f50] px-8 py-3.5 rounded-xl font-bold hover:bg-blue-50 transition shadow-xl text-center"
-                >
-                  {content.soapArchitectTeaser.ctaLabel}
-                </a>
+              <div className="flex flex-col sm:flex-row gap-3 items-center mt-2">
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                  <a
+                    href={content.soapArchitectTeaser.ctaHref}
+                    className="relative inline-block bg-gradient-psych text-white px-8 py-4 rounded-xl font-bold transition text-center"
+                  >
+                    {content.soapArchitectTeaser.ctaLabel}
+                  </a>
+                </motion.div>
                 <span className="flex items-center text-blue-300 text-xs px-4">{content.soapArchitectTeaser.disclaimer}</span>
               </div>
             </div>
@@ -408,7 +407,7 @@ export default function Home() {
       <section id="features" className="py-24 bg-white">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-[#041f50] font-bold tracking-widest uppercase text-xs mb-3 block">Student Love</span>
+            <span className="text-transparent bg-clip-text bg-gradient-psych font-bold tracking-widest uppercase text-xs mb-3 block">Student Love</span>
             <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">{content.solution.headline}</h2>
             <p className="text-slate-600 text-lg">{content.solution.subheadline}</p>
           </div>
@@ -421,7 +420,7 @@ export default function Home() {
                 className="bg-slate-50 p-10 rounded-3xl border border-slate-100 hover:border-[#041f50] hover:shadow-xl transition duration-300 text-center"
               >
                 <div className="text-5xl mb-5">{emoji}</div>
-                <div className="inline-block px-3 py-1 bg-[#041f50]/10 text-[#041f50] rounded-full text-xs font-bold mb-4 tracking-widest uppercase">{tag}</div>
+                <div className="inline-block px-3 py-1 bg-psych-purple/10 text-psych-purple rounded-full text-xs font-bold mb-4 tracking-widest uppercase">{tag}</div>
                 <h3 className="font-extrabold text-2xl mb-4 text-slate-900">{title}</h3>
                 <p className="text-slate-500 leading-relaxed">{description}</p>
               </motion.div>
@@ -437,7 +436,10 @@ export default function Home() {
                   {content.visualBreak.headline}<br />{content.visualBreak.headlineAccent}
                 </h3>
                 <p className="text-slate-200 mb-8 text-lg">{content.visualBreak.description}</p>
-                <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#052647] transition shadow-lg transform hover:-translate-y-1">{content.visualBreak.ctaLabel}</button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group inline-block">
+                  <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                  <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="relative bg-gradient-psych text-white px-8 py-4 rounded-xl font-bold transition w-full">{content.visualBreak.ctaLabel}</button>
+                </motion.div>
               </div>
             </div>
           </div>
@@ -459,10 +461,10 @@ export default function Home() {
               return (
                 <div
                   key={card.key}
-                  className={`${isFeatured ? "md:scale-105 z-10 border-2 border-[#041f50]" : "border border-slate-200"} rounded-2xl p-8 bg-white ${isFeatured ? "shadow-2xl" : "shadow-xl"} relative flex flex-col`}
+                  className={`${isFeatured ? "md:scale-105 z-10 border-2 border-psych-purple" : "border border-slate-200"} rounded-2xl p-8 bg-white ${isFeatured ? "shadow-2xl shadow-psych-purple/10" : "shadow-xl"} relative flex flex-col`}
                 >
                   {card.badge && (
-                    <div className={`absolute top-0 right-0 ${isFeatured ? "bg-[#041f50]" : "bg-slate-600"} text-white text-xs font-bold px-4 py-1 rounded-bl-xl uppercase tracking-wider`}>
+                    <div className={`absolute top-0 right-0 ${isFeatured ? "bg-gradient-psych" : "bg-slate-600"} text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider`}>
                       {card.badge}
                     </div>
                   )}
@@ -492,22 +494,28 @@ export default function Home() {
                     ))}
                   </ul>
                   {card.ctaHref ? (
-                    <Link
-                      href={card.ctaHref}
-                      className={`w-full ${isFeatured ? "bg-[#041f50] hover:bg-[#052647] text-white" : "bg-white border-2 border-[#041f50] text-[#041f50] hover:bg-slate-50"} font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2 ${isFeatured ? "transform hover:-translate-y-1" : ""}`}
-                    >
-                      <CtaIcon />
-                      {card.ctaLabel}
-                    </Link>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={isFeatured ? "relative group w-full" : "w-full"}>
+                      {isFeatured && <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>}
+                      <Link
+                        href={card.ctaHref}
+                        className={`relative w-full ${isFeatured ? "bg-gradient-psych text-white shadow-xl shadow-psych-purple/20" : "bg-white border-2 border-psych-navy text-psych-navy hover:bg-slate-50"} font-bold py-4 rounded-xl transition flex items-center justify-center gap-2`}
+                      >
+                        <CtaIcon />
+                        {card.ctaLabel}
+                      </Link>
+                    </motion.div>
                   ) : (
-                    <button
-                      onClick={() => handleBuy(card.key)}
-                      disabled={loadingProduct === card.key}
-                      className={`w-full ${isFeatured ? "bg-[#041f50] hover:bg-[#052647] text-white" : "bg-[#041f50] text-white hover:bg-[#052647]"} font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2 ${isFeatured ? "transform hover:-translate-y-1" : ""}`}
-                    >
-                      {loadingProduct === card.key ? <Loader2 className="animate-spin" /> : <CtaIcon />}
-                      {card.ctaLabel}
-                    </button>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={isFeatured ? "relative group w-full" : "w-full"}>
+                      {isFeatured && <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>}
+                      <button
+                        onClick={() => handleBuy(card.key)}
+                        disabled={loadingProduct === card.key}
+                        className={`relative w-full ${isFeatured ? "bg-gradient-psych text-white shadow-xl shadow-psych-purple/20" : "bg-psych-navy text-white hover:bg-[#052647]"} font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-70`}
+                      >
+                        {loadingProduct === card.key ? <Loader2 className="animate-spin" /> : <CtaIcon />}
+                        {card.ctaLabel}
+                      </button>
+                    </motion.div>
                   )}
                 </div>
               );
@@ -522,7 +530,7 @@ export default function Home() {
       {/* About the Author + Feedback Section */}
       <section id="about" className="py-32 bg-slate-50 relative overflow-hidden">
         {/* Decorative deep blue background cut */}
-        <div className="absolute top-0 left-0 w-full h-[600px] bg-[#041f50] -skew-y-3 origin-top-left -translate-y-20 z-0" />
+        <div className="absolute top-0 left-0 w-full h-[600px] bg-psych-navy -skew-y-3 origin-top-left -translate-y-20 z-0" />
 
         <div className="max-w-6xl mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
@@ -545,7 +553,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="font-bold text-2xl text-slate-900 leading-tight block xl:hidden">Meet Tonia</h3>
-                  <h3 className="font-bold text-2xl text-slate-900 leading-tight hidden xl:block">Tonia Ojomo,<br /><span className="text-[#041f50] text-lg">MSN, BSN, RN</span></h3>
+                  <h3 className="font-bold text-2xl text-slate-900 leading-tight hidden xl:block">Tonia Ojomo,<br /><span className="text-transparent bg-clip-text bg-gradient-psych text-lg">MSN, BSN, RN</span></h3>
                 </div>
               </div>
 
@@ -553,25 +561,28 @@ export default function Home() {
                 {content.aboutAuthor.bio}
               </p>
 
-              <blockquote className="border-l-4 border-[#041f50] pl-5 py-1 text-slate-700 italic text-base mb-10 leading-relaxed bg-[#041f50]/5 rounded-r-xl">
+              <blockquote className="border-l-4 border-psych-purple pl-5 py-2 text-slate-700 italic text-base mb-10 leading-relaxed bg-psych-purple/5 rounded-r-xl">
                 {content.aboutAuthor.mission}
               </blockquote>
 
               {/* Credential pills */}
               <div className="flex flex-wrap gap-2 mb-10 mt-auto">
                 {content.aboutAuthor.credentials.map((cred: string) => (
-                  <span key={cred} className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#041f50]/5 text-[#041f50] border border-[#041f50]/10 rounded-full text-xs font-bold tracking-wide">
+                  <span key={cred} className="inline-flex items-center gap-1.5 px-4 py-2 bg-psych-purple/5 text-psych-purple border border-psych-purple/20 rounded-full text-xs font-bold tracking-wide shadow-sm">
                     <CheckCircle2 className="w-3.5 h-3.5" /> {cred}
                   </span>
                 ))}
               </div>
 
-              <a
-                href={content.aboutAuthor.ctaHref}
-                className="inline-flex items-center justify-center gap-2 bg-amber-400 text-amber-950 px-8 py-4 rounded-xl font-bold text-lg hover:bg-amber-300 transition shadow-lg transform hover:-translate-y-0.5"
-              >
-                {content.aboutAuthor.ctaLabel}
-              </a>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group inline-block mt-auto w-fit">
+                <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                <a
+                  href={content.aboutAuthor.ctaHref}
+                  className="relative inline-flex items-center justify-center gap-2 bg-gradient-psych text-white px-8 py-4 rounded-xl font-bold text-lg transition shadow-xl w-full"
+                >
+                  {content.aboutAuthor.ctaLabel}
+                </a>
+              </motion.div>
             </div>
 
             {/* Feedback Form Column */}
@@ -579,7 +590,7 @@ export default function Home() {
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-200 to-transparent lg:w-1 lg:h-full lg:bg-gradient-to-b" />
 
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-white text-[#041f50] rounded-xl shadow-sm border border-slate-100">
+                <div className="p-3 bg-gradient-psych text-white rounded-xl shadow-md border border-white">
                   <Send className="w-6 h-6" />
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900">{content.aboutAuthor.feedbackForm.headline}</h3>
@@ -630,7 +641,7 @@ function FeedbackForm({ content }: { content: any }) {
 
   if (status === "success") {
     return (
-      <div className="bg-[#041f50]/10 border border-[#041f50]/20 rounded-xl p-8 text-center text-[#041f50]">
+      <div className="bg-psych-purple/5 border border-psych-purple/20 rounded-xl p-8 text-center text-psych-purple">
         <CheckCircle2 className="w-12 h-12 mx-auto mb-4" />
         <h4 className="font-bold text-xl mb-2">{content.successMessage}</h4>
         <button
@@ -648,40 +659,49 @@ function FeedbackForm({ content }: { content: any }) {
       <div className="grid sm:grid-cols-2 gap-5">
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-2">{content.nameLabel}</label>
-          <input
-            required
-            type="text"
-            placeholder={content.namePlaceholder}
-            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#041f50] focus:border-transparent transition"
-          />
+          <div className="relative p-[2px] rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
+            <input
+              required
+              type="text"
+              placeholder={content.namePlaceholder}
+              className="w-full bg-white rounded-[10px] px-4 py-3 text-slate-900 focus:outline-none transition"
+            />
+          </div>
         </div>
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-2">{content.emailLabel}</label>
-          <input
-            required
-            type="email"
-            placeholder={content.emailPlaceholder}
-            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#041f50] focus:border-transparent transition"
-          />
+          <div className="relative p-[2px] rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
+            <input
+              required
+              type="email"
+              placeholder={content.emailPlaceholder}
+              className="w-full bg-white rounded-[10px] px-4 py-3 text-slate-900 focus:outline-none transition"
+            />
+          </div>
         </div>
       </div>
       <div>
         <label className="block text-sm font-bold text-slate-700 mb-2">{content.messageLabel}</label>
-        <textarea
-          required
-          rows={4}
-          placeholder={content.messagePlaceholder}
-          className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#041f50] focus:border-transparent transition resize-none"
-        ></textarea>
+        <div className="relative p-[2px] rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
+          <textarea
+            required
+            rows={4}
+            placeholder={content.messagePlaceholder}
+            className="w-full bg-white rounded-[10px] px-4 py-3 text-slate-900 focus:outline-none transition resize-none"
+          ></textarea>
+        </div>
       </div>
-      <button
-        type="submit"
-        disabled={status === "submitting"}
-        className="w-full bg-[#041f50] text-white font-bold py-4 rounded-xl hover:bg-[#052647] transition flex items-center justify-center gap-2 shadow-sm disabled:opacity-70"
-      >
-        {status === "submitting" ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-        {content.submitLabel}
-      </button>
+      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="relative group">
+        <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+        <button
+          type="submit"
+          disabled={status === "submitting"}
+          className="relative w-full bg-gradient-psych text-white shadow-xl shadow-psych-purple/20 font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-70"
+        >
+          {status === "submitting" ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          {content.submitLabel}
+        </button>
+      </motion.div>
     </form>
   );
 }
