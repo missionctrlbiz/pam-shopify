@@ -6,7 +6,7 @@
         "readingLevel": "12th-grade level, Simple English, High Clarity"
     },
     "global": {
-        "brandName": "Psychiatric Assessment Mastery™",
+        "brandName": "Psychiatric Assessment Mastery",
         "introductoryPrice": "$17.99",
         "navigation": [
             {
@@ -18,7 +18,7 @@
                 "href": "#problem"
             },
             {
-                "label": "SOAP Architect™",
+                "label": "SOAP Architect",
                 "href": "#soap-architect",
                 "badge": "Free"
             },
@@ -32,7 +32,7 @@
             }
         ],
         "ctaButton": "Get the Digital Bundle ($17.99)",
-        "footerDisclaimer": "Educational content only. Not a substitute for clinical supervision or professional judgment. SOAP Architect™ provides structural support only and does not offer medical advice or diagnosis.",
+        "footerDisclaimer": "Educational content only. Not a substitute for clinical supervision or professional judgment. SOAP Architect provides structural support only and does not offer medical advice or diagnosis.",
         "footerCopyright": "© 2026 Tonia Ojomo. All Rights Reserved."
     },
     "homePage": {
@@ -46,14 +46,14 @@
                 "href": "#pricing"
             },
             "secondaryCTA": {
-                "label": "Try SOAP Architect™ (Free)",
+                "label": "Try SOAP Architect (Free)",
                 "href": "#soap-architect"
             }
         },
         "whatWeDo": {
             "sectionLabel": "Our Mission",
             "headline": "What We Do",
-            "subheadline": "Psychiatric Assessment Mastery™ creates clear, practical, and easy-to-understand psychiatric education tools.",
+            "subheadline": "Psychiatric Assessment Mastery creates clear, practical, and easy-to-understand psychiatric education tools.",
             "items": [
                 {
                     "label": "Mental Status Exams",
@@ -142,7 +142,7 @@
         },
         "soapArchitectTeaser": {
             "badge": "AI Documentation Tool",
-            "headline": "SOAP Architect™",
+            "headline": "SOAP Architect",
             "subheadline": "Turn Messy Notes into Structured Documentation.",
             "valueProp": "Paste your rough bullet points. Get a structured, safety-aware SOAP note instantly.",
             "authTrigger": "Create a free account to use this tool.",
@@ -152,7 +152,7 @@
                 "Enhances clarity of MSE terminology.",
                 "Preserves your clinician judgment and voice."
             ],
-            "ctaLabel": "Access SOAP Architect™ →",
+            "ctaLabel": "Access SOAP Architect →",
             "ctaHref": "/soap-architect",
             "disclaimer": "No auto-diagnosis. Structural support only.",
             "demo": {
@@ -197,8 +197,8 @@
                             "highlight": false
                         },
                         {
-                            "text": "SOAP Architect™ AI Tool Access — 5 structured notes included",
-                            "bold": "SOAP Architect™ AI Tool Access",
+                            "text": "SOAP Architect AI Tool Access — 5 structured notes included",
+                            "bold": "SOAP Architect AI Tool Access",
                             "highlight": true
                         },
                         {
@@ -213,7 +213,7 @@
                 {
                     "key": "SOAP_ARCHITECT",
                     "title": "AI Clinical Companion",
-                    "subtitle": "SOAP Architect™",
+                    "subtitle": "SOAP Architect",
                     "price": "FREE",
                     "badge": "Digital Tool",
                     "items": [
@@ -233,7 +233,7 @@
                             "highlight": false
                         }
                     ],
-                    "ctaLabel": "Try SOAP Architect™",
+                    "ctaLabel": "Try SOAP Architect",
                     "ctaIcon": "package",
                     "ctaHref": "/soap-architect"
                 }
@@ -242,14 +242,14 @@
         "aboutAuthor": {
             "sectionLabel": "Meet the Author",
             "headline": "Hi, I'm Tonia Ojomo.",
-            "role": "PMHNP · Clinical Educator · Creator of Psych Mastery",
+            "role": "Psychiatric Nurse Practitioner · Clinical Educator · Creator of Psych Mastery",
             "bio": "I created Psychiatric Assessment Mastery because I remember what it felt like — walking into a clinical rotation with textbook knowledge but no practical script. The fear of saying the wrong thing to a vulnerable patient. The panic of staring at a blank SOAP note. I wrote this guide in simple, clear English so that every student — especially ESL learners and new graduates — can feel confident from day one.",
             "mission": "My mission is simple: make psychiatric education accessible, practical, and free of unnecessary jargon. Every template, phrase bank, and teaching tool in this workbook was built from real clinical experience.",
             "credentials": [
                 "Board-Certified PMHNP",
                 "Published Clinical Educator",
                 "ESL Curriculum Specialist",
-                "Creator of SOAP Architect™ AI Tool"
+                "Creator of SOAP Architect AI Tool"
             ],
             "ctaLabel": "Get the Mastery Bundle",
             "ctaHref": "#pricing",
@@ -270,11 +270,11 @@
     "soapArchitectPage": {
         "hero": {
             "badge": "Built for PMHNP Students & Psychiatric Clinicians",
-            "headline": "SOAP Architect™",
+            "headline": "SOAP Architect",
             "subheadline": "Turn Messy Notes into Structured Documentation.",
             "valueProp": "Paste your rough bullet points. Get a structured, safety-aware SOAP note instantly.",
             "authTrigger": "Create a free account to use this tool.",
-            "ctaLabel": "Access SOAP Architect™",
+            "ctaLabel": "Access SOAP Architect",
             "disclaimer": "No auto-diagnosis. Structured documentation support only."
         },
         "howItWorks": {
@@ -360,7 +360,7 @@
             "disclaimer": "No auto-diagnosis. Structural documentation support only."
         },
         "ctaBanner": {
-            "headline": "Get 1-Year Access to SOAP Architect™",
+            "headline": "Get 1-Year Access to SOAP Architect",
             "description": "Included free with the Mastery Bundle — along with the Physical Workbook, Digital PDF, Phrase Bank AI Tool, and the 5-Page Cheat Sheet.",
             "ctaLabel": "View the Mastery Bundle",
             "priceNote": "$17.99 · Digital Bundle"

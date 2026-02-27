@@ -315,12 +315,12 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                     <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-[#041f50] mb-5">
                         <Lock className="w-8 h-8" />
                     </div>
-                    <h3 className="font-extrabold text-2xl text-slate-900 mb-2">Unlock SOAP Architect™</h3>
+                    <h3 className="font-extrabold text-2xl text-slate-900 mb-2">Unlock SOAP Architect</h3>
                     <p className="text-slate-500 text-sm mb-1 max-w-sm">
                         Get <span className="font-bold text-[#041f50]">5 free structured psychiatric notes</span> — no credit card needed.
                     </p>
                     <p className="text-slate-400 text-xs mb-7 max-w-xs">
-                        Enter your email to access the tool and receive clinical tips from Psychiatric Assessment Mastery™.
+                        Enter your email to access the tool and receive clinical tips from Psychiatric Assessment Mastery.
                     </p>
                     <form onSubmit={handleSubscribe} className="w-full max-w-sm space-y-3">
                         <input
@@ -357,87 +357,85 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
             ) : (
                 /* ── Tool UI ── */
                 <>
-                <div className="flex items-center justify-between gap-4 mb-6">
-                    <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-700 dark:text-blue-400">
-                        <FileText className="w-6 h-6" />
+                    <div className="flex items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-700 dark:text-blue-400">
+                                <FileText className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-xl text-slate-900 dark:text-white">
+                                    SOAP Architect ✨
+                                </h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    Turn messy notes into a structured SOAP note.
+                                </p>
+                            </div>
+                        </div>
+                        {/* Usage Countdown */}
+                        <div className={`flex-shrink-0 text-center px-3 py-2 rounded-xl border ${usesLeft === 0
+                                ? "bg-red-50 border-red-200 text-red-600"
+                                : usesLeft <= 2
+                                    ? "bg-amber-50 border-amber-200 text-amber-700"
+                                    : "bg-blue-50 border-blue-200 text-blue-700"
+                            }`}>
+                            <div className="text-2xl font-extrabold leading-none">{usesLeft}</div>
+                            <div className="text-[10px] font-bold uppercase tracking-wider mt-0.5">/ {MAX_USES} left</div>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="font-bold text-xl text-slate-900 dark:text-white">
-                            SOAP Architect™ ✨
-                        </h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Turn messy notes into a structured SOAP note.
+
+                    {/* Usage progress bar */}
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 mb-5">
+                        <div
+                            className={`h-1.5 rounded-full transition-all duration-500 ${usesLeft === 0 ? "bg-red-400" : usesLeft <= 2 ? "bg-amber-400" : "bg-blue-500"
+                                }`}
+                            style={{ width: `${(usesLeft / MAX_USES) * 100}%` }}
+                        />
+                    </div>
+
+                    <div className="mb-4">
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                            Paste your rough notes:
+                        </label>
+                        <textarea
+                            value={soapInput}
+                            onChange={(e) => setSoapInput(e.target.value)}
+                            className="w-full p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 transition-colors bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
+                            rows={3}
+                            placeholder="e.g. 45yo male, sad for 2 weeks, not sleeping, denies SI, looks disheveled..."
+                        />
+                    </div>
+                    <button
+                        onClick={generateSoap}
+                        disabled={isSoapLoading || !soapInput.trim() || usesLeft <= 0}
+                        className="w-full bg-blue-600 dark:bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isSoapLoading ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" /> Structuring...
+                            </>
+                        ) : usesLeft <= 0 ? (
+                            <span>Usage Limit Reached — Upgrade to Continue</span>
+                        ) : (
+                            <>
+                                <span>Structure My Note</span> <Sparkles className="w-4 h-4" />
+                            </>
+                        )}
+                    </button>
+
+                    {usesLeft <= 0 && (
+                        <p className="text-center text-sm text-red-500 mt-3 font-semibold">
+                            You&apos;ve used all 5 free notes. <a href="/#pricing" className="underline hover:text-red-700">Get the Digital Edition</a> to keep going.
                         </p>
-                    </div>
-                </div>
-                {/* Usage Countdown */}
-                <div className={`flex-shrink-0 text-center px-3 py-2 rounded-xl border ${
-                    usesLeft === 0
-                        ? "bg-red-50 border-red-200 text-red-600"
-                        : usesLeft <= 2
-                        ? "bg-amber-50 border-amber-200 text-amber-700"
-                        : "bg-blue-50 border-blue-200 text-blue-700"
-                }`}>
-                    <div className="text-2xl font-extrabold leading-none">{usesLeft}</div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider mt-0.5">/ {MAX_USES} left</div>
-                </div>
-                </div>
+                    )}
 
-            {/* Usage progress bar */}
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mb-5">
-                <div
-                    className={`h-1.5 rounded-full transition-all duration-500 ${
-                        usesLeft === 0 ? "bg-red-400" : usesLeft <= 2 ? "bg-amber-400" : "bg-blue-500"
-                    }`}
-                    style={{ width: `${(usesLeft / MAX_USES) * 100}%` }}
-                />
-            </div>
-
-            <div className="mb-4">
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                    Paste your rough notes:
-                </label>
-                <textarea
-                    value={soapInput}
-                    onChange={(e) => setSoapInput(e.target.value)}
-                    className="w-full p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 transition-colors bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
-                    rows={3}
-                    placeholder="e.g. 45yo male, sad for 2 weeks, not sleeping, denies SI, looks disheveled..."
-                />
-            </div>
-            <button
-                onClick={generateSoap}
-                disabled={isSoapLoading || !soapInput.trim() || usesLeft <= 0}
-                className="w-full bg-blue-600 dark:bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {isSoapLoading ? (
-                    <>
-                        <Loader2 className="w-4 h-4 animate-spin" /> Structuring...
-                    </>
-                ) : usesLeft <= 0 ? (
-                    <span>Usage Limit Reached — Upgrade to Continue</span>
-                ) : (
-                    <>
-                        <span>Structure My Note</span> <Sparkles className="w-4 h-4" />
-                    </>
-                )}
-            </button>
-
-            {usesLeft <= 0 && (
-                <p className="text-center text-sm text-red-500 mt-3 font-semibold">
-                    You&apos;ve used all 5 free notes. <a href="/#pricing" className="underline hover:text-red-700">Get the Digital Edition</a> to keep going.
-                </p>
-            )}
-
-            <ResponseModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title="SOAP Architect 💬"
-                initialContent={soapOutput}
-                accentColor="blue"
-            />
-            </>
+                    <ResponseModal
+                        isOpen={isModalOpen}
+                        onClose={() => setIsModalOpen(false)}
+                        title="SOAP Architect 💬"
+                        initialContent={soapOutput}
+                        accentColor="blue"
+                    />
+                </>
             )}
         </motion.div>
     );

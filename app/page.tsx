@@ -349,7 +349,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SOAP Architect™ Teaser */}
+      {/* SOAP Architect Teaser */}
       <section id="soap-architect" className="py-20 bg-[#041f50] relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:24px_24px]" />
         <div className="max-w-5xl mx-auto px-4 relative z-10">
