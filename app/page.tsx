@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { createCheckout, getProducts } from "@/lib/shopify";
 import { SoapArchitect } from "@/components/GeminiTools";
@@ -30,8 +31,36 @@ import {
   X,
   Target,
   Tag,
+  Send,
+  User,
 } from "lucide-react";
 import { motion } from "framer-motion";
+
+// Import centralized content
+import siteContent from "@/content/site-content.json";
+
+const content = siteContent.homePage;
+const global = siteContent.global;
+
+// Icon map for pain points
+const painPointIcons: Record<string, typeof AlertCircle> = {
+  red: AlertCircle,
+  brand: CheckSquare,
+  slate: Flag,
+};
+
+const painPointIconStyles: Record<string, string> = {
+  red: "p-3 bg-red-100 text-red-600 rounded-lg",
+  brand: "p-3 bg-[#041f50]/10 text-[#041f50] rounded-lg",
+  slate: "p-3 bg-slate-200 text-slate-700 rounded-lg",
+};
+
+// Icon map for pricing CTA
+const pricingCtaIcons: Record<string, typeof Package> = {
+  package: Package,
+  cart: ShoppingCart,
+  download: Download,
+};
 
 export default function Home() {
   const [loadingProduct, setLoadingProduct] = useState<string | null>(null);
@@ -48,10 +77,7 @@ export default function Home() {
   useEffect(() => {
     async function loadProducts() {
       try {
-        console.log('Fetching products from Shopify...');
-        console.log('Domain:', process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN);
         const fetchedProducts = await getProducts();
-        console.log('Products fetched:', fetchedProducts.length);
 
         const newVariantIds: { [key: string]: string } = {};
         fetchedProducts.forEach((p: any) => {
@@ -64,9 +90,15 @@ export default function Home() {
           }
         });
         setVariantIds(newVariantIds);
-      } catch (error) {
-        console.error("Failed to fetch products", error);
-        console.error("Error details:", error instanceof Error ? error.message : String(error));
+      } catch (error: unknown) {
+        // Shopify SDK may throw non-Error objects — handle gracefully
+        const message =
+          error instanceof Error
+            ? error.message
+            : typeof error === "object" && error !== null
+              ? JSON.stringify(error)
+              : String(error);
+        console.warn("[Shopify] Could not load products:", message);
       }
     }
     loadProducts();
@@ -102,33 +134,33 @@ export default function Home() {
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-3">
               <div className="relative w-auto h-10 flex items-center">
-                {/* Changed logo to be rectangular/responsive */}
+                {/* New Psych Mastery brand logo */}
                 <Image
-                  src="/logo.png"
-                  alt="PsychAssessment Mastery Logo"
-                  width={180}
-                  height={50}
-                  className="object-contain h-10 w-auto"
+                  src="/logo.webp"
+                  alt="Psych Mastery Logo"
+                  width={240}
+                  height={70}
+                  className="object-contain h-14 w-auto"
+                  priority
                 />
               </div>
             </div>
             <div className="flex items-center gap-6">
               <div className="hidden md:flex space-x-8 items-center">
-                <a href="/" className="text-[#041f50] font-bold hover:text-[#052647] transition">
-                  Home
-                </a>
-                <a href="#problem" className="text-[#041f50] font-bold hover:text-[#052647] transition">
-                  The Gap
-                </a>
-                <a href="#soap-architect" className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1">
-                  SOAP Architect™ <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">New</span>
-                </a>
-                <a href="#pricing" className="text-[#041f50] font-bold hover:text-[#052647] transition">
-                  Pricing
-                </a>
-                <a href="#contact" className="text-[#041f50] font-bold hover:text-[#052647] transition">
-                  Contact
-                </a>
+                {global.navigation.map((nav) => (
+                  <a
+                    key={nav.label}
+                    href={nav.href}
+                    className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1"
+                  >
+                    {nav.label}
+                    {nav.badge && (
+                      <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                        {nav.badge}
+                      </span>
+                    )}
+                  </a>
+                ))}
               </div>
               {/* ThemeToggle Removed */}
               <button
@@ -152,41 +184,21 @@ export default function Home() {
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-slate-200 shadow-xl absolute w-full top-20 left-0">
             <div className="px-4 py-4 space-y-3">
-              <a
-                href="/"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
-              >
-                Home
-              </a>
-              <a
-                href="#problem"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
-              >
-                The Gap
-              </a>
-              <a
-                href="#soap-architect"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-2 text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
-              >
-                SOAP Architect™ <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">New</span>
-              </a>
-              <a
-                href="#pricing"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
-              >
-                Pricing
-              </a>
-              <a
-                href="#contact"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
-              >
-                Contact
-              </a>
+              {global.navigation.map((nav) => (
+                <a
+                  key={nav.label}
+                  href={nav.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-2 text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
+                >
+                  {nav.label}
+                  {nav.badge && (
+                    <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                      {nav.badge}
+                    </span>
+                  )}
+                </a>
+              ))}
               <button
                 onClick={() => {
                   document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
@@ -219,23 +231,22 @@ export default function Home() {
               className="text-center lg:text-left mb-12 lg:mb-0 relative z-30"
             >
               <div className="inline-flex items-center px-4 py-1.5 bg-[#041f50]/10 text-[#041f50] rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-[#041f50]/20">
-                <PenTool className="w-3 h-3 mr-2" /> Simple English · ESL Friendly
+                <PenTool className="w-3 h-3 mr-2" /> {content.hero.badge}
               </div>
               <h1 className="text-5xl lg:text-7xl font-extrabold leading-tight mb-6 text-slate-900 tracking-tight">
-                Pysch Assessment<br />
-                <span className="text-[#041f50]">the  Simple Guide.</span>
+                {content.hero.headline}<br />
+                <span className="text-[#041f50]">{content.hero.headlineAccent}</span>
               </h1>
               <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-lg mx-auto lg:mx-0">
-                Beginner-friendly mental health resources written in clear, plain English — ideal for nursing students, PMHNP learners, psych techs, and ESL users. The complete step-by-step guide for learning psychiatric assessment with confidence —
-even if you’re brand new.
+                {content.hero.subheadline}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <a href="#pricing" className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#052647] transition shadow-xl flex items-center justify-center gap-2">
-                  Get the Mastery Bundle →
+                <a href={content.hero.primaryCTA.href} className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#052647] transition shadow-xl flex items-center justify-center gap-2">
+                  {content.hero.primaryCTA.label}
                 </a>
-                <a href="#soap-architect" className="bg-white text-[#041f50] border-2 border-[#041f50] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#041f50] hover:text-white transition flex items-center justify-center shadow-sm gap-2">
-                  <SparklesIcon className="w-5 h-5" /> Try SOAP Architect™
+                <a href={content.hero.secondaryCTA.href} className="bg-white text-[#041f50] border-2 border-[#041f50] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#041f50] hover:text-white transition flex items-center justify-center shadow-sm gap-2">
+                  <SparklesIcon className="w-5 h-5" /> {content.hero.secondaryCTA.label}
                 </a>
               </div>
             </motion.div>
@@ -255,9 +266,9 @@ even if you’re brand new.
                   playsInline
                   className="absolute inset-0 w-full h-full object-cover bg-white"
                   style={{ objectPosition: 'center' }}
-                  poster="/pam-book-mockup.png" // Fallback
+                  poster="/pam-book-mockup.png"
                 >
-                  <source src="/HERO-splash.webm" type="video/webm" />
+                  <source src="/Updated-Mockup.webm" type="video/webm" />
                   Your browser does not support the video tag.
                 </video>
               </div>
@@ -273,24 +284,14 @@ even if you’re brand new.
       <section className="py-20 bg-slate-50 border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-12">
-            <span className="text-[#041f50] font-bold tracking-widest uppercase text-xs mb-3 block">Our Mission</span>
-            <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 mb-4">What We Do</h2>
+            <span className="text-[#041f50] font-bold tracking-widest uppercase text-xs mb-3 block">{content.whatWeDo.sectionLabel}</span>
+            <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 mb-4">{content.whatWeDo.headline}</h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Psychiatric Assessment Mastery™ creates clear, practical, and easy-to-understand psychiatric education tools.
+              {content.whatWeDo.subheadline}
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
-            {[
-              { label: "Mental Status Exams", icon: "🧠" },
-              { label: "SOAP Notes", icon: "📋" },
-              { label: "Psych Evaluations", icon: "🔍" },
-              { label: "Differential Diagnosis", icon: "⚕️" },
-              { label: "PMHNP Training", icon: "🎓" },
-              { label: "Case Studies", icon: "📚" },
-              { label: "Psych Med Cheat Sheets", icon: "💊" },
-              { label: "Documentation Phrases", icon: "✍️" },
-              { label: "Risk Assessment Tools", icon: "🛡️" },
-            ].map(({ label, icon }) => (
+            {content.whatWeDo.items.map(({ label, icon }) => (
               <div key={label} className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-5 py-4 shadow-sm">
                 <span className="text-xl">{icon}</span>
                 <span className="font-semibold text-slate-700">{label}</span>
@@ -298,7 +299,7 @@ even if you’re brand new.
             ))}
           </div>
           <p className="text-center text-slate-500 text-sm">
-            All written in simple, 12th-grade English so you learn faster and feel more confident in clinical settings.
+            {content.whatWeDo.footnote}
           </p>
         </div>
       </section>
@@ -320,40 +321,28 @@ even if you’re brand new.
               </div>
             </div>
             <div>
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">The "Textbook Gap" is Real.</h2>
-              <p className="text-base font-semibold text-[#041f50] mb-4">Simple English. 12th Grade Reading Level. ESL Friendly.</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">{content.problem.headline}</h2>
+              <p className="text-base font-semibold text-[#041f50] mb-4">{content.problem.subLabel}</p>
               <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                You know the theory. You've memorized the pharmacology. But when you walk into that exam room, do you freeze? We call it the "Textbook Gap".
+                {content.problem.description}
               </p>
 
               <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-red-100 text-red-600 rounded-lg">
-                    <AlertCircle className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-lg">Preceptor Red Flags</h3>
-                    <p className="text-slate-600">A guide to common mistakes preceptors hate (and how to avoid them).</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-[#041f50]/10 text-[#041f50] rounded-lg">
-                    <CheckSquare className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-lg">Phrase Banks</h3>
-                    <p className="text-slate-600">Exact scripts for trauma, substance use, and redirecting chatty patients.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-slate-200 text-slate-700 rounded-lg">
-                    <Flag className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-lg">Step-by-Step Teaching</h3>
-                    <p className="text-slate-600">"I break down complex concepts into bite-sized pieces."</p>
-                  </div>
-                </div>
+                {content.problem.painPoints.map((point) => {
+                  const IconComponent = painPointIcons[point.iconColor] || AlertCircle;
+                  const iconStyle = painPointIconStyles[point.iconColor] || painPointIconStyles.red;
+                  return (
+                    <div key={point.title} className="flex items-start gap-4">
+                      <div className={iconStyle}>
+                        <IconComponent className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-lg">{point.title}</h3>
+                        <p className="text-slate-600">{point.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -367,21 +356,16 @@ even if you’re brand new.
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 border border-white/20 text-blue-200 rounded-full text-xs font-bold tracking-widest uppercase mb-5">
-                <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase">New</span>
-                AI Documentation Tool
+                <span className="bg-amber-400 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase">{content.soapArchitectTeaser.badge ? "New" : ""}</span>
+                {content.soapArchitectTeaser.badge}
               </div>
-              <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-4 leading-tight">SOAP Architect™</h2>
-              <p className="text-blue-200 text-lg mb-3 font-semibold">Structured Psychiatric Documentation. Instantly Organized.</p>
+              <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-4 leading-tight">{content.soapArchitectTeaser.headline}</h2>
+              <p className="text-blue-200 text-lg mb-3 font-semibold">{content.soapArchitectTeaser.subheadline}</p>
               <p className="text-blue-300 mb-8 leading-relaxed">
-                Paste raw psychiatric notes. Generate a structured, safety-aware SOAP note using the Psychiatric Assessment Mastery™ framework.
+                {content.soapArchitectTeaser.valueProp}
               </p>
               <ul className="space-y-3 mb-8">
-                {[
-                  "Applies structured psychiatric SOAP format.",
-                  "Highlights commonly documented safety domains.",
-                  "Enhances clarity of MSE terminology.",
-                  "Preserves your clinician judgment and voice.",
-                ].map((item) => (
+                {content.soapArchitectTeaser.features.map((item) => (
                   <li key={item} className="flex items-start gap-3 text-blue-100">
                     <CheckCircle2 className="w-5 h-5 text-blue-300 flex-shrink-0 mt-0.5" />
                     <span className="text-sm">{item}</span>
@@ -390,28 +374,28 @@ even if you’re brand new.
               </ul>
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
-                  href="/soap-architect"
+                  href={content.soapArchitectTeaser.ctaHref}
                   className="inline-block bg-white text-[#041f50] px-8 py-3.5 rounded-xl font-bold hover:bg-blue-50 transition shadow-xl text-center"
                 >
-                  Access SOAP Architect™ →
+                  {content.soapArchitectTeaser.ctaLabel}
                 </a>
-                <span className="flex items-center text-blue-300 text-xs px-4">No auto-diagnosis. Structural support only.</span>
+                <span className="flex items-center text-blue-300 text-xs px-4">{content.soapArchitectTeaser.disclaimer}</span>
               </div>
             </div>
             <div className="hidden lg:block">
               {/* Before/After preview */}
               <div className="space-y-4">
                 <div className="bg-white/10 border border-white/20 rounded-2xl p-5 backdrop-blur-sm">
-                  <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">Input — Raw Notes</span>
-                  <p className="mt-2 text-blue-100 font-mono text-sm italic">&ldquo;45yo male. Sad 2 weeks. Poor sleep. Denies SI. Disheveled. Slow speech.&rdquo;</p>
+                  <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">{content.soapArchitectTeaser.demo.inputLabel}</span>
+                  <p className="mt-2 text-blue-100 font-mono text-sm italic">{content.soapArchitectTeaser.demo.inputText}</p>
                 </div>
                 <div className="text-center text-white/40 text-2xl">↓</div>
                 <div className="bg-white rounded-2xl p-5 shadow-xl">
-                  <span className="text-xs font-bold text-[#041f50] uppercase tracking-wider">Output — Structured SOAP</span>
+                  <span className="text-xs font-bold text-[#041f50] uppercase tracking-wider">{content.soapArchitectTeaser.demo.outputLabel}</span>
                   <div className="mt-2 text-slate-700 text-xs space-y-1.5">
-                    <p><strong className="text-[#041f50]">Subjective:</strong> 45-year-old male, 2-week depressed mood, insomnia, decreased appetite. Denies SI.</p>
-                    <p><strong className="text-[#041f50]">Objective (MSE):</strong> Disheveled. Speech slowed. Mood: &ldquo;Sad.&rdquo; Affect: Constricted.</p>
-                    <p><strong className="text-[#041f50]">Assessment:</strong> Depressive episode; safety denied; monitoring indicated.</p>
+                    <p><strong className="text-[#041f50]">Subjective:</strong> {content.soapArchitectTeaser.demo.outputSubjective}</p>
+                    <p><strong className="text-[#041f50]">Objective (MSE):</strong> {content.soapArchitectTeaser.demo.outputObjective}</p>
+                    <p><strong className="text-[#041f50]">Assessment:</strong> {content.soapArchitectTeaser.demo.outputAssessment}</p>
                   </div>
                 </div>
               </div>
@@ -425,31 +409,12 @@ even if you’re brand new.
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <span className="text-[#041f50] font-bold tracking-widest uppercase text-xs mb-3 block">Student Love</span>
-            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">Why Students Love Us</h2>
-            <p className="text-slate-600 text-lg">Built for real learning — simple, practical, and confidence-building.</p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">{content.solution.headline}</h2>
+            <p className="text-slate-600 text-lg">{content.solution.subheadline}</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-10">
-            {[
-              {
-                emoji: "💡",
-                title: "Clear",
-                desc: "We remove the jargon and make every psychiatric concept easy to understand. If we use a clinical word, we define it.",
-                tag: "Plain English",
-              },
-              {
-                emoji: "📋",
-                title: "Practical",
-                desc: "Our templates are copy-and-paste friendly, perfect for documentation. Every topic includes examples, scripts, and scenarios.",
-                tag: "Ready to Use",
-              },
-              {
-                emoji: "🌍",
-                title: "Beginner-Friendly",
-                desc: "Ideal for new nurses, NP students, and learners whose first language is not English. No slang. No complex metaphors.",
-                tag: "ESL Friendly",
-              },
-            ].map(({ emoji, title, desc, tag }) => (
+            {content.solution.features.map(({ emoji, title, description, tag }) => (
               <motion.div
                 whileHover={{ y: -5 }}
                 key={title}
@@ -458,7 +423,7 @@ even if you’re brand new.
                 <div className="text-5xl mb-5">{emoji}</div>
                 <div className="inline-block px-3 py-1 bg-[#041f50]/10 text-[#041f50] rounded-full text-xs font-bold mb-4 tracking-widest uppercase">{tag}</div>
                 <h3 className="font-extrabold text-2xl mb-4 text-slate-900">{title}</h3>
-                <p className="text-slate-500 leading-relaxed">{desc}</p>
+                <p className="text-slate-500 leading-relaxed">{description}</p>
               </motion.div>
             ))}
           </div>
@@ -468,9 +433,11 @@ even if you’re brand new.
             <Image src="/psych-cover.png" alt="Workbook Spread" fill className="object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/50 to-transparent flex items-center p-8 py-16 md:p-16">
               <div className="max-w-lg">
-                <h3 className="text-white text-3xl md:text-5xl font-extrabold mb-6 leading-tight">Stop Guessing.<br />Start Assessing.</h3>
-                <p className="text-slate-200 mb-8 text-lg">Join thousands of students who have mastered their clinical rotations with PAM.</p>
-                <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#052647] transition shadow-lg transform hover:-translate-y-1">Get Your Copy</button>
+                <h3 className="text-white text-3xl md:text-5xl font-extrabold mb-6 leading-tight">
+                  {content.visualBreak.headline}<br />{content.visualBreak.headlineAccent}
+                </h3>
+                <p className="text-slate-200 mb-8 text-lg">{content.visualBreak.description}</p>
+                <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="bg-[#041f50] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#052647] transition shadow-lg transform hover:-translate-y-1">{content.visualBreak.ctaLabel}</button>
               </div>
             </div>
           </div>
@@ -481,93 +448,70 @@ even if you’re brand new.
       <section id="pricing" className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900">Get Clinical Ready Today</h2>
-            <p className="text-slate-600 mt-4">Choose the format that fits your study style.</p>
+            <h2 className="text-4xl font-bold text-slate-900">{content.pricing.headline}</h2>
+            <p className="text-slate-600 mt-4">{content.pricing.subheadline}</p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-
-            {/* Bundle - Featured */}
-            <div className="lg:col-span-1 lg:scale-105 z-10 border-2 border-amber-500 rounded-2xl p-8 bg-white shadow-2xl relative flex flex-col">
-              <div className="absolute top-0 right-0 bg-amber-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl uppercase tracking-wider">Most Popular</div>
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold text-slate-900 mb-1">Mastery Bundle</h3>
-                <p className="text-sm text-slate-500">Physical + Digital + AI</p>
-              </div>
-              <div className="flex items-baseline mb-8">
-                <span className="text-5xl font-extrabold text-slate-900">$49.99</span>
-                <span className="ml-2 text-slate-400">USD</span>
-              </div>
-              <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>The Physical Workbook</strong> — shipped directly to you</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Digital PDF Edition</strong> — instant access on all devices</span></li>
-                <li className="flex items-start border border-amber-200 bg-amber-50 rounded-lg px-3 py-2"><CheckCircle2 className="text-amber-600 mr-2 w-5 h-5 flex-shrink-0 mt-0.5" /> <span className="text-slate-700 text-sm"><strong>1-Year Access to SOAP Architect™</strong> <span className="ml-1 text-amber-700 text-[10px] font-bold uppercase tracking-wider">New!</span></span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Script Doctor AI Tool</strong> — instant clinical scripts</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>5-Page Cheat Sheet</strong> (Lead Magnet, included free)</span></li>
-              </ul>
-              <button
-                onClick={() => handleBuy('BUNDLE')}
-                disabled={loadingProduct === 'BUNDLE'}
-                className="w-full bg-[#041f50] hover:bg-[#052647] text-white font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2 transform hover:-translate-y-1"
-              >
-                {loadingProduct === 'BUNDLE' ? <Loader2 className="animate-spin" /> : <Package />}
-                Get The Bundle
-              </button>
-            </div>
-
-            {/* Physical Workbook */}
-            <div className="border border-slate-200 rounded-2xl p-8 bg-white shadow-xl relative flex flex-col">
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Physical Workbook</h3>
-                <p className="text-sm text-slate-500">Paperback (Shipped)</p>
-              </div>
-              <div className="flex items-baseline mb-8">
-                <span className="text-4xl font-bold text-slate-900">$17.99</span>
-                <span className="ml-2 text-slate-400">USD</span>
-              </div>
-              <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Physical Paperback Workbook</strong> shipped right to your door</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Durable Write-In Worksheets</strong> for your daily clinical notes</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Quick-Reference Desk Guide</strong> for fast clinical decisions</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Free Standard Shipping</strong> included with your purchase</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Perfect for Offline Use</strong> during any clinical encounter</span></li>
-              </ul>
-              <button
-                onClick={() => handleBuy('PHYSICAL')}
-                disabled={loadingProduct === 'PHYSICAL'}
-                className="w-full bg-[#041f50] text-white font-bold py-4 rounded-xl hover:bg-[#052647] transition shadow-lg flex items-center justify-center gap-2"
-              >
-                {loadingProduct === 'PHYSICAL' ? <Loader2 className="animate-spin" /> : <ShoppingCart />}
-                Ship to Me
-              </button>
-            </div>
-
-            {/* Digital Edition */}
-            <div className="border border-slate-200 rounded-2xl p-8 bg-white shadow-xl relative flex flex-col">
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Digital Edition</h3>
-                <p className="text-sm text-slate-500">PDF + AI Tool Access</p>
-              </div>
-              <div className="flex items-baseline mb-8">
-                <span className="text-4xl font-bold text-slate-900">$17.99</span>
-                <span className="ml-2 text-slate-400">USD</span>
-              </div>
-              <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Instant PDF Download</strong> compatible with any device</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Complete Assessment Framework</strong> for quick reference</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>Fully Searchable &amp; Printable</strong> PDF for any device</span></li>
-                <li className="flex items-start border border-blue-200 bg-blue-50 rounded-lg px-3 py-2"><CheckCircle2 className="text-blue-600 mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>SOAP Architect™ AI Tool Access</strong> — 5 structured notes included</span></li>
-                <li className="flex items-start"><CheckCircle2 className="text-[#041f50] mr-2 w-5 h-5 flex-shrink-0" /> <span className="text-slate-700 text-sm"><strong>5-Page Cheat Sheet</strong> (Bonus, included free)</span></li>
-              </ul>
-              <button
-                onClick={() => handleBuy('DIGITAL')}
-                disabled={loadingProduct === 'DIGITAL'}
-                className="w-full bg-[#041f50] text-white font-bold py-4 rounded-xl hover:bg-[#052647] transition flex items-center justify-center gap-2 shadow-lg"
-              >
-                {loadingProduct === 'DIGITAL' ? <Loader2 className="animate-spin" /> : <Download />}
-                Download Now
-              </button>
-            </div>
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {content.pricing.cards.map((card) => {
+              const CtaIcon = pricingCtaIcons[card.ctaIcon] || Package;
+              const isFeatured = card.key === "DIGITAL";
+              return (
+                <div
+                  key={card.key}
+                  className={`${isFeatured ? "md:scale-105 z-10 border-2 border-[#041f50]" : "border border-slate-200"} rounded-2xl p-8 bg-white ${isFeatured ? "shadow-2xl" : "shadow-xl"} relative flex flex-col`}
+                >
+                  {card.badge && (
+                    <div className={`absolute top-0 right-0 ${isFeatured ? "bg-[#041f50]" : "bg-slate-600"} text-white text-xs font-bold px-4 py-1 rounded-bl-xl uppercase tracking-wider`}>
+                      {card.badge}
+                    </div>
+                  )}
+                  <div className="mb-6">
+                    <h3 className={`${isFeatured ? "text-2xl" : "text-xl"} font-bold text-slate-900 mb-1`}>{card.title}</h3>
+                    <p className="text-sm text-slate-500">{card.subtitle}</p>
+                  </div>
+                  <div className="flex items-baseline mb-8">
+                    <span className={`${isFeatured ? "text-5xl font-extrabold" : "text-4xl font-bold"} text-slate-900`}>{card.price}</span>
+                    <span className="ml-2 text-slate-400">USD</span>
+                  </div>
+                  <ul className="space-y-4 mb-8 flex-grow">
+                    {card.items.map((item: any, idx: number) => (
+                      <li
+                        key={idx}
+                        className={`flex items-start ${item.highlight ? "border border-amber-200 bg-amber-50 rounded-lg px-3 py-2" : ""}`}
+                      >
+                        <CheckCircle2 className={`${item.highlight ? "text-amber-600" : "text-[#041f50]"} mr-2 w-5 h-5 flex-shrink-0 ${item.highlight ? "mt-0.5" : ""}`} />
+                        <span className="text-slate-700 text-sm">
+                          <strong>{item.bold}</strong>
+                          {item.text.replace(item.bold, "") && ` ${item.text.slice(item.bold.length)}`}
+                          {item.highlightLabel && (
+                            <span className="ml-1 text-amber-700 text-[10px] font-bold uppercase tracking-wider">{item.highlightLabel}</span>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {card.ctaHref ? (
+                    <Link
+                      href={card.ctaHref}
+                      className={`w-full ${isFeatured ? "bg-[#041f50] hover:bg-[#052647] text-white" : "bg-white border-2 border-[#041f50] text-[#041f50] hover:bg-slate-50"} font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2 ${isFeatured ? "transform hover:-translate-y-1" : ""}`}
+                    >
+                      <CtaIcon />
+                      {card.ctaLabel}
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => handleBuy(card.key)}
+                      disabled={loadingProduct === card.key}
+                      className={`w-full ${isFeatured ? "bg-[#041f50] hover:bg-[#052647] text-white" : "bg-[#041f50] text-white hover:bg-[#052647]"} font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2 ${isFeatured ? "transform hover:-translate-y-1" : ""}`}
+                    >
+                      {loadingProduct === card.key ? <Loader2 className="animate-spin" /> : <CtaIcon />}
+                      {card.ctaLabel}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <LeadMagnet />
@@ -575,11 +519,87 @@ even if you’re brand new.
         </div>
       </section>
 
+      {/* About the Author + Feedback Section */}
+      <section id="about" className="py-32 bg-slate-50 relative overflow-hidden">
+        {/* Decorative deep blue background cut */}
+        <div className="absolute top-0 left-0 w-full h-[600px] bg-[#041f50] -skew-y-3 origin-top-left -translate-y-20 z-0" />
+
+        <div className="max-w-6xl mx-auto px-4 relative z-10">
+          <div className="text-center mb-16">
+            <span className="text-blue-200 font-bold tracking-widest uppercase text-xs mb-3 block">{content.aboutAuthor.sectionLabel}</span>
+            <h2 className="text-4xl lg:text-5xl font-extrabold text-white">{content.aboutAuthor.headline}</h2>
+            <p className="text-blue-100 font-semibold text-xl mt-4">{content.aboutAuthor.role}</p>
+          </div>
+
+          <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-[#041f50]/10 overflow-hidden flex flex-col lg:flex-row">
+            {/* Bio Column */}
+            <div className="lg:w-1/2 p-10 lg:p-16 flex flex-col">
+              <div className="flex items-center gap-6 mb-8">
+                <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg ring-2 ring-[#041f50]/10 flex-shrink-0">
+                  <Image
+                    src="/Tonia Ojomo, MSN, BSN, RN.png"
+                    alt="Tonia Ojomo — Author of Psychiatric Assessment Mastery"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-bold text-2xl text-slate-900 leading-tight block xl:hidden">Meet Tonia</h3>
+                  <h3 className="font-bold text-2xl text-slate-900 leading-tight hidden xl:block">Tonia Ojomo,<br /><span className="text-[#041f50] text-lg">MSN, BSN, RN</span></h3>
+                </div>
+              </div>
+
+              <p className="text-slate-600 text-lg leading-relaxed mb-6">
+                {content.aboutAuthor.bio}
+              </p>
+
+              <blockquote className="border-l-4 border-[#041f50] pl-5 py-1 text-slate-700 italic text-base mb-10 leading-relaxed bg-[#041f50]/5 rounded-r-xl">
+                {content.aboutAuthor.mission}
+              </blockquote>
+
+              {/* Credential pills */}
+              <div className="flex flex-wrap gap-2 mb-10 mt-auto">
+                {content.aboutAuthor.credentials.map((cred: string) => (
+                  <span key={cred} className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#041f50]/5 text-[#041f50] border border-[#041f50]/10 rounded-full text-xs font-bold tracking-wide">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> {cred}
+                  </span>
+                ))}
+              </div>
+
+              <a
+                href={content.aboutAuthor.ctaHref}
+                className="inline-flex items-center justify-center gap-2 bg-amber-400 text-amber-950 px-8 py-4 rounded-xl font-bold text-lg hover:bg-amber-300 transition shadow-lg transform hover:-translate-y-0.5"
+              >
+                {content.aboutAuthor.ctaLabel}
+              </a>
+            </div>
+
+            {/* Feedback Form Column */}
+            <div className="lg:w-1/2 p-10 lg:p-16 bg-slate-50 border-t lg:border-t-0 lg:border-l border-slate-100 relative">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-200 to-transparent lg:w-1 lg:h-full lg:bg-gradient-to-b" />
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-white text-[#041f50] rounded-xl shadow-sm border border-slate-100">
+                  <Send className="w-6 h-6" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900">{content.aboutAuthor.feedbackForm.headline}</h3>
+              </div>
+
+              <p className="text-slate-500 text-base mb-10 leading-relaxed max-w-sm">
+                {content.aboutAuthor.feedbackForm.description}
+              </p>
+
+              <FeedbackForm content={content.aboutAuthor.feedbackForm} />
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer id="contact" className="bg-slate-900 text-slate-400 py-16 text-center border-t border-slate-800 mt-auto">
-        <p className="text-slate-300 font-semibold mb-2">Psychiatric Assessment Mastery™</p>
-        <p className="mb-6">&copy; 2026 Tonia Ojomo. All Rights Reserved.</p>
+        <p className="text-slate-300 font-semibold mb-2">{global.brandName}</p>
+        <p className="mb-6">{global.footerCopyright}</p>
         <p className="max-w-2xl mx-auto text-xs leading-relaxed text-slate-600 px-6">
-          Educational content only. Not a substitute for clinical supervision or professional judgment. SOAP Architect™ provides structural support only and does not offer medical advice or diagnosis.
+          {global.footerDisclaimer}
         </p>
       </footer>
 
@@ -595,4 +615,73 @@ even if you’re brand new.
 
 function SparklesIcon({ className }: { className?: string }) {
   return <Sparkles className={className} />;
+}
+
+function FeedbackForm({ content }: { content: any }) {
+  const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("submitting");
+    setTimeout(() => {
+      setStatus("success");
+    }, 1000); // Simulate API call
+  };
+
+  if (status === "success") {
+    return (
+      <div className="bg-[#041f50]/10 border border-[#041f50]/20 rounded-xl p-8 text-center text-[#041f50]">
+        <CheckCircle2 className="w-12 h-12 mx-auto mb-4" />
+        <h4 className="font-bold text-xl mb-2">{content.successMessage}</h4>
+        <button
+          onClick={() => setStatus("idle")}
+          className="mt-6 text-sm font-bold underline hover:no-underline"
+        >
+          Send another message
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="grid sm:grid-cols-2 gap-5">
+        <div>
+          <label className="block text-sm font-bold text-slate-700 mb-2">{content.nameLabel}</label>
+          <input
+            required
+            type="text"
+            placeholder={content.namePlaceholder}
+            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#041f50] focus:border-transparent transition"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-bold text-slate-700 mb-2">{content.emailLabel}</label>
+          <input
+            required
+            type="email"
+            placeholder={content.emailPlaceholder}
+            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#041f50] focus:border-transparent transition"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-bold text-slate-700 mb-2">{content.messageLabel}</label>
+        <textarea
+          required
+          rows={4}
+          placeholder={content.messagePlaceholder}
+          className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#041f50] focus:border-transparent transition resize-none"
+        ></textarea>
+      </div>
+      <button
+        type="submit"
+        disabled={status === "submitting"}
+        className="w-full bg-[#041f50] text-white font-bold py-4 rounded-xl hover:bg-[#052647] transition flex items-center justify-center gap-2 shadow-sm disabled:opacity-70"
+      >
+        {status === "submitting" ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+        {content.submitLabel}
+      </button>
+    </form>
+  );
 }

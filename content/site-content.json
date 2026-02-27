@@ -1,0 +1,369 @@
+{
+    "meta": {
+        "version": "1.0",
+        "status": "Final Review Phase",
+        "targetAudience": "PMHNP Students, ESL/International Nurses, New Grads",
+        "readingLevel": "12th-grade level, Simple English, High Clarity"
+    },
+    "global": {
+        "brandName": "Psychiatric Assessment Mastery™",
+        "introductoryPrice": "$17.99",
+        "navigation": [
+            {
+                "label": "Home",
+                "href": "/"
+            },
+            {
+                "label": "The Gap",
+                "href": "#problem"
+            },
+            {
+                "label": "SOAP Architect™",
+                "href": "#soap-architect",
+                "badge": "Free"
+            },
+            {
+                "label": "Get the Book",
+                "href": "#pricing"
+            },
+            {
+                "label": "Contact",
+                "href": "#contact"
+            }
+        ],
+        "ctaButton": "Get the Digital Bundle ($17.99)",
+        "footerDisclaimer": "Educational content only. Not a substitute for clinical supervision or professional judgment. SOAP Architect™ provides structural support only and does not offer medical advice or diagnosis.",
+        "footerCopyright": "© 2026 Tonia Ojomo. All Rights Reserved."
+    },
+    "homePage": {
+        "hero": {
+            "badge": "Simple English · ESL Friendly",
+            "headline": "Don't Just Read About Assessment.",
+            "headlineAccent": "Practice It.",
+            "subheadline": "The practical, step-by-step clinical companion for PMHNP students and new graduates. Simple English. Zero fluff.",
+            "primaryCTA": {
+                "label": "Get the Digital Bundle ($17.99)",
+                "href": "#pricing"
+            },
+            "secondaryCTA": {
+                "label": "Try SOAP Architect™ (Free)",
+                "href": "#soap-architect"
+            }
+        },
+        "whatWeDo": {
+            "sectionLabel": "Our Mission",
+            "headline": "What We Do",
+            "subheadline": "Psychiatric Assessment Mastery™ creates clear, practical, and easy-to-understand psychiatric education tools.",
+            "items": [
+                {
+                    "label": "Mental Status Exams",
+                    "icon": "🧠"
+                },
+                {
+                    "label": "SOAP Notes",
+                    "icon": "📋"
+                },
+                {
+                    "label": "Psych Evaluations",
+                    "icon": "🔍"
+                },
+                {
+                    "label": "Differential Diagnosis",
+                    "icon": "⚕️"
+                },
+                {
+                    "label": "PMHNP Training",
+                    "icon": "🎓"
+                },
+                {
+                    "label": "Case Studies",
+                    "icon": "📚"
+                },
+                {
+                    "label": "Psych Med Cheat Sheets",
+                    "icon": "💊"
+                },
+                {
+                    "label": "Documentation Phrases",
+                    "icon": "✍️"
+                },
+                {
+                    "label": "Risk Assessment Tools",
+                    "icon": "🛡️"
+                }
+            ],
+            "footnote": "All written in simple, 12th-grade English so you learn faster and feel more confident in clinical settings."
+        },
+        "problem": {
+            "headline": "Why Clinical Rotations Feel So Hard",
+            "subLabel": "Simple English. 12th Grade Reading Level. ESL Friendly.",
+            "description": "You know the theory. You've memorized the pharmacology. But when you walk into that exam room, do you freeze? We call it the \"Textbook Gap\".",
+            "painPoints": [
+                {
+                    "title": "Imposter Syndrome",
+                    "description": "Feeling like you are 'faking it' because textbooks don't teach you exactly what to say to patients.",
+                    "iconColor": "red"
+                },
+                {
+                    "title": "Documentation Dread",
+                    "description": "Staring at a blank screen, worried your notes are too vague or will get flagged by your preceptor.",
+                    "iconColor": "brand"
+                },
+                {
+                    "title": "Safety Blindspots",
+                    "description": "The constant fear that you might miss a subtle sign of suicide risk or mania.",
+                    "iconColor": "slate"
+                }
+            ]
+        },
+        "solution": {
+            "headline": "Psychiatric Assessment Mastery",
+            "subheadline": "A guide written for real life, not just for exams.",
+            "features": [
+                {
+                    "emoji": "💡",
+                    "title": "Simple English",
+                    "description": "Written at a 12th-grade reading level. Perfect for ESL speakers. If we use a clinical word, we define it.",
+                    "tag": "Plain English"
+                },
+                {
+                    "emoji": "📋",
+                    "title": "Phrase Banks",
+                    "description": "Exact words to use for trauma, suicide risk, and difficult patients. Copy-and-paste friendly for documentation.",
+                    "tag": "Ready to Use"
+                },
+                {
+                    "emoji": "🌍",
+                    "title": "Preceptor Red Flags",
+                    "description": "A list of common mistakes that preceptors hate (and how to avoid them). No slang. No complex metaphors.",
+                    "tag": "ESL Friendly"
+                }
+            ]
+        },
+        "soapArchitectTeaser": {
+            "badge": "AI Documentation Tool",
+            "headline": "SOAP Architect™",
+            "subheadline": "Turn Messy Notes into Structured Documentation.",
+            "valueProp": "Paste your rough bullet points. Get a structured, safety-aware SOAP note instantly.",
+            "authTrigger": "Create a free account to use this tool.",
+            "features": [
+                "Applies structured psychiatric SOAP format.",
+                "Highlights commonly documented safety domains.",
+                "Enhances clarity of MSE terminology.",
+                "Preserves your clinician judgment and voice."
+            ],
+            "ctaLabel": "Access SOAP Architect™ →",
+            "ctaHref": "/soap-architect",
+            "disclaimer": "No auto-diagnosis. Structural support only.",
+            "demo": {
+                "inputLabel": "Input — Raw Notes",
+                "inputText": "\"45yo male. Sad 2 weeks. Poor sleep. Denies SI. Disheveled. Slow speech.\"",
+                "outputLabel": "Output — Structured SOAP",
+                "outputSubjective": "45-year-old male, 2-week depressed mood, insomnia, decreased appetite. Denies SI.",
+                "outputObjective": "Disheveled. Speech slowed. Mood: \"Sad.\" Affect: Constricted.",
+                "outputAssessment": "Depressive episode; safety denied; monitoring indicated."
+            }
+        },
+        "visualBreak": {
+            "headline": "Stop Guessing.",
+            "headlineAccent": "Start Assessing.",
+            "description": "Join thousands of students who have mastered their clinical rotations with PAM.",
+            "ctaLabel": "Get Your Copy"
+        },
+        "pricing": {
+            "headline": "Get Clinical Ready Today",
+            "subheadline": "Choose the format that fits your study style.",
+            "cards": [
+                {
+                    "key": "DIGITAL",
+                    "title": "Psychiatric Assessment Mastery (Digital Edition)",
+                    "subtitle": "PDF + AI Tool Access",
+                    "price": "$17.99",
+                    "badge": "Introductory Price",
+                    "items": [
+                        {
+                            "text": "The Full Digital Workbook: Searchable PDF with all templates and lessons",
+                            "bold": "The Full Digital Workbook",
+                            "highlight": false
+                        },
+                        {
+                            "text": "BONUS: The 5-Page Cheat Sheet (Included Free)",
+                            "bold": "BONUS: The 5-Page Cheat Sheet",
+                            "highlight": false
+                        },
+                        {
+                            "text": "Instant Access: Download immediately after purchase",
+                            "bold": "Instant Access",
+                            "highlight": false
+                        },
+                        {
+                            "text": "SOAP Architect™ AI Tool Access — 5 structured notes included",
+                            "bold": "SOAP Architect™ AI Tool Access",
+                            "highlight": true
+                        },
+                        {
+                            "text": "Fully Searchable & Printable PDF for any device",
+                            "bold": "Fully Searchable & Printable",
+                            "highlight": false
+                        }
+                    ],
+                    "ctaLabel": "Buy Now - Instant Download",
+                    "ctaIcon": "download"
+                },
+                {
+                    "key": "SOAP_ARCHITECT",
+                    "title": "AI Clinical Companion",
+                    "subtitle": "SOAP Architect™",
+                    "price": "FREE",
+                    "badge": "Digital Tool",
+                    "items": [
+                        {
+                            "text": "Access to SOAP Architect: Organize your notes instantly.",
+                            "bold": "Access to SOAP Architect",
+                            "highlight": true
+                        },
+                        {
+                            "text": "Secure Account: Save your preferences and templates.",
+                            "bold": "Secure Account",
+                            "highlight": false
+                        },
+                        {
+                            "text": "Weekly Tips: Get clinical tips from Tonia via email.",
+                            "bold": "Weekly Tips",
+                            "highlight": false
+                        }
+                    ],
+                    "ctaLabel": "Try SOAP Architect™",
+                    "ctaIcon": "package",
+                    "ctaHref": "/soap-architect"
+                }
+            ]
+        },
+        "aboutAuthor": {
+            "sectionLabel": "Meet the Author",
+            "headline": "Hi, I'm Tonia Ojomo.",
+            "role": "PMHNP · Clinical Educator · Creator of Psych Mastery",
+            "bio": "I created Psychiatric Assessment Mastery because I remember what it felt like — walking into a clinical rotation with textbook knowledge but no practical script. The fear of saying the wrong thing to a vulnerable patient. The panic of staring at a blank SOAP note. I wrote this guide in simple, clear English so that every student — especially ESL learners and new graduates — can feel confident from day one.",
+            "mission": "My mission is simple: make psychiatric education accessible, practical, and free of unnecessary jargon. Every template, phrase bank, and teaching tool in this workbook was built from real clinical experience.",
+            "credentials": [
+                "Board-Certified PMHNP",
+                "Published Clinical Educator",
+                "ESL Curriculum Specialist",
+                "Creator of SOAP Architect™ AI Tool"
+            ],
+            "ctaLabel": "Get the Mastery Bundle",
+            "ctaHref": "#pricing",
+            "feedbackForm": {
+                "headline": "Got Feedback? I'd Love to Hear From You.",
+                "description": "Whether it's a suggestion, a question, or just a kind word — your feedback helps me make this resource better for every student.",
+                "nameLabel": "Your Name",
+                "namePlaceholder": "e.g. Sarah Johnson",
+                "emailLabel": "Your Email",
+                "emailPlaceholder": "e.g. sarah@nursing.edu",
+                "messageLabel": "Your Message",
+                "messagePlaceholder": "Share your thoughts, feedback, or questions...",
+                "submitLabel": "Send Feedback",
+                "successMessage": "Thank you! Your feedback has been received. 💙"
+            }
+        }
+    },
+    "soapArchitectPage": {
+        "hero": {
+            "badge": "Built for PMHNP Students & Psychiatric Clinicians",
+            "headline": "SOAP Architect™",
+            "subheadline": "Turn Messy Notes into Structured Documentation.",
+            "valueProp": "Paste your rough bullet points. Get a structured, safety-aware SOAP note instantly.",
+            "authTrigger": "Create a free account to use this tool.",
+            "ctaLabel": "Access SOAP Architect™",
+            "disclaimer": "No auto-diagnosis. Structured documentation support only."
+        },
+        "howItWorks": {
+            "headline": "How It Works",
+            "steps": [
+                {
+                    "step": "1",
+                    "label": "Paste your rough notes",
+                    "desc": "Dictation or fragments — any format works."
+                },
+                {
+                    "step": "2",
+                    "label": "The system organizes your data",
+                    "desc": "Data is structured into the standard Psychiatric SOAP format."
+                },
+                {
+                    "step": "3",
+                    "label": "Review, refine, and put it in your chart",
+                    "desc": "Apply your clinical reasoning. The voice stays yours."
+                },
+                {
+                    "step": "4",
+                    "label": "Export into your EHR",
+                    "desc": "Clean, professional, ready-to-submit documentation."
+                }
+            ],
+            "disclaimerNote": "This is a documentation engine. It does not diagnose patients."
+        },
+        "problemBlock": {
+            "headline": "Why Documentation Breaks Down",
+            "items": [
+                "Notes are disorganized.",
+                "Safety domains are inconsistently addressed.",
+                "MSE language lacks precision.",
+                "Assessment logic is unclear."
+            ],
+            "blockquote": "The result? Documentation fatigue, weak clinical defensibility, and reduced confidence during preceptor review."
+        },
+        "whatItDoes": {
+            "headline": "Clinical Clarity, Automated.",
+            "features": [
+                "Applies structured psychiatric SOAP format.",
+                "Organizes subjective and objective data logically.",
+                "Highlights commonly documented safety domains.",
+                "Enhances clarity of MSE terminology.",
+                "Preserves your clinician judgment and voice."
+            ],
+            "importantNote": "This is a documentation structuring engine — not diagnostic automation."
+        },
+        "beforeAfterDemo": {
+            "headline": "See the Difference",
+            "input": {
+                "label": "Input — Raw Notes",
+                "text": "\"45-year-old male. Sad for 2 weeks. Poor sleep. Appetite is low. Denies SI. Disheveled. Slow speech.\""
+            },
+            "output": {
+                "label": "Output — Structured SOAP",
+                "subjective": "A 45-year-old male presents with a 2-week history of depressed mood, insomnia, and decreased appetite. Denies suicidal ideation.",
+                "objectiveMSE": [
+                    {
+                        "label": "Appearance",
+                        "value": "Disheveled"
+                    },
+                    {
+                        "label": "Speech",
+                        "value": "Slowed"
+                    },
+                    {
+                        "label": "Mood",
+                        "value": "\"Sad\""
+                    },
+                    {
+                        "label": "Affect",
+                        "value": "Constricted"
+                    }
+                ],
+                "assessment": "Symptoms consistent with depressive episode; safety risk currently denied; ongoing monitoring indicated."
+            }
+        },
+        "interactiveTool": {
+            "headline": "Try It Now",
+            "subheadline": "Paste your clinical notes and watch the structure emerge.",
+            "disclaimer": "No auto-diagnosis. Structural documentation support only."
+        },
+        "ctaBanner": {
+            "headline": "Get 1-Year Access to SOAP Architect™",
+            "description": "Included free with the Mastery Bundle — along with the Physical Workbook, Digital PDF, Phrase Bank AI Tool, and the 5-Page Cheat Sheet.",
+            "ctaLabel": "View the Mastery Bundle",
+            "priceNote": "$17.99 · Digital Bundle"
+        }
+    }
+}

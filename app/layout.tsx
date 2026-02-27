@@ -15,7 +15,20 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Psychiatric Assessment Mastery | Tonia Ojomo",
-  description: "The ultimate clinical companion for PMHNP students",
+  description: "The practical, step-by-step clinical companion for PMHNP students and new graduates. Simple English. Zero fluff.",
+  icons: {
+    icon: [
+      { url: "/favicon.webp?v=2", type: "image/webp" },
+      { url: "/favicon.webp?v=2" },
+    ],
+    shortcut: ["/favicon.webp?v=2"],
+    apple: "/favicon.webp?v=2",
+  },
+  openGraph: {
+    title: "Psychiatric Assessment Mastery | Tonia Ojomo",
+    description: "The practical, step-by-step clinical companion for PMHNP students and new graduates.",
+    images: ["/logo.webp"],
+  },
 };
 
 export default function RootLayout({
@@ -26,7 +39,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 text-slate-900`}
+        suppressHydrationWarning
       >
         <Providers>{children}</Providers>
       </body>
