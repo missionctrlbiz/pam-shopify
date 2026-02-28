@@ -253,7 +253,7 @@ export default function Home() {
 
             {/* Video Hero */}
             <div className="flex justify-center items-center relative z-20 py-8">
-              <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[3/4] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] border-[6px] border-white ring-1 ring-slate-200 bg-white transform rotate-[-2deg] hover:rotate-0 transition-transform duration-500">
+              <div className="relative w-full max-w-[560px] sm:max-w-[640px] aspect-[3/4] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] border-[6px] border-white ring-1 ring-slate-200 bg-white transform rotate-[-2deg] hover:rotate-0 transition-transform duration-500">
                 <video
                   suppressHydrationWarning
                   autoPlay
