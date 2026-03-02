@@ -32,12 +32,15 @@ export default function SoapArchitectPage() {
             <Link href="/" className="text-sm font-bold text-slate-500 tracking-widest uppercase hover:text-psych-navy transition">
               {global.brandName}
             </Link>
-            <Link
-              href="/#pricing"
-              className="bg-psych-navy text-white px-5 py-2 rounded-full text-sm font-bold hover:opacity-90 transition shadow-md"
-            >
-              Get the Bundle
-            </Link>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group inline-block">
+              <div className="absolute -inset-1 bg-gradient-psych rounded-full blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+              <Link
+                href="/#pricing"
+                className="relative inline-block bg-gradient-psych text-white px-5 py-2 rounded-full text-sm font-bold transition shadow-md"
+              >
+                Get the Bundle
+              </Link>
+            </motion.div>
           </div>
         </div>
       </nav>
@@ -62,21 +65,23 @@ export default function SoapArchitectPage() {
             <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
               {content.hero.valueProp}
             </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-full text-sm font-semibold mb-8 border border-slate-200">
-              {content.hero.authTrigger}
+            <div className="flex flex-col items-center gap-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-full text-sm font-semibold border border-slate-200">
+                {content.hero.authTrigger}
+              </div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group inline-block">
+                <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                <a
+                  href="#soap-tool"
+                  className="relative inline-block bg-gradient-psych text-white px-10 py-4 rounded-xl font-bold text-lg transition shadow-xl w-full"
+                >
+                  {content.hero.ctaLabel}
+                </a>
+                <p className="mt-4 text-sm text-slate-400 italic">
+                  {content.hero.disclaimer}
+                </p>
+              </motion.div>
             </div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group inline-block">
-              <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-              <a
-                href="#soap-tool"
-                className="relative inline-block bg-gradient-psych text-white px-10 py-4 rounded-xl font-bold text-lg transition shadow-xl w-full"
-              >
-                {content.hero.ctaLabel}
-              </a>
-              <p className="mt-4 text-sm text-slate-400 italic">
-                {content.hero.disclaimer}
-              </p>
-            </motion.div>
           </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-slate-50 to-transparent" />

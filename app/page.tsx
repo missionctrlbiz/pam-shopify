@@ -69,7 +69,7 @@ export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const PRODUCT_IDS = {
-    DIGITAL: "gid://shopify/Product/8121253003343",
+    DIGITAL: "gid://shopify/Product/8137108652111",
     PHYSICAL: "gid://shopify/Product/8094955569231",
     BUNDLE: "gid://shopify/Product/8121252020303",
   };
@@ -163,12 +163,15 @@ export default function Home() {
                 ))}
               </div>
               {/* ThemeToggle Removed */}
-              <button
-                onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-                className="hidden md:block bg-[#041f50] text-white px-6 py-2 rounded-full font-bold hover:bg-[#052647] transition shadow-lg transform hover:-translate-y-0.5"
-              >
-                Start Practicing
-              </button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group hidden md:inline-block">
+                <div className="absolute -inset-1 bg-gradient-psych rounded-full blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                <button
+                  onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="relative bg-gradient-psych text-white px-6 py-2 rounded-full font-bold transition shadow-lg"
+                >
+                  Start Practicing
+                </button>
+              </motion.div>
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -199,15 +202,18 @@ export default function Home() {
                   )}
                 </a>
               ))}
-              <button
-                onClick={() => {
-                  document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
-                  setIsMobileMenuOpen(false);
-                }}
-                className="w-full bg-[#041f50] text-white px-6 py-3.5 mt-2 rounded-xl font-bold hover:bg-[#052647] transition shadow-md"
-              >
-                Start Practicing
-              </button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="relative group w-full mt-2">
+                <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                <button
+                  onClick={() => {
+                    document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="relative w-full bg-gradient-psych text-white px-6 py-3.5 rounded-xl font-bold transition shadow-md"
+                >
+                  Start Practicing
+                </button>
+              </motion.div>
             </div>
           </div>
         )}
