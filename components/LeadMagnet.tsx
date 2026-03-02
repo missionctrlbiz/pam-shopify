@@ -113,7 +113,7 @@ export function LeadMagnet() {
 
                         {/* Download Placeholder — replace href with real PDF path once uploaded */}
                         <a
-                            href="/one-page-workflow-placeholder.pdf"
+                            href="/one-page-workflow.pdf"
                             download
                             className="inline-flex items-center gap-3 bg-yellow-400 text-[#041f50] font-bold px-10 py-4 rounded-xl hover:bg-yellow-300 transition shadow-xl transform hover:-translate-y-0.5 text-lg"
                         >

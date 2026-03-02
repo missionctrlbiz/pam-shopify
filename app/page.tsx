@@ -429,7 +429,7 @@ export default function Home() {
 
           {/* Visual Break */}
           <div className="my-16 md:my-24 relative min-h-[400px] md:h-96 rounded-3xl overflow-hidden shadow-2xl">
-            <Image src="/psych-cover.png" alt="Workbook Spread" fill className="object-cover" />
+            <Image src="/pam-book-mockup.png" alt="Workbook Spread" fill className="object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/50 to-transparent flex items-center p-8 py-16 md:p-16">
               <div className="max-w-lg">
                 <h3 className="text-white text-3xl md:text-5xl font-extrabold mb-6 leading-tight">

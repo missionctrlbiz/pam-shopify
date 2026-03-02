@@ -230,10 +230,10 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                         </div>
                         {/* Usage Countdown */}
                         <div className={`flex-shrink-0 text-center px-3 py-2 rounded-xl border ${usesLeft === 0
-                                ? "bg-red-50 border-red-200 text-red-600"
-                                : usesLeft <= 2
-                                    ? "bg-amber-50 border-amber-200 text-amber-700"
-                                    : "bg-blue-50 border-blue-200 text-blue-700"
+                            ? "bg-red-50 border-red-200 text-red-600"
+                            : usesLeft <= 2
+                                ? "bg-amber-50 border-amber-200 text-amber-700"
+                                : "bg-blue-50 border-blue-200 text-blue-700"
                             }`}>
                             <div className="text-2xl font-extrabold leading-none">{usesLeft}</div>
                             <div className="text-[10px] font-bold uppercase tracking-wider mt-0.5">/ {MAX_USES} left</div>
