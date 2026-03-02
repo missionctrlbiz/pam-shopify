@@ -1,7 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      // Redirect Shopify download links from custom domain to myshopify.com
+      // to avoid 404 when they're clicked in order confirmation emails.
+      // This is a temporary 307 redirect, so Shopify's download server serves the file directly
+      // without any further bouncing back to the custom domain.
+      {
+        source: "/a/downloads/:path*",
+        destination: "https://psychassessmentguide-com.myshopify.com/a/downloads/:path*",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
