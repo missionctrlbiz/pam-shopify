@@ -9,7 +9,7 @@ export function CheatSheetPage3() {
         <div className={`h-full flex flex-col ${redHat.className}`}>
             <header className="mb-4 border-b border-slate-200 pb-3 shrink-0">
                 <h1 className={`text-xl font-extrabold text-psych-navy tracking-tight ${inter.className}`}>
-                    Diagnostic Reasoning (fast differential engine)
+                    Diagnostic Reasoning
                 </h1>
             </header>
 

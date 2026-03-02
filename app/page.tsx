@@ -472,9 +472,15 @@ export default function Home() {
                     <h3 className={`${isFeatured ? "text-2xl" : "text-xl"} font-bold text-slate-900 mb-1`}>{card.title}</h3>
                     <p className="text-sm text-slate-500">{card.subtitle}</p>
                   </div>
-                  <div className="flex items-baseline mb-8">
+                  <div className="flex items-baseline gap-3 mb-8">
+                    {(card as any).regularPrice && (
+                      <span className="text-2xl text-slate-400 line-through font-medium">{(card as any).regularPrice}</span>
+                    )}
                     <span className={`${isFeatured ? "text-5xl font-extrabold" : "text-4xl font-bold"} text-slate-900`}>{card.price}</span>
-                    <span className="ml-2 text-slate-400">USD</span>
+                    <span className="ml-1 text-slate-400">USD</span>
+                    {isFeatured && (
+                      <span className="ml-1 text-xs font-bold text-green-600 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">Introductory</span>
+                    )}
                   </div>
                   <ul className="space-y-4 mb-8 flex-grow">
                     {card.items.map((item: any, idx: number) => (

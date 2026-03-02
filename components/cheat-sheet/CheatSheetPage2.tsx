@@ -9,7 +9,7 @@ export function CheatSheetPage2() {
         <div className={`h-full flex flex-col ${redHat.className}`}>
             <header className="mb-4 border-b border-slate-200 pb-3 shrink-0">
                 <h1 className={`text-xl font-extrabold text-psych-navy tracking-tight ${inter.className}`}>
-                    PAGE 2 — Mental Status Exam (MSE) Micro-Template
+                    Mental Status Exam (MSE) Quick Reference
                 </h1>
             </header>
 

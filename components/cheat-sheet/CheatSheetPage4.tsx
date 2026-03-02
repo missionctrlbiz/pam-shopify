@@ -9,7 +9,7 @@ export function CheatSheetPage4() {
     <div className={`h-full flex flex-col ${redHat.className}`}>
       <header className="mb-4 border-b border-slate-200 pb-3 shrink-0">
         <h1 className={`text-xl font-extrabold text-psych-navy tracking-tight ${inter.className}`}>
-          Risk Assessment (suicide, violence, grave disability)
+          Risk Assessment
         </h1>
       </header>
 

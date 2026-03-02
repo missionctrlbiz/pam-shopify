@@ -7,7 +7,7 @@
     },
     "global": {
         "brandName": "Psychiatric Assessment Mastery",
-        "introductoryPrice": "$17.99",
+        "introductoryPrice": "$69.99",
         "navigation": [
             {
                 "label": "Home",
@@ -31,7 +31,7 @@
                 "href": "#contact"
             }
         ],
-        "ctaButton": "Get the Digital Bundle ($17.99)",
+        "ctaButton": "Get the Digital Edition ($69.99)",
         "footerDisclaimer": "Educational content only. Not a substitute for clinical supervision or professional judgment. SOAP Architect provides structural support only and does not offer medical advice or diagnosis.",
         "footerCopyright": "© 2026 Tonia Ojomo. All Rights Reserved.",
         "cookieBanner": {
@@ -47,7 +47,7 @@
             "headlineAccent": "Practice It.",
             "subheadline": "The practical, step-by-step clinical companion for PMHNP students and new graduates. Simple English. Zero fluff.",
             "primaryCTA": {
-                "label": "Get the Digital Bundle ($17.99)",
+                "label": "Get the Digital Edition ($69.99)",
                 "href": "#pricing"
             },
             "secondaryCTA": {
@@ -146,7 +146,7 @@
             ]
         },
         "soapArchitectTeaser": {
-            "badge": "AI Documentation Tool",
+            "badge": "Clinical Documentation Tool",
             "headline": "SOAP Architect",
             "subheadline": "Turn Messy Notes into Structured Documentation.",
             "valueProp": "Paste your rough bullet points. Get a structured, safety-aware SOAP note instantly.",
@@ -182,8 +182,9 @@
                 {
                     "key": "DIGITAL",
                     "title": "Psychiatric Assessment Mastery (Digital Edition)",
-                    "subtitle": "PDF + AI Tool Access",
-                    "price": "$17.99",
+                    "subtitle": "PDF + Clinical Tools Included",
+                    "regularPrice": "$79.99",
+                    "price": "$69.99",
                     "badge": "Introductory Price",
                     "items": [
                         {
@@ -202,9 +203,16 @@
                             "highlight": false
                         },
                         {
-                            "text": "SOAP Architect AI Tool Access — Unlimited structured notes included",
-                            "bold": "SOAP Architect AI Tool Access",
-                            "highlight": true
+                            "text": "SOAP Architect Workflow Tool — Unlimited structured notes included",
+                            "bold": "SOAP Architect Workflow Tool",
+                            "highlight": true,
+                            "highlightLabel": "FREE BUNDLE"
+                        },
+                        {
+                            "text": "5-Page Cheat Sheet — Included Free with digital purchase",
+                            "bold": "5-Page Cheat Sheet",
+                            "highlight": true,
+                            "highlightLabel": "FREE BUNDLE"
                         },
                         {
                             "text": "Fully Searchable & Printable PDF for any device",
@@ -217,8 +225,8 @@
                 },
                 {
                     "key": "SOAP_ARCHITECT",
-                    "title": "AI Clinical Companion",
-                    "subtitle": "SOAP Architect",
+                    "title": "Clinical Workflow Companion",
+                    "subtitle": "SOAP Architect — Free Clinical Tool",
                     "price": "FREE",
                     "badge": "Digital Tool",
                     "items": [
@@ -238,7 +246,7 @@
                             "highlight": false
                         }
                     ],
-                    "ctaLabel": "Try SOAP Architect",
+                    "ctaLabel": "Create Free Account",
                     "ctaIcon": "package",
                     "ctaHref": "/soap-architect"
                 }
@@ -254,7 +262,7 @@
                 "Board-Certified PMHNP",
                 "Published Clinical Educator",
                 "ESL Curriculum Specialist",
-                "Creator of SOAP Architect AI Tool"
+                "Creator of SOAP Architect"
             ],
             "ctaLabel": "Get the Mastery Bundle",
             "ctaHref": "#pricing",
@@ -366,9 +374,9 @@
         },
         "ctaBanner": {
             "headline": "Get 1-Year Access to SOAP Architect",
-            "description": "Included free with the Mastery Bundle — along with the Physical Workbook, Digital PDF, Phrase Bank AI Tool, and the 5-Page Cheat Sheet.",
+            "description": "Included free with the Digital Edition — along with the SOAP Architect Workflow Tool and the 5-Page Cheat Sheet.",
             "ctaLabel": "View the Mastery Bundle",
-            "priceNote": "$17.99 · Digital Bundle"
+            "priceNote": "$69.99 · Digital Edition"
         }
     }
 }
