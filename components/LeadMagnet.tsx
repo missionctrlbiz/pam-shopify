@@ -111,11 +111,9 @@ export function LeadMagnet() {
                             Your free <strong className="text-white">One-Page Workflow</strong> is ready to download.
                         </p>
 
-                        {/* Direct Shopify Digital Downloads CDN link — static, not order-tied */}
                         <a
-                            href="https://delivery.shopifyapps.com/-/b69a47aa586a0c96/268886450f7297e1"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            href="/one-page-workflow.pdf"
+                            download
                             className="inline-flex items-center gap-3 bg-yellow-400 text-[#041f50] font-bold px-10 py-4 rounded-xl hover:bg-yellow-300 transition shadow-xl transform hover:-translate-y-0.5 text-lg"
                         >
                             <Download className="w-5 h-5" />
