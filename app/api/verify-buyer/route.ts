@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
         const normalizedEmail = email.trim().toLowerCase();
 
         // Check if the email exists in the Postgres database
-        const buyer = await prisma.buyer.findUnique({
+        const buyer = await (prisma as any).buyer.findUnique({
             where: { email: normalizedEmail }
         });
 

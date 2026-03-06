@@ -2,17 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { signOut } from "next-auth/react"
+import { MotionIcon } from "motion-icons-react"
+import { motion, AnimatePresence } from "framer-motion"
+import Image from "next/image"
 import {
     Users, Mail, BarChart3, LogOut, Plus,
     Trash2, Search, Activity, RefreshCw, Loader2
-} from "motion-icons-react"
-import { motion, AnimatePresence } from "framer-motion"
-import Image from "next/image"
+} from "lucide-react"
 
 interface DashboardStats {
     totalBuyers: number
     totalLeads: number
-    totalSoapNotes: number
     totalUsageEvents: number
 }
 
@@ -32,9 +32,10 @@ const BRAND = {
 
 const POLL_INTERVAL = 10000 // 10 seconds
 
-function AnimatedIcon({ icon: Icon, color, size = 20, animation = "pulse" }: { icon: any; color?: string; size?: number; animation?: string }) {
+function AnimatedIcon({ iconName, color, size = 20, animation = "pulse" }: { iconName: string; color?: string; size?: number; animation?: any }) {
     return (
-        <Icon
+        <MotionIcon
+            name={iconName as any}
             size={size}
             strokeWidth={2}
             style={color ? { color } : {}}
@@ -52,7 +53,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [isLoaded, setIsLoaded] = useState(false)
 
-    const [stats, setStats] = useState<DashboardStats>({ totalBuyers: 0, totalLeads: 0, totalSoapNotes: 0, totalUsageEvents: 0 })
+    const [stats, setStats] = useState<DashboardStats>({ totalBuyers: 0, totalLeads: 0, totalUsageEvents: 0 })
     const [buyers, setBuyers] = useState<BuyerRow[]>([])
     const [leads, setLeads] = useState<LeadRow[]>([])
 
@@ -116,17 +117,17 @@ export function AdminDashboardClient({ session }: { session: any }) {
         } catch { /* silently fail */ }
     }
 
-    const tabs: { key: Tab; label: string; icon: any }[] = [
-        { key: "overview", label: "Overview", icon: BarChart3 },
-        { key: "buyers", label: "Buyers", icon: Users },
-        { key: "leads", label: "Leads", icon: Mail },
-        { key: "analytics", label: "Analytics", icon: Activity },
+    const tabs: { key: Tab; label: string; icon: any; iconName: string }[] = [
+        { key: "overview", label: "Overview", icon: BarChart3, iconName: "BarChart3" },
+        { key: "buyers", label: "Buyers", icon: Users, iconName: "Users" },
+        { key: "leads", label: "Leads", icon: Mail, iconName: "Mail" },
+        { key: "analytics", label: "Analytics", icon: Activity, iconName: "Activity" },
     ]
 
     const statCards = [
-        { label: "Verified Buyers", value: stats.totalBuyers, icon: Users, color: BRAND.red },
-        { label: "Leads Captured", value: stats.totalLeads, icon: Mail, color: BRAND.pink },
-        { label: "Usage Events", value: stats.totalUsageEvents, icon: Activity, color: BRAND.purple },
+        { label: "Verified Buyers", value: stats.totalBuyers, iconName: "Users", color: BRAND.red },
+        { label: "Leads Captured", value: stats.totalLeads, iconName: "Mail", color: BRAND.pink },
+        { label: "Usage Events", value: stats.totalUsageEvents, iconName: "Activity", color: BRAND.purple },
     ]
 
     const filteredBuyers = buyers.filter(b => b.email.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -200,7 +201,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                     />
                                 )}
                                 <span className="relative z-10 flex items-center gap-2">
-                                    <AnimatedIcon icon={tab.icon} size={16} />
+                                    <AnimatedIcon iconName={tab.iconName} size={16} />
                                     {tab.label}
                                 </span>
                             </motion.button>
@@ -226,7 +227,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                         <div className="relative z-10">
                                             <div className="flex items-center justify-between mb-4">
                                                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${s.color}15` }}>
-                                                    <AnimatedIcon icon={s.icon} color={s.color} size={20} />
+                                                    <AnimatedIcon iconName={s.iconName} color={s.color} size={20} />
                                                 </div>
                                             </div>
                                             <motion.p
@@ -247,9 +248,9 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                 <h3 className="text-base font-semibold text-white mb-5">Quick Actions</h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     {[
-                                        { tab: "buyers" as Tab, icon: Plus, label: "Add Buyer", desc: "Whitelist a new email", color: BRAND.red },
-                                        { tab: "leads" as Tab, icon: Mail, label: "View Leads", desc: "Browse captured emails", color: BRAND.pink },
-                                        { tab: "analytics" as Tab, icon: Activity, label: "Analytics", desc: "Track platform usage", color: BRAND.purple },
+                                        { tab: "buyers" as Tab, iconName: "Plus", icon: Plus, label: "Add Buyer", desc: "Whitelist a new email", color: BRAND.red },
+                                        { tab: "leads" as Tab, iconName: "Mail", icon: Mail, label: "View Leads", desc: "Browse captured emails", color: BRAND.pink },
+                                        { tab: "analytics" as Tab, iconName: "Activity", icon: Activity, label: "Analytics", desc: "Track platform usage", color: BRAND.purple },
                                     ].map(action => (
                                         <motion.button
                                             key={action.tab}
@@ -259,7 +260,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                             className="p-5 border border-white/[0.06] hover:border-white/[0.12] rounded-2xl text-left transition-all group"
                                             style={{ background: "rgba(255,255,255,0.01)" }}
                                         >
-                                            <AnimatedIcon icon={action.icon} color={action.color} size={22} />
+                                            <AnimatedIcon iconName={action.iconName} color={action.color} size={22} animation="bounce" />
                                             <p className="text-white text-sm font-semibold mt-3">{action.label}</p>
                                             <p className="text-white/25 text-xs mt-0.5">{action.desc}</p>
                                         </motion.button>
@@ -291,7 +292,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                         className="px-6 py-2.5 text-white text-sm font-semibold rounded-xl transition disabled:opacity-50 flex items-center gap-2"
                                         style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
                                     >
-                                        <AnimatedIcon icon={Plus} size={16} />
+                                        <AnimatedIcon iconName="Plus" size={16} animation="draw" />
                                         {addingBuyer ? "Adding..." : "Add"}
                                     </motion.button>
                                 </form>
@@ -362,7 +363,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                 <div className="space-y-1.5">
                                     {leads.length === 0 ? (
                                         <div className="text-center py-12">
-                                            <AnimatedIcon icon={Mail} color={BRAND.pink} size={32} />
+                                            <AnimatedIcon iconName="Mail" color={BRAND.pink} size={32} />
                                             <p className="text-white/20 text-sm mt-3">No leads captured yet.</p>
                                         </div>
                                     ) : (
