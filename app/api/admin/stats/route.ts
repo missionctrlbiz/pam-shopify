@@ -9,30 +9,19 @@ export async function GET() {
     }
 
     try {
-        const [totalBuyers, totalLeads, totalSoapNotes, totalUsageEvents, recentBuyers, recentLeads, recentSoapNotes] =
+        const [totalBuyers, totalLeads, totalUsageEvents, recentBuyers, recentLeads] =
             await Promise.all([
                 prisma.buyer.count(),
                 prisma.lead.count(),
-                prisma.soapHistory.count(),
                 prisma.usageEvent.count(),
                 prisma.buyer.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
                 prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
-                prisma.soapHistory.findMany({
-                    orderBy: { createdAt: "desc" },
-                    take: 20,
-                    include: { user: { select: { email: true, name: true } } },
-                }),
             ])
 
         return NextResponse.json({
-            stats: { totalBuyers, totalLeads, totalSoapNotes, totalUsageEvents },
+            stats: { totalBuyers, totalLeads, totalUsageEvents },
             recentBuyers: recentBuyers.map(b => ({ ...b, createdAt: b.createdAt.toISOString() })),
             recentLeads: recentLeads.map(l => ({ ...l, createdAt: l.createdAt.toISOString() })),
-            recentSoapNotes: recentSoapNotes.map(s => ({
-                ...s,
-                createdAt: s.createdAt.toISOString(),
-                user: s.user ? { email: s.user.email, name: s.user.name } : null,
-            })),
         })
     } catch (error) {
         console.error("[Admin Stats] Error:", error)

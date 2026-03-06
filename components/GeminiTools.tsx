@@ -12,7 +12,7 @@ export function SoapArchitect() {
     const [isSoapLoading, setIsSoapLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const MAX_USES = 5;
+    const MAX_USES = 2;
     const STORAGE_KEY = "pam_soap_uses";
     const SUBSCRIBE_KEY = "pam_soap_subscribed";
     const UNLOCKED_KEY = "pam_soap_unlocked";
@@ -214,7 +214,7 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                     </div>
                     <h3 className="font-extrabold text-2xl text-slate-900 mb-2">Unlock SOAP Architect</h3>
                     <p className="text-slate-500 text-sm mb-1 max-w-sm">
-                        Get <span className="font-bold text-[#041f50]">5 free structured psychiatric notes</span> — no credit card needed.
+                        Get <span className="font-bold text-[#041f50]">2 free structured psychiatric notes</span> — no credit card needed.
                     </p>
                     <p className="text-slate-400 text-xs mb-7 max-w-xs">
                         Enter your email to access the tool and receive clinical tips from Psychiatric Assessment Mastery.
@@ -248,7 +248,7 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                         </button>
                     </form>
                     <p className="text-[10px] text-slate-400 mt-4 max-w-xs">
-                        No spam. You can unsubscribe at any time. Access limited to 5 trial uses.
+                        No spam. You can unsubscribe at any time. Access limited to 2 trial uses.
                     </p>
                 </div>
             ) : (
@@ -330,7 +330,7 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
 
                     {!isUnlocked && usesLeft <= 0 && (
                         <p className="text-center text-sm text-red-500 mt-3 font-semibold">
-                            You&apos;ve used all 5 free notes. <a href="/#pricing" className="underline hover:text-red-700">Get the Digital Edition</a> to keep going.
+                            You&apos;ve used all 2 free notes. <a href="/#pricing" className="underline hover:text-red-700">Get the Digital Edition</a> to keep going.
                         </p>
                     )}
 
