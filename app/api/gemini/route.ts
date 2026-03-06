@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
 // Simple in-memory cache to prevent identical prompts from consuming the API key
 const responseCache = new Map<string, string>();
@@ -72,6 +73,18 @@ export async function POST(req: Request) {
             if (firstKey) responseCache.delete(firstKey);
         }
         responseCache.set(cacheKey, text);
+
+        // Track usage event
+        try {
+            await prisma.usageEvent.create({
+                data: {
+                    action: "soap_generate",
+                    metadata: JSON.stringify({ promptLength: prompt.length, responseLength: text.length, ip }),
+                },
+            });
+        } catch (trackError) {
+            console.error("[Usage Tracking] Error:", trackError);
+        }
 
         return NextResponse.json({ text });
     } catch (error) {

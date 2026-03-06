@@ -489,12 +489,12 @@ export default function Home() {
                   </div>
 
                   <div className="mb-8 flex flex-col items-center w-full">
-                    {card.ctaHref ? (
+                    {(card as any).ctaHref ? (
                       <>
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={isFeatured ? "relative group w-full" : "w-full"}>
                           {isFeatured && <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>}
                           <Link
-                            href={card.ctaHref}
+                            href={(card as any).ctaHref}
                             className={`relative w-full ${isFeatured ? "bg-gradient-psych text-white shadow-xl shadow-psych-purple/20" : "bg-white border-2 border-psych-navy text-psych-navy hover:bg-slate-50"} font-bold py-4 rounded-xl transition flex items-center justify-center gap-2`}
                           >
                             <CtaIcon />
@@ -502,7 +502,7 @@ export default function Home() {
                           </Link>
                         </motion.div>
                         {(card as any).smallLink && (
-                          <Link href={card.ctaHref} className="mt-4 text-sm text-slate-500 underline decoration-slate-300 font-semibold hover:text-psych-purple transition">
+                          <Link href={(card as any).ctaHref} className="mt-4 text-sm text-slate-500 underline decoration-slate-300 font-semibold hover:text-psych-purple transition">
                             {(card as any).smallLink}
                           </Link>
                         )}
@@ -629,12 +629,13 @@ export default function Home() {
         </div>
       </section>
 
-      <footer id="contact" className="bg-slate-900 text-slate-400 py-16 text-center border-t border-slate-800 mt-auto">
+      <footer id="contact" className="bg-slate-900 text-slate-400 py-16 text-center border-t border-slate-800 mt-auto relative">
         <p className="text-slate-300 font-semibold mb-2">{global.brandName}</p>
         <p className="mb-6">{global.footerCopyright}</p>
         <p className="max-w-2xl mx-auto text-xs leading-relaxed text-slate-600 px-6">
           {global.footerDisclaimer}
         </p>
+        <Link href="/admin/login" className="absolute bottom-4 right-6 text-slate-700 hover:text-slate-500 text-[10px] transition">Admin</Link>
       </footer>
 
       {/* PDF Preview Modal */}

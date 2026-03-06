@@ -70,7 +70,7 @@ export function LeadMagnet() {
                                 onChange={(e) => { setEmail(e.target.value); setError(""); }}
                                 placeholder="Enter your best email..."
                                 required
-                                className="flex-grow px-6 py-4 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-400 shadow-md text-base"
+                                className="flex-grow px-6 py-4 rounded-xl text-white bg-white/10 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-400 shadow-md text-base"
                             />
                             <button
                                 type="submit"

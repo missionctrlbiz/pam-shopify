@@ -15,12 +15,18 @@ export function SoapArchitect() {
     const MAX_USES = 5;
     const STORAGE_KEY = "pam_soap_uses";
     const SUBSCRIBE_KEY = "pam_soap_subscribed";
+    const UNLOCKED_KEY = "pam_soap_unlocked";
 
     const [usesLeft, setUsesLeft] = useState<number>(MAX_USES);
     const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
     const [subEmail, setSubEmail] = useState("");
     const [subName, setSubName] = useState("");
     const [subError, setSubError] = useState("");
+
+    const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
+    const [unlockEmail, setUnlockEmail] = useState("");
+    const [isUnlocking, setIsUnlocking] = useState(false);
+    const [unlockError, setUnlockError] = useState("");
 
     useEffect(() => {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -30,6 +36,7 @@ export function SoapArchitect() {
             localStorage.setItem(STORAGE_KEY, String(MAX_USES));
         }
         setIsSubscribed(localStorage.getItem(SUBSCRIBE_KEY) === "true");
+        setIsUnlocked(localStorage.getItem(UNLOCKED_KEY) === "true");
     }, []);
 
     function handleSubscribe(e: React.FormEvent) {
@@ -44,13 +51,42 @@ export function SoapArchitect() {
         setSubError("");
     }
 
+    async function handleUnlock(e: React.FormEvent) {
+        e.preventDefault();
+        setUnlockError("");
+        if (!unlockEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(unlockEmail)) {
+            setUnlockError("Please enter a valid email address.");
+            return;
+        }
+        setIsUnlocking(true);
+        try {
+            const res = await fetch("/api/verify-buyer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: unlockEmail })
+            });
+            const data = await res.json();
+            if (data.verified) {
+                localStorage.setItem(UNLOCKED_KEY, "true");
+                setIsUnlocked(true);
+                setUnlockError("");
+            } else {
+                setUnlockError("Email not found in our purchase list. Check your spelling or grab the Digital Edition below!");
+            }
+        } catch (error) {
+            setUnlockError("Verification failed. Please try again later.");
+        } finally {
+            setIsUnlocking(false);
+        }
+    }
+
     const systemPrompt = `You are a clinical preceptor helping students structure their psychiatric notes.
 You format rough notes into standard Psychiatric SOAP Note structure with clear sections.
 Provide professional, educational guidance with clinical reasoning.`;
 
     async function generateSoap() {
         if (!soapInput.trim()) return;
-        if (usesLeft <= 0) return;
+        if (!isUnlocked && usesLeft <= 0) return;
         setIsSoapLoading(true);
         try {
             const currentDate = new Date().toLocaleDateString('en-US', {
@@ -143,10 +179,14 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
             }
 
             setSoapOutput(cleanedText.trim());
-            // Decrement usage count on success
-            const newUses = Math.max(0, usesLeft - 1);
-            setUsesLeft(newUses);
-            localStorage.setItem(STORAGE_KEY, String(newUses));
+
+            // Decrement usage count on success ONLY if not unlocked
+            if (!isUnlocked) {
+                const newUses = Math.max(0, usesLeft - 1);
+                setUsesLeft(newUses);
+                localStorage.setItem(STORAGE_KEY, String(newUses));
+            }
+
             setIsModalOpen(true);
         } catch (error) {
             console.error("Error generating SOAP note:", error);
@@ -229,25 +269,34 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                             </div>
                         </div>
                         {/* Usage Countdown */}
-                        <div className={`flex-shrink-0 text-center px-3 py-2 rounded-xl border ${usesLeft === 0
-                            ? "bg-red-50 border-red-200 text-red-600"
-                            : usesLeft <= 2
-                                ? "bg-amber-50 border-amber-200 text-amber-700"
-                                : "bg-blue-50 border-blue-200 text-blue-700"
-                            }`}>
-                            <div className="text-2xl font-extrabold leading-none">{usesLeft}</div>
-                            <div className="text-[10px] font-bold uppercase tracking-wider mt-0.5">/ {MAX_USES} left</div>
-                        </div>
+                        {isUnlocked ? (
+                            <div className="flex-shrink-0 text-center px-3 py-2 rounded-xl border bg-gradient-psych text-white shadow-md">
+                                <div className="text-2xl font-extrabold leading-none">∞</div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider mt-0.5">Unlocked</div>
+                            </div>
+                        ) : (
+                            <div className={`flex-shrink-0 text-center px-3 py-2 rounded-xl border ${usesLeft === 0
+                                ? "bg-red-50 border-red-200 text-red-600"
+                                : usesLeft <= 2
+                                    ? "bg-amber-50 border-amber-200 text-amber-700"
+                                    : "bg-blue-50 border-blue-200 text-blue-700"
+                                }`}>
+                                <div className="text-2xl font-extrabold leading-none">{usesLeft}</div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider mt-0.5">/ {MAX_USES} left</div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Usage progress bar */}
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 mb-5">
-                        <div
-                            className={`h-1.5 rounded-full transition-all duration-500 ${usesLeft === 0 ? "bg-red-400" : usesLeft <= 2 ? "bg-amber-400" : "bg-blue-500"
-                                }`}
-                            style={{ width: `${(usesLeft / MAX_USES) * 100}%` }}
-                        />
-                    </div>
+                    {!isUnlocked && (
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 mb-5">
+                            <div
+                                className={`h-1.5 rounded-full transition-all duration-500 ${usesLeft === 0 ? "bg-red-400" : usesLeft <= 2 ? "bg-amber-400" : "bg-blue-500"
+                                    }`}
+                                style={{ width: `${(usesLeft / MAX_USES) * 100}%` }}
+                            />
+                        </div>
+                    )}
 
                     <div className="mb-4">
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
@@ -263,14 +312,14 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                     </div>
                     <button
                         onClick={generateSoap}
-                        disabled={isSoapLoading || !soapInput.trim() || usesLeft <= 0}
+                        disabled={isSoapLoading || !soapInput.trim() || (!isUnlocked && usesLeft <= 0)}
                         className="w-full bg-blue-600 dark:bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSoapLoading ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" /> Structuring...
                             </>
-                        ) : usesLeft <= 0 ? (
+                        ) : (!isUnlocked && usesLeft <= 0) ? (
                             <span>Usage Limit Reached — Upgrade to Continue</span>
                         ) : (
                             <>
@@ -279,10 +328,34 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                         )}
                     </button>
 
-                    {usesLeft <= 0 && (
+                    {!isUnlocked && usesLeft <= 0 && (
                         <p className="text-center text-sm text-red-500 mt-3 font-semibold">
                             You&apos;ve used all 5 free notes. <a href="/#pricing" className="underline hover:text-red-700">Get the Digital Edition</a> to keep going.
                         </p>
+                    )}
+
+                    {!isUnlocked && (
+                        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3 text-center">Already purchased the bundle?</p>
+                            <form onSubmit={handleUnlock} className="flex gap-2 max-w-sm mx-auto">
+                                <input
+                                    type="email"
+                                    value={unlockEmail}
+                                    onChange={(e) => { setUnlockEmail(e.target.value); setUnlockError(""); }}
+                                    placeholder="Enter your purchase email"
+                                    required
+                                    className="flex-1 px-4 py-2 text-sm border-2 border-slate-200 dark:border-slate-700 bg-transparent rounded-lg focus:outline-none focus:border-blue-500 transition text-slate-900 dark:text-white"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isUnlocking}
+                                    className="bg-[#041f50] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#052d6e] transition shrink-0 disabled:opacity-50"
+                                >
+                                    {isUnlocking ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unlock"}
+                                </button>
+                            </form>
+                            {unlockError && <p className="text-center text-xs text-red-500 mt-2">{unlockError}</p>}
+                        </div>
                     )}
 
                     <ResponseModal

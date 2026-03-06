@@ -234,12 +234,13 @@ export default function SoapArchitectPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-12 text-center border-t border-slate-800 mt-auto">
+      <footer className="bg-slate-900 text-slate-400 py-12 text-center border-t border-slate-800 mt-auto relative">
         <p className="text-slate-300 font-semibold mb-2">{global.brandName}</p>
         <p className="mb-4">{global.footerCopyright}</p>
         <p className="max-w-2xl mx-auto text-xs leading-relaxed text-slate-600 px-6">
           {global.footerDisclaimer}
         </p>
+        <Link href="/admin/login" className="absolute bottom-4 right-6 text-slate-700 hover:text-slate-500 text-[10px] transition">Admin</Link>
       </footer>
 
     </div>
