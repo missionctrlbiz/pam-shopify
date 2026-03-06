@@ -470,7 +470,7 @@ export default function Home() {
                   className={`${isFeatured ? "md:scale-105 z-10 border-2 border-psych-purple" : "border border-slate-200"} rounded-2xl p-8 bg-white ${isFeatured ? "shadow-2xl shadow-psych-purple/10" : "shadow-xl"} relative flex flex-col`}
                 >
                   {card.badge && (
-                    <div className={`absolute top-0 right-0 ${isFeatured ? "bg-gradient-psych" : "bg-slate-600"} text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl uppercase tracking-wider`}>
+                    <div className={`absolute top-0 right-0 ${isFeatured ? "bg-gradient-psych" : "bg-slate-600"} text-white text-xs font-bold px-4 py-1.5 rounded-xl uppercase tracking-wider`}>
                       {card.badge}
                     </div>
                   )}
@@ -478,17 +478,51 @@ export default function Home() {
                     <h3 className={`${isFeatured ? "text-2xl" : "text-xl"} font-bold text-slate-900 mb-1`}>{card.title}</h3>
                     <p className="text-sm text-slate-500">{card.subtitle}</p>
                   </div>
-                  <div className="flex items-baseline gap-3 mb-8">
+                  <div className="flex items-baseline flex-wrap gap-2 mb-6">
                     {(card as any).regularPrice && (
                       <span className="text-2xl text-slate-400 line-through font-medium">{(card as any).regularPrice}</span>
                     )}
                     <span className={`${isFeatured ? "text-5xl font-extrabold" : "text-4xl font-bold"} text-slate-900`}>{card.price}</span>
-                    <span className="ml-1 text-slate-400">USD</span>
                     {isFeatured && (
-                      <span className="ml-1 text-xs font-bold text-green-600 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">Introductory</span>
+                      <span className="text-sm font-semibold text-slate-500 w-full xs:w-auto mt-1 xs:mt-0">(Introductory Price)</span>
                     )}
                   </div>
-                  <ul className="space-y-4 mb-8 flex-grow">
+
+                  <div className="mb-8 flex flex-col items-center w-full">
+                    {card.ctaHref ? (
+                      <>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={isFeatured ? "relative group w-full" : "w-full"}>
+                          {isFeatured && <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>}
+                          <Link
+                            href={card.ctaHref}
+                            className={`relative w-full ${isFeatured ? "bg-gradient-psych text-white shadow-xl shadow-psych-purple/20" : "bg-white border-2 border-psych-navy text-psych-navy hover:bg-slate-50"} font-bold py-4 rounded-xl transition flex items-center justify-center gap-2`}
+                          >
+                            <CtaIcon />
+                            {card.ctaLabel}
+                          </Link>
+                        </motion.div>
+                        {(card as any).smallLink && (
+                          <Link href={card.ctaHref} className="mt-4 text-sm text-slate-500 underline decoration-slate-300 font-semibold hover:text-psych-purple transition">
+                            {(card as any).smallLink}
+                          </Link>
+                        )}
+                      </>
+                    ) : (
+                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={isFeatured ? "relative group w-full" : "w-full"}>
+                        {isFeatured && <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>}
+                        <button
+                          onClick={() => handleBuy(card.key)}
+                          disabled={loadingProduct === card.key}
+                          className={`relative w-full ${isFeatured ? "bg-gradient-psych text-white shadow-xl shadow-psych-purple/20" : "bg-psych-navy text-white hover:bg-[#052647]"} font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-70`}
+                        >
+                          {loadingProduct === card.key ? <Loader2 className="animate-spin" /> : <CtaIcon />}
+                          {card.ctaLabel}
+                        </button>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <ul className="space-y-4 mb-4 flex-grow">
                     {card.items.map((item: any, idx: number) => (
                       <li
                         key={idx}
@@ -505,30 +539,6 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  {card.ctaHref ? (
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={isFeatured ? "relative group w-full" : "w-full"}>
-                      {isFeatured && <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>}
-                      <Link
-                        href={card.ctaHref}
-                        className={`relative w-full ${isFeatured ? "bg-gradient-psych text-white shadow-xl shadow-psych-purple/20" : "bg-white border-2 border-psych-navy text-psych-navy hover:bg-slate-50"} font-bold py-4 rounded-xl transition flex items-center justify-center gap-2`}
-                      >
-                        <CtaIcon />
-                        {card.ctaLabel}
-                      </Link>
-                    </motion.div>
-                  ) : (
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={isFeatured ? "relative group w-full" : "w-full"}>
-                      {isFeatured && <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>}
-                      <button
-                        onClick={() => handleBuy(card.key)}
-                        disabled={loadingProduct === card.key}
-                        className={`relative w-full ${isFeatured ? "bg-gradient-psych text-white shadow-xl shadow-psych-purple/20" : "bg-psych-navy text-white hover:bg-[#052647]"} font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-70`}
-                      >
-                        {loadingProduct === card.key ? <Loader2 className="animate-spin" /> : <CtaIcon />}
-                        {card.ctaLabel}
-                      </button>
-                    </motion.div>
-                  )}
                 </div>
               );
             })}

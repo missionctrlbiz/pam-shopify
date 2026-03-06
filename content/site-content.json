@@ -7,7 +7,7 @@
     },
     "global": {
         "brandName": "Psychiatric Assessment Mastery",
-        "introductoryPrice": "$69.99",
+        "introductoryPrice": "$69.99 USD",
         "navigation": [
             {
                 "label": "Home",
@@ -31,7 +31,7 @@
                 "href": "#contact"
             }
         ],
-        "ctaButton": "Get the Digital Edition ($69.99)",
+        "ctaButton": "Get the Digital Edition ($69.99 USD)",
         "footerDisclaimer": "Educational content only. Not a substitute for clinical supervision or professional judgment. SOAP Architect provides structural support only and does not offer medical advice or diagnosis.",
         "footerCopyright": "© 2026 Tonia Ojomo. All Rights Reserved.",
         "cookieBanner": {
@@ -47,7 +47,7 @@
             "headlineAccent": "Practice It.",
             "subheadline": "The practical, step-by-step clinical companion for PMHNP students and new graduates. Simple English. Zero fluff.",
             "primaryCTA": {
-                "label": "Get the Digital Edition ($69.99)",
+                "label": "Get the Digital Edition ($69.99 USD)",
                 "href": "#pricing"
             },
             "secondaryCTA": {
@@ -176,90 +176,75 @@
             "ctaLabel": "Get Your Copy"
         },
         "pricing": {
-            "headline": "Get Clinical Ready Today",
+            "headline": "Get Clinically Ready Today",
             "subheadline": "Choose the format that fits your study style.",
             "cards": [
                 {
                     "key": "DIGITAL",
                     "title": "Psychiatric Assessment Mastery (Digital Edition)",
                     "subtitle": "PDF + Clinical Tools Included",
-                    "regularPrice": "$79.99",
-                    "price": "$69.99",
-                    "badge": "Introductory Price",
+                    "price": "$69.99 USD",
+                    "badge": "Best Value",
                     "items": [
                         {
-                            "text": "The Full Digital Workbook: Searchable PDF with all templates and lessons",
-                            "bold": "The Full Digital Workbook",
+                            "text": "Full Digital Workbook — searchable PDF with templates and lessons",
+                            "bold": "Full Digital Workbook",
                             "highlight": false
                         },
                         {
-                            "text": "BONUS: The 5-Page Cheat Sheet (Included Free)",
-                            "bold": "BONUS: The 5-Page Cheat Sheet",
+                            "text": "BONUS — 5-Page Cheat Sheet (included free)",
+                            "bold": "BONUS — 5-Page Cheat Sheet",
                             "highlight": false
                         },
                         {
-                            "text": "Instant Access: Download immediately after purchase",
+                            "text": "Instant Access — download immediately after purchase",
                             "bold": "Instant Access",
                             "highlight": false
                         },
                         {
-                            "text": "SOAP Architect Workflow Tool — Unlimited structured notes included",
-                            "bold": "SOAP Architect Workflow Tool",
-                            "highlight": true,
-                            "highlightLabel": "FREE BUNDLE"
-                        },
-                        {
-                            "text": "5-Page Cheat Sheet — Included Free with digital purchase",
-                            "bold": "5-Page Cheat Sheet",
-                            "highlight": true,
-                            "highlightLabel": "FREE BUNDLE"
-                        },
-                        {
-                            "text": "Fully Searchable & Printable PDF for any device",
-                            "bold": "Fully Searchable & Printable",
+                            "text": "Fully searchable + printable PDF for any device",
+                            "bold": "Fully searchable + printable PDF",
                             "highlight": false
                         }
                     ],
-                    "ctaLabel": "Buy Now - Instant Download",
+                    "ctaLabel": "Buy Now — Instant Download",
                     "ctaIcon": "download"
                 },
                 {
                     "key": "SOAP_ARCHITECT",
-                    "title": "Clinical Workflow Companion",
-                    "subtitle": "SOAP Architect — Free Clinical Tool",
+                    "title": "SOAP Architect — Free Clinical Tool",
+                    "subtitle": "Clinical Workflow Companion",
                     "price": "FREE",
                     "badge": "Digital Tool",
                     "items": [
                         {
-                            "text": "Access to SOAP Architect: Organize your notes instantly.",
-                            "bold": "Access to SOAP Architect",
+                            "text": "Organize your notes into a structured SOAP format",
+                            "bold": "Organize your notes",
                             "highlight": true
                         },
                         {
-                            "text": "Secure Account: Save your preferences and templates.",
-                            "bold": "Secure Account",
+                            "text": "Secure account to save preferences and templates",
+                            "bold": "Secure account",
                             "highlight": false
                         },
                         {
-                            "text": "Weekly Tips: Get clinical tips from Tonia via email.",
-                            "bold": "Weekly Tips",
+                            "text": "Weekly clinical tips via email",
+                            "bold": "Weekly clinical tips",
                             "highlight": false
                         }
                     ],
-                    "ctaLabel": "Create Free Account",
-                    "ctaIcon": "package",
-                    "ctaHref": "/soap-architect"
+                    "ctaLabel": "Try SOAP Architect Free",
+                    "ctaIcon": "package"
                 }
             ]
         },
         "aboutAuthor": {
             "sectionLabel": "Meet the Author",
             "headline": "Hi, I'm Tonia Ojomo.",
-            "role": "Psychiatric Nurse Practitioner · Clinical Educator · Creator of Psych Mastery",
-            "bio": "I created Psychiatric Assessment Mastery because I remember what it felt like — walking into a clinical rotation with textbook knowledge but no practical script. The fear of saying the wrong thing to a vulnerable patient. The panic of staring at a blank SOAP note. I wrote this guide in simple, clear English so that every student — especially ESL learners and new graduates — can feel confident from day one.",
-            "mission": "My mission is simple: make psychiatric education accessible, practical, and free of unnecessary jargon. Every template, phrase bank, and teaching tool in this workbook was built from real clinical experience.",
+            "role": "Clinician with experience in inpatient psychiatric settings.",
+            "bio": "I created Psychiatric Assessment Mastery because I remember walking into clinical rotations with textbook knowledge—but no practical script. I knew the concepts, but I feared saying the wrong thing to a vulnerable patient and felt stuck staring at a blank SOAP note. This workbook is written in simple, clear English so students—especially ESL learners and new graduates—can follow a structured interview flow and document with confidence from day one.",
+            "mission": "Every template, phrase bank, and teaching tool is designed to make psychiatric education practical, clinically sound, and free of unnecessary jargon.",
             "credentials": [
-                "Board-Certified PMHNP",
                 "Published Clinical Educator",
                 "ESL Curriculum Specialist",
                 "Creator of SOAP Architect"
@@ -376,7 +361,7 @@
             "headline": "Get 1-Year Access to SOAP Architect",
             "description": "Included free with the Digital Edition — along with the SOAP Architect Workflow Tool and the 5-Page Cheat Sheet.",
             "ctaLabel": "View the Mastery Bundle",
-            "priceNote": "$69.99 · Digital Edition"
+            "priceNote": "$69.99 USD · Digital Edition"
         }
     }
 }
