@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import siteContent from "@/content/site-content.json";
 
 export function PrintLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +23,7 @@ export function PrintPage({ children, pageNumber, totalPages = 5 }: { children: 
         >
             {/* Background Watermark */}
             <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center opacity-[0.03]">
-                <img src="/favicon.webp" alt="" className="w-1/2 h-auto object-contain" />
+                <Image src="/favicon.webp" alt="" width={400} height={400} className="w-1/2 h-auto object-contain" />
             </div>
 
             {/* Decorative Header Border */}
@@ -31,7 +32,7 @@ export function PrintPage({ children, pageNumber, totalPages = 5 }: { children: 
             {/* Top Brand Header */}
             <div className="px-8 pt-6 flex justify-between items-center z-10 shrink-0">
                 <a href="https://psychassessmentguide.com" target="_blank" rel="noopener noreferrer" className="block focus:outline-none">
-                    <img src="/logo.webp" alt="Psychiatric Assessment Guide" className="h-8 w-auto object-contain" />
+                    <Image src="/logo.webp" alt="Psychiatric Assessment Guide" width={200} height={32} className="h-8 w-auto object-contain" />
                 </a>
                 <div className="text-[10px] font-bold text-psych-navy uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                     Clinical Reference Sheet

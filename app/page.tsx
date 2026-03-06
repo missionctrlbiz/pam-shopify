@@ -148,7 +148,7 @@ export default function Home() {
             <div className="flex items-center gap-6">
               <div className="hidden md:flex space-x-8 items-center">
                 {global.navigation.map((nav) => (
-                  <a
+                  <Link
                     key={nav.label}
                     href={nav.href}
                     className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1"
@@ -159,7 +159,7 @@ export default function Home() {
                         {nav.badge}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 ))}
               </div>
               {/* ThemeToggle Removed */}
@@ -188,7 +188,7 @@ export default function Home() {
           <div className="md:hidden bg-white border-b border-slate-200 shadow-xl absolute w-full top-20 left-0">
             <div className="px-4 py-4 space-y-3">
               {global.navigation.map((nav) => (
-                <a
+                <Link
                   key={nav.label}
                   href={nav.href}
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -200,7 +200,7 @@ export default function Home() {
                       {nav.badge}
                     </span>
                   )}
-                </a>
+                </Link>
               ))}
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="relative group w-full mt-2">
                 <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
@@ -245,14 +245,14 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group">
                   <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-                  <a href={content.hero.primaryCTA.href} className="relative bg-gradient-psych text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                  <Link href={content.hero.primaryCTA.href} className="relative bg-gradient-psych text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
                     {content.hero.primaryCTA.label}
-                  </a>
+                  </Link>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative p-[2px] rounded-xl bg-gradient-brain group hover:shadow-lg hover:shadow-psych-blue/20 transition">
-                  <a href={content.hero.secondaryCTA.href} className="bg-white text-psych-navy px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-50 transition flex items-center justify-center gap-2 h-full w-full">
+                  <Link href={content.hero.secondaryCTA.href} className="bg-white text-psych-navy px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-50 transition flex items-center justify-center gap-2 h-full w-full">
                     <SparklesIcon className="w-5 h-5 text-psych-purple" /> {content.hero.secondaryCTA.label}
-                  </a>
+                  </Link>
                 </motion.div>
               </div>
             </div>
@@ -377,12 +377,12 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row gap-3 items-center mt-2">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group">
                   <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-                  <a
+                  <Link
                     href={content.soapArchitectTeaser.ctaHref}
                     className="relative inline-block bg-gradient-psych text-white px-8 py-4 rounded-xl font-bold transition text-center"
                   >
                     {content.soapArchitectTeaser.ctaLabel}
-                  </a>
+                  </Link>
                 </motion.div>
                 <span className="flex items-center text-blue-300 text-xs px-4">{content.soapArchitectTeaser.disclaimer}</span>
               </div>
@@ -435,7 +435,7 @@ export default function Home() {
 
           {/* Visual Break */}
           <div className="my-16 md:my-24 relative min-h-[400px] md:h-96 rounded-3xl overflow-hidden shadow-2xl">
-            <Image src="/pam-book-mockup.png" alt="Workbook Spread" fill className="object-cover" />
+            <Image src="/pam-book-mockup.png" alt="Workbook Spread" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/50 to-transparent flex items-center p-8 py-16 md:p-16">
               <div className="max-w-lg">
                 <h3 className="text-white text-3xl md:text-5xl font-extrabold mb-6 leading-tight">
@@ -525,7 +525,7 @@ export default function Home() {
                   <ul className="space-y-4 mb-4 flex-grow">
                     {card.items.map((item: any, idx: number) => (
                       <li
-                        key={idx}
+                        key={item.text}
                         className={`flex items-start ${item.highlight ? "border border-amber-200 bg-amber-50 rounded-lg px-3 py-2" : ""}`}
                       >
                         <CheckCircle2 className={`${item.highlight ? "text-amber-600" : "text-[#041f50]"} mr-2 w-5 h-5 flex-shrink-0 ${item.highlight ? "mt-0.5" : ""}`} />
@@ -570,6 +570,7 @@ export default function Home() {
                     src="/Tonia Ojomo, MSN, BSN, RN.png"
                     alt="Tonia Ojomo — Author of Psychiatric Assessment Mastery"
                     fill
+                    sizes="(max-width: 768px) 112px, 112px"
                     className="object-cover"
                   />
                 </div>
@@ -598,12 +599,12 @@ export default function Home() {
 
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group inline-block mt-auto w-fit">
                 <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-                <a
+                <Link
                   href={content.aboutAuthor.ctaHref}
                   className="relative inline-flex items-center justify-center gap-2 bg-gradient-psych text-white px-8 py-4 rounded-xl font-bold text-lg transition shadow-xl w-full"
                 >
                   {content.aboutAuthor.ctaLabel}
-                </a>
+                </Link>
               </motion.div>
             </div>
 
@@ -680,9 +681,10 @@ function FeedbackForm({ content }: { content: any }) {
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid sm:grid-cols-2 gap-5">
         <div>
-          <label className="block text-sm font-bold text-slate-700 mb-2">{content.nameLabel}</label>
+          <label htmlFor="nameInput" className="block text-sm font-bold text-slate-700 mb-2">{content.nameLabel}</label>
           <div className="relative p-[2px] rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
             <input
+              id="nameInput"
               required
               type="text"
               placeholder={content.namePlaceholder}
@@ -691,9 +693,10 @@ function FeedbackForm({ content }: { content: any }) {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-bold text-slate-700 mb-2">{content.emailLabel}</label>
+          <label htmlFor="emailInput" className="block text-sm font-bold text-slate-700 mb-2">{content.emailLabel}</label>
           <div className="relative p-[2px] rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
             <input
+              id="emailInput"
               required
               type="email"
               placeholder={content.emailPlaceholder}
@@ -703,9 +706,10 @@ function FeedbackForm({ content }: { content: any }) {
         </div>
       </div>
       <div>
-        <label className="block text-sm font-bold text-slate-700 mb-2">{content.messageLabel}</label>
+        <label htmlFor="messageInput" className="block text-sm font-bold text-slate-700 mb-2">{content.messageLabel}</label>
         <div className="relative p-[2px] rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
           <textarea
+            id="messageInput"
             required
             rows={4}
             placeholder={content.messagePlaceholder}

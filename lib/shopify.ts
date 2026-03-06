@@ -4,7 +4,7 @@
 import Client from 'shopify-buy';
 
 // 1. Initialize the client using your environment variables
-export const shopifyClient = Client.buildClient({
+const shopifyClient = Client.buildClient({
     domain: process.env.NEXT_PUBLIC_SHOPIFY_DOMAIN || 'your-store.myshopify.com',
     storefrontAccessToken: process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN || 'your_token',
     apiVersion: '2025-01',
