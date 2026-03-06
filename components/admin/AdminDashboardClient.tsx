@@ -34,13 +34,13 @@ const POLL_INTERVAL = 10000 // 10 seconds
 
 function AnimatedIcon({ iconName, color, size = 20, animation = "pulse" }: { iconName: string; color?: string; size?: number; animation?: any }) {
     return (
-        <MotionIcon
-            name={iconName as any}
-            size={size}
-            strokeWidth={2}
-            style={color ? { color } : {}}
-            animation={animation}
-        />
+        <span style={color ? { color } : {}} className="inline-flex">
+            <MotionIcon
+                name={iconName as any}
+                size={size}
+                animation={animation}
+            />
+        </span>
     )
 }
 
