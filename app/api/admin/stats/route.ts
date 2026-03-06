@@ -20,8 +20,8 @@ export async function GET() {
 
         return NextResponse.json({
             stats: { totalBuyers, totalLeads, totalUsageEvents },
-            recentBuyers: recentBuyers.map(b => ({ ...b, createdAt: b.createdAt.toISOString() })),
-            recentLeads: recentLeads.map(l => ({ ...l, createdAt: l.createdAt.toISOString() })),
+            recentBuyers: recentBuyers.map((b: any) => ({ ...b, createdAt: b.createdAt.toISOString() })),
+            recentLeads: recentLeads.map((l: any) => ({ ...l, createdAt: l.createdAt.toISOString() })),
         })
     } catch (error) {
         console.error("[Admin Stats] Error:", error)

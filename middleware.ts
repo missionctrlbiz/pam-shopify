@@ -1,26 +1,14 @@
-import { auth } from "@/lib/auth"
-import { NextResponse } from "next/server"
+import NextAuth from "next-auth"
+import { authConfig } from "@/lib/auth.config"
+
+const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
-    const { pathname } = req.nextUrl
-
-    // Protect admin routes
-    if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
-        if (!req.auth) {
-            const loginUrl = new URL("/admin/login", req.url)
-            loginUrl.searchParams.set("callbackUrl", pathname)
-            return NextResponse.redirect(loginUrl)
-        }
-
-        // Check admin role
-        if ((req.auth.user as any)?.role !== "admin") {
-            return NextResponse.redirect(new URL("/", req.url))
-        }
-    }
-
-    return NextResponse.next()
+    // Auth.js handles the logic inside the 'authorized' callback of authConfig
+    // We just need to make sure we're using the edge-compatible version here.
 })
 
 export const config = {
+    // Only wrap the admin routes to protect them
     matcher: ["/admin/:path*"],
 }
