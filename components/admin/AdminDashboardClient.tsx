@@ -5,7 +5,7 @@ import { signOut } from "next-auth/react"
 import {
     Users, Mail, BarChart3, LogOut, Plus,
     Trash2, Search, Activity, RefreshCw, Loader2
-} from "lucide-react"
+} from "motion-icons-react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 
@@ -32,16 +32,14 @@ const BRAND = {
 
 const POLL_INTERVAL = 10000 // 10 seconds
 
-function AnimatedIcon({ icon: Icon, color, size = 20 }: { icon: any; color?: string; size?: number }) {
+function AnimatedIcon({ icon: Icon, color, size = 20, animation = "pulse" }: { icon: any; color?: string; size?: number; animation?: string }) {
     return (
-        <motion.div
-            whileHover={{ scale: 1.2, rotate: 5 }}
-            whileTap={{ scale: 0.9 }}
-            transition={{ type: "spring", stiffness: 400, damping: 15 }}
-            className="inline-flex"
-        >
-            <Icon size={size} style={color ? { color } : {}} />
-        </motion.div>
+        <Icon
+            size={size}
+            strokeWidth={2}
+            style={color ? { color } : {}}
+            animation={animation}
+        />
     )
 }
 

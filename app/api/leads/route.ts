@@ -18,12 +18,12 @@ export async function POST(req: NextRequest) {
         const normalizedEmail = email.trim().toLowerCase();
 
         // Check for duplicate
-        const existing = await prisma.lead.findFirst({
+        const existing = await (prisma as any).lead.findFirst({
             where: { email: normalizedEmail },
         });
 
         if (!existing) {
-            await prisma.lead.create({
+            await (prisma as any).lead.create({
                 data: {
                     email: normalizedEmail,
                     name: name?.trim() || null,
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Also track the usage event
-        await prisma.usageEvent.create({
+        await (prisma as any).usageEvent.create({
             data: {
                 action: "lead_signup",
                 metadata: JSON.stringify({ email: normalizedEmail, source }),
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
     try {
-        const leads = await prisma.lead.findMany({ orderBy: { createdAt: "desc" } });
+        const leads = await (prisma as any).lead.findMany({ orderBy: { createdAt: "desc" } });
         return NextResponse.json({ count: leads.length, leads });
     } catch {
         return NextResponse.json({ error: "Could not read leads." }, { status: 500 });

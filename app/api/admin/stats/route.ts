@@ -11,11 +11,11 @@ export async function GET() {
     try {
         const [totalBuyers, totalLeads, totalUsageEvents, recentBuyers, recentLeads] =
             await Promise.all([
-                prisma.buyer.count(),
-                prisma.lead.count(),
-                prisma.usageEvent.count(),
-                prisma.buyer.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
-                prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
+                (prisma as any).buyer.count(),
+                (prisma as any).lead.count(),
+                (prisma as any).usageEvent.count(),
+                (prisma as any).buyer.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
+                (prisma as any).lead.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
             ])
 
         return NextResponse.json({

@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
         // Track the verification attempt
         try {
-            await prisma.usageEvent.create({
+            await (prisma as any).usageEvent.create({
                 data: {
                     action: buyer ? "buyer_verified" : "buyer_not_found",
                     metadata: JSON.stringify({ email: normalizedEmail }),
