@@ -111,7 +111,7 @@ export function ResponseModal({
 
                     <div className="flex-1 overflow-y-auto p-8 bg-slate-900">
                         <div
-                            className="prose max-w-none text-white [&_*]:!text-white prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:leading-relaxed prose-li:my-2 prose-code:text-sm prose-code:bg-slate-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-strong:font-bold"
+                            className="prose max-w-none text-white **:text-white! prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:leading-relaxed prose-li:my-2 prose-code:text-sm prose-code:bg-slate-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-strong:font-bold"
                             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(initialContent) as string) }}
                         />
                     </div>

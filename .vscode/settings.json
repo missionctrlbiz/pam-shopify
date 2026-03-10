@@ -15,5 +15,6 @@
     "tailwindCSS.lint.invalidScreen": "ignore",
     "tailwindCSS.lint.invalidTailwindDirective": "ignore",
     "tailwindCSS.lint.invalidVariant": "ignore",
-    "tailwindCSS.lint.recommendedVariantOrder": "ignore"
+    "tailwindCSS.lint.recommendedVariantOrder": "ignore",
+    "Codegeex.SidebarUI.LanguagePreference": "English"
 }

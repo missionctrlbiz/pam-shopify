@@ -51,7 +51,7 @@ const painPointIcons: Record<string, typeof AlertCircle> = {
 
 const painPointIconStyles: Record<string, string> = {
   red: "p-3 bg-red-100 text-red-600 rounded-lg",
-  brand: "p-3 bg-[#041f50]/10 text-[#041f50] rounded-lg",
+  brand: "p-3 bg-psych-navy/10 text-psych-navy rounded-lg",
   slate: "p-3 bg-slate-200 text-slate-700 rounded-lg",
 };
 
@@ -126,7 +126,7 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans selection:bg-[#041f50]/20 min-h-screen flex flex-col">
+    <div className="bg-slate-50 text-slate-800 font-sans selection:bg-psych-navy/20 min-h-screen flex flex-col">
 
       {/* Navigation */}
       <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200 transition-colors duration-500">
@@ -151,7 +151,7 @@ export default function Home() {
                   <Link
                     key={nav.label}
                     href={nav.href}
-                    className="text-[#041f50] font-bold hover:text-[#052647] transition flex items-center gap-1"
+                    className="text-psych-navy font-bold hover:text-[#052647] transition flex items-center gap-1"
                   >
                     {nav.label}
                     {nav.badge && (
@@ -161,6 +161,12 @@ export default function Home() {
                     )}
                   </Link>
                 ))}
+                <button
+                  onClick={() => setIsPDFPreviewOpen(true)}
+                  className="text-psych-navy font-bold hover:text-[#052647] transition flex items-center gap-1.5"
+                >
+                  <BookOpen className="w-4 h-4" /> Preview Sample
+                </button>
               </div>
               {/* ThemeToggle Removed */}
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative group hidden md:inline-block">
@@ -175,7 +181,7 @@ export default function Home() {
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden text-[#041f50] p-2 hover:bg-slate-100 rounded-lg transition"
+                className="md:hidden text-psych-navy p-2 hover:bg-slate-100 rounded-lg transition"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -192,7 +198,7 @@ export default function Home() {
                   key={nav.label}
                   href={nav.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-2 text-[#041f50] font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
+                  className="flex items-center gap-2 text-psych-navy font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition"
                 >
                   {nav.label}
                   {nav.badge && (
@@ -202,6 +208,12 @@ export default function Home() {
                   )}
                 </Link>
               ))}
+              <button
+                onClick={() => { setIsPDFPreviewOpen(true); setIsMobileMenuOpen(false); }}
+                className="flex items-center gap-2 text-psych-navy font-bold py-3 px-4 hover:bg-slate-50 rounded-xl transition w-full"
+              >
+                <BookOpen className="w-4 h-4" /> Preview Sample
+              </button>
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="relative group w-full mt-2">
                 <div className="absolute -inset-1 bg-gradient-psych rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
                 <button
@@ -224,14 +236,14 @@ export default function Home() {
         <div className="absolute inset-0 bg-white z-0"></div>
 
         {/* Subtle nice background element */}
-        <div className="absolute top-0 right-0 w-200 h-200 bg-[#041f50]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-60"></div>
+        <div className="absolute top-0 right-0 w-200 h-200 bg-psych-navy/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-60"></div>
         <div className="absolute bottom-0 left-0 w-150 h-150 bg-blue-50 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none opacity-60"></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
 
             <div className="text-center lg:text-left mb-12 lg:mb-0 relative z-30">
-              <div className="inline-flex items-center px-4 py-1.5 bg-[#041f50]/10 text-[#041f50] rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-[#041f50]/20">
+              <div className="inline-flex items-center px-4 py-1.5 bg-psych-navy/10 text-psych-navy rounded-full text-xs font-bold tracking-widest uppercase mb-6 border border-psych-navy/20">
                 <PenTool className="w-3 h-3 mr-2" /> {content.hero.badge}
               </div>
               <h1 className="text-5xl lg:text-7xl font-extrabold leading-tight mb-6 text-slate-900 tracking-tight">
@@ -249,7 +261,7 @@ export default function Home() {
                     {content.hero.primaryCTA.label}
                   </Link>
                 </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative p-[2px] rounded-xl bg-gradient-brain group hover:shadow-lg hover:shadow-psych-blue/20 transition">
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative p-0.5 rounded-xl bg-gradient-brain group hover:shadow-lg hover:shadow-psych-blue/20 transition">
                   <Link href={content.hero.secondaryCTA.href} className="bg-white text-psych-navy px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-50 transition flex items-center justify-center gap-2 h-full w-full">
                     <SparklesIcon className="w-5 h-5 text-psych-purple" /> {content.hero.secondaryCTA.label}
                   </Link>
@@ -257,20 +269,22 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Video Hero */}
+            {/* Video Hero — 9:16 mockup, bezels cropped via scale + white fade masks */}
             <div className="flex justify-center items-center relative z-20 py-8">
-              <div className="relative w-full max-w-[560px] sm:max-w-[640px] aspect-[3/4] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] border-[6px] border-white ring-1 ring-slate-200 bg-white transform rotate-[-2deg] hover:rotate-0 transition-transform duration-500">
+              <div className="relative w-full max-w-75 sm:max-w-[380px] aspect-9/16 rounded-2xl md:rounded-4xl overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] bg-white -rotate-2 hover:rotate-0 transition-transform duration-500">
+                {/* White fade masks to hide top/bottom phone bezels */}
+                <div className="absolute top-0 left-0 w-full h-[14%] bg-linear-to-b from-white to-transparent z-10 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-full h-[14%] bg-linear-to-t from-white to-transparent z-10 pointer-events-none" />
                 <video
                   suppressHydrationWarning
                   autoPlay
                   loop
                   muted
                   playsInline
-                  className="absolute inset-0 w-full h-full object-cover bg-white"
-                  style={{ objectPosition: 'center' }}
-                  poster="/pam-book-mockup.png"
+                  className="absolute inset-0 w-full h-full object-cover scale-[1.24] [object-position:center_48%]"
+                  poster="/1.png"
                 >
-                  <source src="/Updated-Mockup.webm" type="video/webm" />
+                  <source src="/Mockup.webm" type="video/webm" />
                   Your browser does not support the video tag.
                 </video>
               </div>
@@ -279,14 +293,14 @@ export default function Home() {
         </div>
 
         {/* Gradient Fade at bottom */}
-        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-slate-50 to-transparent z-10"></div>
+        <div className="absolute bottom-0 left-0 w-full h-24 bg-linear-to-t from-slate-50 to-transparent z-10"></div>
       </header>
 
       {/* What We Do Section */}
       <section className="py-20 bg-slate-50 border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-12">
-            <span className="text-[#041f50] font-bold tracking-widest uppercase text-xs mb-3 block">{content.whatWeDo.sectionLabel}</span>
+            <span className="text-psych-navy font-bold tracking-widest uppercase text-xs mb-3 block">{content.whatWeDo.sectionLabel}</span>
             <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 mb-4">{content.whatWeDo.headline}</h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               {content.whatWeDo.subheadline}
@@ -311,7 +325,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative">
-              <div className="absolute -inset-4 bg-[#041f50]/10 rounded-3xl transform -rotate-2"></div>
+              <div className="absolute -inset-4 bg-psych-navy/10 rounded-3xl transform -rotate-2"></div>
               <div className="relative rounded-2xl overflow-hidden shadow-xl border border-slate-200">
                 <Image
                   src="/student-with-pam-in-library.png"
@@ -324,7 +338,7 @@ export default function Home() {
             </div>
             <div>
               <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">{content.problem.headline}</h2>
-              <p className="text-base font-semibold text-[#041f50] mb-4">{content.problem.subLabel}</p>
+              <p className="text-base font-semibold text-psych-navy mb-4">{content.problem.subLabel}</p>
               <p className="text-lg text-slate-600 mb-8 leading-relaxed">
                 {content.problem.description}
               </p>
@@ -353,7 +367,7 @@ export default function Home() {
 
       {/* SOAP Architect Teaser */}
       <section id="soap-architect" className="py-20 bg-psych-navy relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:24px_24px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] bg-size-[24px_24px]" />
         <div className="max-w-5xl mx-auto px-4 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -369,7 +383,7 @@ export default function Home() {
               <ul className="space-y-3 mb-8">
                 {content.soapArchitectTeaser.features.map((item) => (
                   <li key={item} className="flex items-start gap-3 text-blue-100">
-                    <CheckCircle2 className="w-5 h-5 text-blue-300 flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-blue-300 shrink-0 mt-0.5" />
                     <span className="text-sm">{item}</span>
                   </li>
                 ))}
@@ -396,11 +410,11 @@ export default function Home() {
                 </div>
                 <div className="text-center text-white/40 text-2xl">↓</div>
                 <div className="bg-white rounded-2xl p-5 shadow-xl">
-                  <span className="text-xs font-bold text-[#041f50] uppercase tracking-wider">{content.soapArchitectTeaser.demo.outputLabel}</span>
+                  <span className="text-xs font-bold text-psych-navy uppercase tracking-wider">{content.soapArchitectTeaser.demo.outputLabel}</span>
                   <div className="mt-2 text-slate-700 text-xs space-y-1.5">
-                    <p><strong className="text-[#041f50]">Subjective:</strong> {content.soapArchitectTeaser.demo.outputSubjective}</p>
-                    <p><strong className="text-[#041f50]">Objective (MSE):</strong> {content.soapArchitectTeaser.demo.outputObjective}</p>
-                    <p><strong className="text-[#041f50]">Assessment:</strong> {content.soapArchitectTeaser.demo.outputAssessment}</p>
+                    <p><strong className="text-psych-navy">Subjective:</strong> {content.soapArchitectTeaser.demo.outputSubjective}</p>
+                    <p><strong className="text-psych-navy">Objective (MSE):</strong> {content.soapArchitectTeaser.demo.outputObjective}</p>
+                    <p><strong className="text-psych-navy">Assessment:</strong> {content.soapArchitectTeaser.demo.outputAssessment}</p>
                   </div>
                 </div>
               </div>
@@ -423,7 +437,7 @@ export default function Home() {
               <motion.div
                 whileHover={{ y: -5 }}
                 key={title}
-                className="bg-slate-50 p-10 rounded-3xl border border-slate-100 hover:border-[#041f50] hover:shadow-xl transition duration-300 text-center"
+                className="bg-slate-50 p-10 rounded-3xl border border-slate-100 hover:border-psych-navy hover:shadow-xl transition duration-300 text-center"
               >
                 <div className="text-5xl mb-5">{emoji}</div>
                 <div className="inline-block px-3 py-1 bg-psych-purple/10 text-psych-purple rounded-full text-xs font-bold mb-4 tracking-widest uppercase">{tag}</div>
@@ -434,9 +448,9 @@ export default function Home() {
           </div>
 
           {/* Visual Break */}
-          <div className="my-16 md:my-24 relative min-h-[400px] md:h-96 rounded-3xl overflow-hidden shadow-2xl">
+          <div className="my-16 md:my-24 relative min-h-100 md:h-96 rounded-3xl overflow-hidden shadow-2xl">
             <Image src="/pam-book-mockup.png" alt="Workbook Spread" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/50 to-transparent flex items-center p-8 py-16 md:p-16">
+            <div className="absolute inset-0 bg-linear-to-r from-slate-900/90 via-slate-900/50 to-transparent flex items-center p-8 py-16 md:p-16">
               <div className="max-w-lg">
                 <h3 className="text-white text-3xl md:text-5xl font-extrabold mb-6 leading-tight">
                   {content.visualBreak.headline}<br />{content.visualBreak.headlineAccent}
@@ -522,13 +536,13 @@ export default function Home() {
                     )}
                   </div>
 
-                  <ul className="space-y-4 mb-4 flex-grow">
+                  <ul className="space-y-4 mb-4 grow">
                     {card.items.map((item: any, idx: number) => (
                       <li
                         key={item.text}
                         className={`flex items-start ${item.highlight ? "border border-amber-200 bg-amber-50 rounded-lg px-3 py-2" : ""}`}
                       >
-                        <CheckCircle2 className={`${item.highlight ? "text-amber-600" : "text-[#041f50]"} mr-2 w-5 h-5 flex-shrink-0 ${item.highlight ? "mt-0.5" : ""}`} />
+                        <CheckCircle2 className={`${item.highlight ? "text-amber-600" : "text-psych-navy"} mr-2 w-5 h-5 shrink-0 ${item.highlight ? "mt-0.5" : ""}`} />
                         <span className="text-slate-700 text-sm">
                           <strong>{item.bold}</strong>
                           {item.text.replace(item.bold, "") && ` ${item.text.slice(item.bold.length)}`}
@@ -552,7 +566,7 @@ export default function Home() {
       {/* About the Author + Feedback Section */}
       <section id="about" className="py-32 bg-slate-50 relative overflow-hidden">
         {/* Decorative deep blue background cut */}
-        <div className="absolute top-0 left-0 w-full h-[600px] bg-psych-navy -skew-y-3 origin-top-left -translate-y-20 z-0" />
+        <div className="absolute top-0 left-0 w-full h-150 bg-psych-navy -skew-y-3 origin-top-left -translate-y-20 z-0" />
 
         <div className="max-w-6xl mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
@@ -561,11 +575,11 @@ export default function Home() {
             <p className="text-blue-100 font-semibold text-xl mt-4">{content.aboutAuthor.role}</p>
           </div>
 
-          <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-[#041f50]/10 overflow-hidden flex flex-col lg:flex-row">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-psych-navy/10 overflow-hidden flex flex-col lg:flex-row">
             {/* Bio Column */}
             <div className="lg:w-1/2 p-10 lg:p-16 flex flex-col">
               <div className="flex items-center gap-6 mb-8">
-                <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg ring-2 ring-[#041f50]/10 flex-shrink-0">
+                <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg ring-2 ring-psych-navy/10 shrink-0">
                   <Image
                     src="/Tonia Ojomo, MSN, BSN, RN.png"
                     alt="Tonia Ojomo — Author of Psychiatric Assessment Mastery"
@@ -610,7 +624,7 @@ export default function Home() {
 
             {/* Feedback Form Column */}
             <div className="lg:w-1/2 p-10 lg:p-16 bg-slate-50 border-t lg:border-t-0 lg:border-l border-slate-100 relative">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-200 to-transparent lg:w-1 lg:h-full lg:bg-gradient-to-b" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-slate-200 to-transparent lg:w-1 lg:h-full lg:bg-linear-to-b" />
 
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-gradient-psych text-white rounded-xl shadow-md border border-white">
@@ -683,7 +697,7 @@ function FeedbackForm({ content }: { content: any }) {
       <div className="grid sm:grid-cols-2 gap-5">
         <div>
           <label htmlFor="nameInput" className="block text-sm font-bold text-slate-700 mb-2">{content.nameLabel}</label>
-          <div className="relative p-[2px] rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
+          <div className="relative p-0.5 rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
             <input
               id="nameInput"
               required
@@ -695,7 +709,7 @@ function FeedbackForm({ content }: { content: any }) {
         </div>
         <div>
           <label htmlFor="emailInput" className="block text-sm font-bold text-slate-700 mb-2">{content.emailLabel}</label>
-          <div className="relative p-[2px] rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
+          <div className="relative p-0.5 rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
             <input
               id="emailInput"
               required
@@ -708,7 +722,7 @@ function FeedbackForm({ content }: { content: any }) {
       </div>
       <div>
         <label htmlFor="messageInput" className="block text-sm font-bold text-slate-700 mb-2">{content.messageLabel}</label>
-        <div className="relative p-[2px] rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
+        <div className="relative p-0.5 rounded-xl focus-within:bg-gradient-psych transition bg-slate-300">
           <textarea
             id="messageInput"
             required

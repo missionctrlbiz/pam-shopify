@@ -209,12 +209,12 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
             {!isSubscribed ? (
                 /* ── Subscription Gate ── */
                 <div className="flex flex-col items-center text-center">
-                    <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-[#041f50] mb-5">
+                    <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-psych-navy mb-5">
                         <Lock className="w-8 h-8" />
                     </div>
                     <h3 className="font-extrabold text-2xl text-slate-900 mb-2">Unlock SOAP Architect</h3>
                     <p className="text-slate-500 text-sm mb-1 max-w-sm">
-                        Get <span className="font-bold text-[#041f50]">2 free structured psychiatric notes</span> — no credit card needed.
+                        Get <span className="font-bold text-psych-navy">2 free structured psychiatric notes</span> — no credit card needed.
                     </p>
                     <p className="text-slate-400 text-xs mb-7 max-w-xs">
                         Enter your email to access the tool and receive clinical tips from Psychiatric Assessment Mastery.
@@ -241,7 +241,7 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                         {subError && <p className="text-red-500 text-xs text-left">{subError}</p>}
                         <button
                             type="submit"
-                            className="w-full bg-[#041f50] text-white font-bold py-3 rounded-xl hover:bg-[#052d6e] transition flex items-center justify-center gap-2 shadow-md"
+                            className="w-full bg-psych-navy text-white font-bold py-3 rounded-xl hover:bg-[#052d6e] transition flex items-center justify-center gap-2 shadow-md"
                         >
                             <Sparkles className="w-4 h-4" />
                             Unlock Free Access
@@ -270,12 +270,12 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                         </div>
                         {/* Usage Countdown */}
                         {isUnlocked ? (
-                            <div className="flex-shrink-0 text-center px-3 py-2 rounded-xl border bg-gradient-psych text-white shadow-md">
+                            <div className="shrink-0 text-center px-3 py-2 rounded-xl border bg-gradient-psych text-white shadow-md">
                                 <div className="text-2xl font-extrabold leading-none">∞</div>
                                 <div className="text-[10px] font-bold uppercase tracking-wider mt-0.5">Unlocked</div>
                             </div>
                         ) : (
-                            <div className={`flex-shrink-0 text-center px-3 py-2 rounded-xl border ${usesLeft === 0
+                            <div className={`shrink-0 text-center px-3 py-2 rounded-xl border ${usesLeft === 0
                                 ? "bg-red-50 border-red-200 text-red-600"
                                 : usesLeft <= 2
                                     ? "bg-amber-50 border-amber-200 text-amber-700"
@@ -349,7 +349,7 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
                                 <button
                                     type="submit"
                                     disabled={isUnlocking}
-                                    className="bg-[#041f50] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#052d6e] transition shrink-0 disabled:opacity-50"
+                                    className="bg-psych-navy text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#052d6e] transition shrink-0 disabled:opacity-50"
                                 >
                                     {isUnlocking ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unlock"}
                                 </button>
