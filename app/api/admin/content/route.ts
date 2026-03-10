@@ -13,7 +13,7 @@ function readContent() {
 export async function GET() {
     try {
         const session = await auth()
-        if (!session?.user || (session.user as any).role !== "admin") {
+        if (!session?.user || (session.user as { role?: string }).role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
         const content = readContent()
@@ -27,7 +27,7 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
     try {
         const session = await auth()
-        if (!session?.user || (session.user as any).role !== "admin") {
+        if (!session?.user || (session.user as { role?: string }).role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 

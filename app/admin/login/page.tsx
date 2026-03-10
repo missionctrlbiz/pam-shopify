@@ -41,17 +41,12 @@ export default function AdminLoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#0a0a12] flex items-center justify-center p-4">
-            {/* Ambient glow */}
-            <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full opacity-[0.07]" style={{ background: "radial-gradient(circle, #ed415b, #af5ce9, transparent)" }} />
-            </div>
-
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="w-full max-w-sm relative z-10"
+                className="w-full max-w-md relative z-10"
             >
                 {/* Logo */}
                 <div className="text-center mb-10">
@@ -66,97 +61,103 @@ export default function AdminLoginPage() {
                             alt="Logo"
                             width={200}
                             height={60}
-                            className="h-16 w-auto object-contain mx-auto"
+                            className="h-16 w-auto object-contain mx-auto drop-shadow-sm"
                             priority
                         />
                     </motion.div>
-                    <p className="text-white/20 text-xs mt-4 tracking-widest uppercase">Admin Dashboard</p>
+                    <p className="text-[#041f50] opacity-60 font-bold text-xs mt-4 tracking-widest uppercase">
+                        Admin Portal
+                    </p>
                 </div>
 
                 {/* Login Card */}
-                <div className="rounded-2xl p-7 border border-white/[0.06]" style={{ background: "rgba(255,255,255,0.02)", backdropFilter: "blur(40px)" }}>
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
+                    <div className="mb-8">
+                        <h1 className="text-2xl font-bold text-[#041f50] tracking-tight">Welcome back</h1>
+                        <p className="text-slate-500 text-sm mt-1">Sign in to manage your platform</p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
                         {error && (
                             <motion.div
                                 initial={{ opacity: 0, y: -5 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="flex items-center gap-2 p-3 rounded-xl text-xs border"
-                                style={{ background: "rgba(237, 65, 91, 0.08)", borderColor: "rgba(237, 65, 91, 0.15)", color: "#ed415b" }}
+                                className="flex items-center gap-2 p-3 rounded-xl text-sm border bg-red-50 border-red-100 text-red-600 font-medium"
                             >
-                                <AlertCircle size={14} />
+                                <AlertCircle size={16} />
                                 {error}
                             </motion.div>
                         )}
 
-                        <div>
-                            <label htmlFor="admin-email" className="block text-xs font-medium text-white/30 mb-2 tracking-wide uppercase">
-                                Email
+                        <div className="space-y-1.5">
+                            <label htmlFor="admin-email" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                Email Address
                             </label>
                             <div className="relative">
-                                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/15" size={16} />
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                 <input
                                     id="admin-email"
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-11 pr-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-sm placeholder-white/15 focus:outline-none focus:border-white/20 transition"
-                                    placeholder="your@email.com"
+                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-[#af5ce9] focus:ring-1 focus:ring-[#af5ce9]/50 transition bg-white"
+                                    placeholder="admin@example.com"
                                     required
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <label htmlFor="admin-password" className="block text-xs font-medium text-white/30 mb-2 tracking-wide uppercase">
+                        <div className="space-y-1.5">
+                            <label htmlFor="admin-password" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
                                 Password
                             </label>
                             <div className="relative">
-                                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/15" size={16} />
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                 <input
                                     id="admin-password"
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-11 pr-12 py-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-sm placeholder-white/15 focus:outline-none focus:border-white/20 transition"
+                                    className="w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-[#af5ce9] focus:ring-1 focus:ring-[#af5ce9]/50 transition bg-white"
                                     placeholder="••••••••"
                                     required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/15 hover:text-white/40 transition"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
                                 >
-                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
                         </div>
 
                         <motion.button
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.99 }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-3 text-white text-sm font-semibold rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full py-3.5 text-white text-base font-bold rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
                             style={{
                                 background: "linear-gradient(135deg, #ed415b, #ec5185, #af5ce9)",
-                                boxShadow: "0 4px 24px rgba(175, 92, 233, 0.25)",
+                                boxShadow: "0 8px 20px -4px rgba(175, 92, 233, 0.3)",
                             }}
                         >
                             {isLoading ? (
                                 <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
-                                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                                 />
                             ) : (
-                                "Sign In"
+                                "Sign In to Admin"
                             )}
                         </motion.button>
                     </form>
                 </div>
 
-                <p className="text-center text-white/10 text-[10px] mt-8 tracking-wider">
-                    PSYCHIATRIC ASSESSMENT MASTERY &copy; {new Date().getFullYear()}
+                <p className="text-center text-slate-400 text-xs font-medium mt-8 tracking-wider uppercase">
+                    Psychiatric Assessment Mastery &copy; {new Date().getFullYear()}
                 </p>
             </motion.div>
         </div>

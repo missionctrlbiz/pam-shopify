@@ -41,15 +41,15 @@ At Day 90, you finalize full ownership of the entire platform by doing one thing
 
 That single action locks out all prior access and transfers control of:
 
-| Platform | Access method |
-|---|---|
-| GitHub (`@psychmastery`) | Google SSO / email login |
-| Vercel | Google SSO via Admin Gmail |
-| Prisma Postgres | Tied to Vercel project |
-| Google Gemini API | Google Cloud Console via Admin Gmail |
-| Google Analytics / Search Console | Google account |
-| ElevenLabs | Email login |
-| Domain registrar | Email login |
+| Platform                          | Access method                        |
+| --------------------------------- | ------------------------------------ |
+| GitHub (`@psychmastery`)          | Google SSO / email login             |
+| Vercel                            | Google SSO via Admin Gmail           |
+| Prisma Postgres                   | Tied to Vercel project               |
+| Google Gemini API                 | Google Cloud Console via Admin Gmail |
+| Google Analytics / Search Console | Google account                       |
+| ElevenLabs                        | Email login                          |
+| Domain registrar                  | Email login                          |
 
 No passwords to collect. No keys to chase. One Gmail change = 100% independently owned.
 
@@ -58,12 +58,15 @@ No passwords to collect. No keys to chase. One Gmail change = 100% independently
 ## 2. Codebase & GitHub
 
 ### Current state
+
 The production codebase lives at:
+
 ```
 https://github.com/missionctrlbiz/pam-shopify
 ```
 
 The transfer target is:
+
 ```
 https://github.com/psychmastery/pam-shopify
 ```
@@ -95,6 +98,7 @@ Once the repo is under `@psychmastery`, go to Vercel → Project → **Settings 
 ### Protecting the main branch
 
 In GitHub: **Settings → Branches → Add rule** for `main`:
+
 - ✅ Require pull request before merging
 - ✅ Require 1 approval
 
@@ -147,16 +151,16 @@ The app uses **Prisma Postgres** (managed by Prisma, accessed via `db.prisma.io`
 
 Add all of these in **Vercel → Project → Settings → Environment Variables** (Production scope).
 
-| Variable | Where to get it | Required |
-|---|---|---|
-| `DATABASE_URL` | Prisma Postgres dashboard → Connection URL (pooled) | ✅ |
-| `DIRECT_URL` | Prisma Postgres dashboard → Direct URL | ✅ (for migrations) |
-| `NEXTAUTH_SECRET` | Generate: `openssl rand -hex 32` | ✅ |
-| `NEXTAUTH_URL` | Your live domain e.g. `https://www.psychassessmentguide.com` | ✅ |
-| `NEXT_PUBLIC_SHOPIFY_DOMAIN` | Shopify Admin → Settings → Domains → `.myshopify.com` URL | ✅ |
-| `NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN` | Shopify Admin → Apps → Storefront API | ✅ |
-| `GEMINI_API_KEY` | Google AI Studio → [aistudio.google.com](https://aistudio.google.com) → API Keys | ✅ |
-| `RESEND_API_KEY` | [resend.com](https://resend.com) dashboard | Optional |
+| Variable                                      | Where to get it                                                                  | Required            |
+| --------------------------------------------- | -------------------------------------------------------------------------------- | ------------------- |
+| `DATABASE_URL`                                | Prisma Postgres dashboard → Connection URL (pooled)                              | ✅                  |
+| `DIRECT_URL`                                  | Prisma Postgres dashboard → Direct URL                                           | ✅ (for migrations) |
+| `NEXTAUTH_SECRET`                             | Generate: `openssl rand -hex 32`                                                 | ✅                  |
+| `NEXTAUTH_URL`                                | Your live domain e.g. `https://www.psychassessmentguide.com`                     | ✅                  |
+| `NEXT_PUBLIC_SHOPIFY_DOMAIN`                  | Shopify Admin → Settings → Domains → `.myshopify.com` URL                        | ✅                  |
+| `NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN` | Shopify Admin → Apps → Storefront API                                            | ✅                  |
+| `GEMINI_API_KEY`                              | Google AI Studio → [aistudio.google.com](https://aistudio.google.com) → API Keys | ✅                  |
+| `RESEND_API_KEY`                              | [resend.com](https://resend.com) dashboard                                       | Optional            |
 
 ### Important notes
 
@@ -170,6 +174,7 @@ Add all of these in **Vercel → Project → Settings → Environment Variables*
 ## 5. Shopify Store
 
 ### Current store
+
 ```
 psychassessmentguide-com.myshopify.com
 ```
@@ -177,6 +182,7 @@ psychassessmentguide-com.myshopify.com
 ### What the platform does with Shopify
 
 The website uses Shopify's **Storefront API** (not the Admin API). This means:
+
 - Products, variants, and prices are pulled from Shopify at runtime
 - Checkout is handled entirely by Shopify (no payment data touches this server)
 - Digital download links are redirected via `next.config.ts` to Shopify's CDN
@@ -184,18 +190,23 @@ The website uses Shopify's **Storefront API** (not the Admin API). This means:
 The platform does **not** store orders or payment data. Shopify owns that entirely.
 
 ### Webhook (buyer whitelist)
+
 The app receives Shopify order webhooks at:
+
 ```
 POST /api/webhooks/shopify
 ```
+
 When an order is placed, this endpoint adds the buyer's email to the Prisma `Buyer` table, which grants them access to the SOAP Architect tool.
 
 ### Transferring Shopify ownership
+
 1. Shopify Admin → **Settings → Users and permissions**
 2. Add `psychmasteryadmin@gmail.com` as staff with full permissions
 3. Transfer store ownership: **Settings → Store details → Transfer ownership**
 
 ### Storefront Access Token
+
 1. Shopify Admin → **Apps → Develop apps**
 2. Create app → **Configure Storefront API**
 3. Enable: `unauthenticated_read_product_listings`, `unauthenticated_write_checkouts`
@@ -208,18 +219,21 @@ When an order is placed, this endpoint adds the buyer's email to the Prisma `Buy
 The platform uses Google's Gemini API to power the **SOAP Architect** tool (`/soap-architect`).
 
 ### How it works
-- Route: `POST /api/gemini`  
+
+- Route: `POST /api/gemini`
 - Model: `gemini-pro` via `@google/generative-ai`
 - Rate-limited: 5 requests per IP per minute (in-memory, resets on function cold start)
 - Free users get 2 trial uses (tracked in Prisma `UsageEvent` table)
 - Verified buyers (in `Buyer` table) get unlimited access
 
 ### Transfer the API key
+
 1. Go to [aistudio.google.com](https://aistudio.google.com) and sign in with Admin Gmail
 2. **Get API key → Create API key**
 3. Copy it → add as `GEMINI_API_KEY` in Vercel
 
 ### Billing
+
 Google provides generous free tier for Gemini. Monitor usage at:
 [console.cloud.google.com](https://console.cloud.google.com) → **APIs & Services → Credentials**
 
@@ -230,17 +244,20 @@ Set a **budget alert** at $10/month to get email warnings before any cost.
 ## 7. External Services
 
 ### ElevenLabs (AI Voice)
+
 - Sign up / log in at [elevenlabs.io](https://elevenlabs.io) using `psychmasteryadmin@gmail.com`
 - Used for producing headless AI voice video content (Phase 2 deliverable)
 - Subscription billing is attached to this account
 
 ### Resend (Transactional Email)
+
 - Sign up at [resend.com](https://resend.com) with Admin Gmail
 - Used for any future email notifications or lead capture follow-ups
 - Add your sending domain (`psychassessmentguide.com`) and verify DNS records
 - Copy the API key → `RESEND_API_KEY` in Vercel
 
 ### Google Analytics / Search Console
+
 - Both tied to Admin Gmail automatically
 - Add property: `psychassessmentguide.com`
 - Verify via DNS TXT record in your domain registrar
@@ -250,35 +267,42 @@ Set a **budget alert** at $10/month to get email warnings before any cost.
 ## 8. Domain & DNS
 
 ### Current domain
+
 ```
 psychassessmentguide.com
 ```
 
 ### Where it should be registered
+
 Transfer or register at a registrar that supports email login (not just Google SSO):
+
 - Recommended: **Cloudflare Registrar** (cost-price, no markup, excellent DNS management)
 - Alternative: **Namecheap**
 
 ### Transfer steps
+
 1. Unlock the domain at current registrar
 2. Request transfer authorization (EPP/Auth code)
 3. Initiate transfer at Cloudflare/Namecheap using the Admin Gmail as the account email
 
 ### Required DNS records for Vercel
 
-| Type | Name | Value |
-|---|---|---|
-| `A` | `@` | `76.76.21.21` |
+| Type    | Name  | Value                  |
+| ------- | ----- | ---------------------- |
+| `A`     | `@`   | `76.76.21.21`          |
 | `CNAME` | `www` | `cname.vercel-dns.com` |
 
 Add these in Vercel: **Project → Settings → Domains → Add domain**
 
 ### Shopify download redirect
+
 The `next.config.ts` already contains:
+
 ```js
 source: "/a/downloads/:path*",
 destination: "https://psychassessmentguide-com.myshopify.com/a/downloads/:path*"
 ```
+
 This handles Shopify's digital download URLs on your custom domain.
 
 ---
@@ -286,6 +310,7 @@ This handles Shopify's digital download URLs on your custom domain.
 ## 9. Admin Portal Access
 
 The platform has a private admin dashboard at:
+
 ```
 /admin
 ```
@@ -293,22 +318,29 @@ The platform has a private admin dashboard at:
 Login is password-protected via NextAuth credentials. Only users with `role: "admin"` in the database can access it.
 
 ### Features
+
 - View total buyers, leads, and usage events
 - Add or remove verified buyers by email
 - Real-time auto-refresh every 10 seconds
 
 ### Create or reset admin user
+
 Run this in a terminal with the database connected:
+
 ```bash
 node prisma/seed.js
 ```
+
 Or manually update a user's role in the database:
+
 ```sql
 UPDATE "User" SET role = 'admin' WHERE email = 'your@email.com';
 ```
 
 ### Admin credentials handoff
+
 At Day 90, provide the client with:
+
 - Admin portal URL: `https://www.psychassessmentguide.com/admin`
 - Admin email + password (set separately from the Gmail account)
 
@@ -342,6 +374,7 @@ Browser
 ```
 
 ### Authentication flow
+
 1. User visits `/admin`
 2. Middleware (`middleware.ts`) checks JWT session
 3. No valid session → redirected to `/admin/login`
@@ -350,6 +383,7 @@ Browser
 6. All admin API routes re-check `role === "admin"` server-side
 
 ### Buyer access flow
+
 1. Customer purchases on Shopify
 2. Shopify sends `orders/paid` webhook to `/api/webhooks/shopify`
 3. Webhook handler extracts email → inserts into `Buyer` table
@@ -409,9 +443,11 @@ pam-shopify/
 ### Updating site content
 
 All public-facing text (headlines, pricing copy, navigation, testimonials) lives in one file:
+
 ```
 content/site-content.json
 ```
+
 Edit this file to update copy without touching any React code.
 
 ---
@@ -421,6 +457,7 @@ Edit this file to update copy without touching any React code.
 Every push to `main` on GitHub triggers an automatic Vercel deployment.
 
 ### Build sequence (automatic)
+
 ```
 npm install
 ↓
@@ -432,6 +469,7 @@ deploy to Vercel edge
 ```
 
 ### Running locally
+
 ```bash
 # 1. Clone the repo
 git clone https://github.com/psychmastery/pam-shopify.git
@@ -455,6 +493,7 @@ npm run dev
 ```
 
 ### Making a change and deploying
+
 ```bash
 # Make your edit in VS Code
 git add -A
@@ -464,11 +503,13 @@ git push origin main
 ```
 
 ### Checking deployment status
+
 1. Vercel dashboard → Project → **Deployments** tab
 2. Click any deployment to see build logs
 3. Look for `✓ Build completed` and `✓ Deployed`
 
 ### Rollback a bad deployment
+
 In Vercel: Deployments → find the last good deployment → **⋯ → Promote to Production**
 
 ---
@@ -477,18 +518,18 @@ In Vercel: Deployments → find the last good deployment → **⋯ → Promote t
 
 ### What you will receive
 
-| Item | Delivery method |
-|---|---|
-| GitHub access | `@psychmastery` org already under Admin Gmail |
-| Vercel access | Project linked to Admin Gmail account |
-| Prisma Postgres | Database under Admin Gmail |
-| Shopify admin | Ownership transferred to Admin Gmail |
-| Domain | Registrar account under Admin Gmail |
-| Gemini API | Google Cloud project under Admin Gmail |
-| ElevenLabs | Account under Admin Gmail |
-| Admin portal credentials | Provided separately at handoff |
-| Recorded training sessions | 2 sessions delivered via video |
-| Architecture walkthrough | This document |
+| Item                       | Delivery method                               |
+| -------------------------- | --------------------------------------------- |
+| GitHub access              | `@psychmastery` org already under Admin Gmail |
+| Vercel access              | Project linked to Admin Gmail account         |
+| Prisma Postgres            | Database under Admin Gmail                    |
+| Shopify admin              | Ownership transferred to Admin Gmail          |
+| Domain                     | Registrar account under Admin Gmail           |
+| Gemini API                 | Google Cloud project under Admin Gmail        |
+| ElevenLabs                 | Account under Admin Gmail                     |
+| Admin portal credentials   | Provided separately at handoff                |
+| Recorded training sessions | 2 sessions delivered via video                |
+| Architecture walkthrough   | This document                                 |
 
 ### Pre-handoff verification checklist
 
@@ -515,6 +556,7 @@ Once you have confirmed everything above:
 This is the moment of full ownership transfer.
 
 After doing this:
+
 - No prior party has access to any system
 - You control the code, the database, all APIs, and the domain
 - The platform is 100% yours
@@ -526,6 +568,7 @@ After doing this:
 ### What does NOT require ongoing developer access
 
 Once handed over, you can independently:
+
 - Edit all website copy by modifying `content/site-content.json`
 - Deploy changes by pushing to GitHub (Vercel auto-deploys)
 - Add or remove buyers in the admin portal at `/admin`
@@ -557,4 +600,4 @@ Once handed over, you can independently:
 
 ---
 
-*Document prepared as part of the 90-Day Technical Stabilization & Infrastructure Transition for Psychiatric Assessment Mastery™.*
+_Document prepared as part of the 90-Day Technical Stabilization & Infrastructure Transition for Psychiatric Assessment Mastery™._

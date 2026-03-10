@@ -249,7 +249,7 @@
             "ctaHref": "#pricing",
             "feedbackForm": {
                 "headline": "Got Feedback? I'd Love to Hear From You.",
-                "description": "Whether it's a suggestion, a question, or just a kind word — your feedback helps me make this resource better for every student.",
+                "description": "Whether it's a suggestion, a question, or just a kind word — your feedback helps me make this resource better for every student",
                 "nameLabel": "Your Name",
                 "namePlaceholder": "e.g. Sarah Johnson",
                 "emailLabel": "Your Email",

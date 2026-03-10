@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, type ComponentType } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     Globe, Home, Brain, Sparkles, Tag, User, Zap,
@@ -18,14 +18,14 @@ const BRAND = {
 }
 
 /* ── Deep-path helpers ─────────────────────────────────── */
-function getAt(obj: any, path: string): any {
-    return path.split(".").reduce((acc, k) => acc?.[k], obj)
+function getAt(obj: unknown, path: string): unknown {
+    return path.split(".").reduce((acc, k) => (acc as Record<string, unknown>)?.[k], obj)
 }
-function setAt(obj: any, path: string, value: any): any {
-    const clone = structuredClone(obj)
+function setAt(obj: unknown, path: string, value: unknown): Record<string, unknown> {
+    const clone = structuredClone(obj) as Record<string, unknown>
     const keys = path.split(".")
-    let cur = clone
-    for (let i = 0; i < keys.length - 1; i++) cur = cur[keys[i]]
+    let cur: Record<string, unknown> = clone
+    for (let i = 0; i < keys.length - 1; i++) cur = cur[keys[i]] as Record<string, unknown>
     cur[keys[keys.length - 1]] = value
     return clone
 }
@@ -41,15 +41,15 @@ type Section =
     | "soap-page"
     | "navigation"
 
-const SECTIONS: { key: Section; label: string; icon: any; desc: string }[] = [
-    { key: "global",      label: "Brand & Global",      icon: Globe,     desc: "Name, price, footer, cookies" },
-    { key: "navigation",  label: "Navigation",           icon: Zap,       desc: "Menu links and labels" },
-    { key: "hero",        label: "Homepage Hero",        icon: Home,      desc: "Headline, subheadline, CTAs" },
-    { key: "problem",     label: "Problem & Solution",   icon: Brain,     desc: "Pain points and features" },
-    { key: "soap-teaser", label: "SOAP Teaser",          icon: Sparkles,  desc: "Homepage SOAP section" },
-    { key: "pricing",     label: "Pricing Cards",        icon: Tag,       desc: "Products and call-to-action" },
-    { key: "about",       label: "About Author",         icon: User,      desc: "Bio, credentials, feedback form" },
-    { key: "soap-page",   label: "SOAP Architect Page",  icon: Brain,     desc: "Full SOAP page copy" },
+const SECTIONS: { key: Section; label: string; icon: ComponentType<{ size?: number }>; desc: string }[] = [
+    { key: "global", label: "Brand & Global", icon: Globe, desc: "Name, price, footer, cookies" },
+    { key: "navigation", label: "Navigation", icon: Zap, desc: "Menu links and labels" },
+    { key: "hero", label: "Homepage Hero", icon: Home, desc: "Headline, subheadline, CTAs" },
+    { key: "problem", label: "Problem & Solution", icon: Brain, desc: "Pain points and features" },
+    { key: "soap-teaser", label: "SOAP Teaser", icon: Sparkles, desc: "Homepage SOAP section" },
+    { key: "pricing", label: "Pricing Cards", icon: Tag, desc: "Products and call-to-action" },
+    { key: "about", label: "About Author", icon: User, desc: "Bio, credentials, feedback form" },
+    { key: "soap-page", label: "SOAP Architect Page", icon: Brain, desc: "Full SOAP page copy" },
 ]
 
 /* ── Field primitives ──────────────────────────────────── */
@@ -59,20 +59,21 @@ interface FieldProps {
     type?: "text" | "textarea" | "url"
     note?: string
     rows?: number
-    content: any
+    content: Record<string, unknown>
     onChange: (path: string, value: string) => void
 }
 function Field({ label, path, type = "text", note, rows = 3, content, onChange }: FieldProps) {
-    const value = getAt(content, path) ?? ""
-    const base = "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-sm placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/20 transition"
+    const value = (getAt(content, path) ?? "") as string
+    const base = "w-full bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#af5ce9]/50 focus:border-[#af5ce9] transition"
 
     return (
         <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wide">{label}</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</label>
             {type === "textarea" ? (
                 <textarea
                     rows={rows}
                     value={value}
+                    title={label}
                     onChange={e => onChange(path, e.target.value)}
                     className={`${base} px-4 py-3 resize-y`}
                 />
@@ -80,11 +81,12 @@ function Field({ label, path, type = "text", note, rows = 3, content, onChange }
                 <input
                     type={type === "url" ? "url" : "text"}
                     value={value}
+                    title={label}
                     onChange={e => onChange(path, e.target.value)}
                     className={`${base} px-4 py-2.5 h-10`}
                 />
             )}
-            {note && <p className="text-[11px] text-white/25 leading-relaxed">{note}</p>}
+            {note && <p className="text-[11px] text-slate-400 leading-relaxed">{note}</p>}
         </div>
     )
 }
@@ -93,13 +95,13 @@ function Field({ label, path, type = "text", note, rows = 3, content, onChange }
 function Group({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
     const [open, setOpen] = useState(defaultOpen)
     return (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: "rgba(255,255,255,0.02)" }}>
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
             <button
                 onClick={() => setOpen(v => !v)}
-                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-white/[0.02] transition"
+                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition"
             >
-                <span className="text-sm font-semibold text-white">{title}</span>
-                {open ? <ChevronUp size={16} className="text-white/30" /> : <ChevronDown size={16} className="text-white/30" />}
+                <span className="text-sm font-semibold text-slate-800">{title}</span>
+                {open ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
             </button>
             <AnimatePresence initial={false}>
                 {open && (
@@ -111,7 +113,7 @@ function Group({ title, children, defaultOpen = true }: { title: string; childre
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                     >
-                        <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-5 border-t border-white/[0.04]  pt-5">
+                        <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
                             {children}
                         </div>
                     </motion.div>
@@ -124,13 +126,13 @@ function Group({ title, children, defaultOpen = true }: { title: string; childre
 function FullWidthGroup({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
     const [open, setOpen] = useState(defaultOpen)
     return (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: "rgba(255,255,255,0.02)" }}>
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
             <button
                 onClick={() => setOpen(v => !v)}
-                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-white/[0.02] transition"
+                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition"
             >
-                <span className="text-sm font-semibold text-white">{title}</span>
-                {open ? <ChevronUp size={16} className="text-white/30" /> : <ChevronDown size={16} className="text-white/30" />}
+                <span className="text-sm font-semibold text-slate-800">{title}</span>
+                {open ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
             </button>
             <AnimatePresence initial={false}>
                 {open && (
@@ -142,7 +144,7 @@ function FullWidthGroup({ title, children, defaultOpen = true }: { title: string
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                     >
-                        <div className="px-6 pb-6 space-y-5 border-t border-white/[0.04] pt-5">
+                        <div className="px-6 pb-6 space-y-5 border-t border-slate-100 pt-5">
                             {children}
                         </div>
                     </motion.div>
@@ -154,8 +156,8 @@ function FullWidthGroup({ title, children, defaultOpen = true }: { title: string
 
 /* ── JSON textarea editor for complex nested arrays ──── */
 function JsonArrayField({ label, path, content, onChange, note }: {
-    label: string; path: string; note?: string; content: any
-    onChange: (path: string, value: any) => void
+    label: string; path: string; note?: string; content: Record<string, unknown>
+    onChange: (path: string, value: unknown) => void
 }) {
     const value = getAt(content, path)
     const [raw, setRaw] = useState(JSON.stringify(value, null, 2))
@@ -163,7 +165,7 @@ function JsonArrayField({ label, path, content, onChange, note }: {
 
     useEffect(() => {
         setRaw(JSON.stringify(getAt(content, path), null, 2))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [path]) // only re-sync when path changes, not on every keystroke
 
     function handleBlur() {
@@ -178,24 +180,25 @@ function JsonArrayField({ label, path, content, onChange, note }: {
 
     return (
         <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wide">{label}</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</label>
             <textarea
                 rows={8}
                 value={raw}
+                title={label}
                 onChange={e => setRaw(e.target.value)}
                 onBlur={handleBlur}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-xs font-mono placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/20 transition px-4 py-3 resize-y"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs font-mono placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#af5ce9]/50 focus:border-[#af5ce9] transition px-4 py-3 resize-y"
                 spellCheck={false}
             />
-            {err && <p className="text-[11px] text-red-400">{err}</p>}
-            {note && <p className="text-[11px] text-white/25 leading-relaxed">{note}</p>}
+            {err && <p className="text-[11px] text-red-500">{err}</p>}
+            {note && <p className="text-[11px] text-slate-400 leading-relaxed">{note}</p>}
         </div>
     )
 }
 
 /* ── Main Component ────────────────────────────────────── */
 export function ContentEditor() {
-    const [content, setContent] = useState<any>(null)
+    const [content, setContent] = useState<Record<string, unknown> | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [loadError, setLoadError] = useState("")
     const [activeSection, setActiveSection] = useState<Section>("global")
@@ -220,8 +223,8 @@ export function ContentEditor() {
 
     useEffect(() => { loadContent() }, [loadContent])
 
-    function handleChange(path: string, value: any) {
-        setContent((prev: any) => setAt(prev, path, value))
+    function handleChange(path: string, value: unknown) {
+        setContent((prev) => prev ? setAt(prev, path, value) : null)
         setIsDirty(true)
         setSaveMsg(null)
     }
@@ -250,26 +253,26 @@ export function ContentEditor() {
     }
 
     const f = (label: string, path: string, opts?: Partial<FieldProps>) => (
-        <Field key={path} label={label} path={path} content={content} onChange={handleChange} {...opts} />
+        <Field key={path} label={label} path={path} content={content ?? {}} onChange={handleChange} {...opts} />
     )
     const jf = (label: string, path: string, note?: string) => (
-        <JsonArrayField key={path} label={label} path={path} content={content} onChange={handleChange} note={note} />
+        <JsonArrayField key={path} label={label} path={path} content={content ?? {}} onChange={handleChange} note={note} />
     )
 
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-24">
-                <Loader2 size={28} className="animate-spin text-white/30" />
+                <Loader2 size={28} className="animate-spin text-slate-400" />
             </div>
         )
     }
 
     if (loadError || !content) {
         return (
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-                <AlertCircle size={32} className="mx-auto text-red-400 mb-3" />
-                <p className="text-white/60 text-sm">{loadError || "Unknown error"}</p>
-                <button onClick={loadContent} className="mt-4 px-4 py-2 text-xs text-white/60 border border-white/10 rounded-xl hover:bg-white/5 transition">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
+                <AlertCircle size={32} className="mx-auto text-red-500 mb-3" />
+                <p className="text-red-700 text-sm font-medium">{loadError || "Unknown error"}</p>
+                <button onClick={loadContent} className="mt-4 px-4 py-2 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition shadow-sm">
                     Retry
                 </button>
             </div>
@@ -282,13 +285,13 @@ export function ContentEditor() {
             {/* Header bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-lg font-bold text-white">Site Content Editor</h2>
-                    <p className="text-xs text-white/30 mt-0.5">Edit all public-facing text from one place. Click <strong className="text-white/50">Publish</strong> to save changes.</p>
+                    <h2 className="text-xl font-bold text-[#041f50]">Site Content Editor</h2>
+                    <p className="text-sm font-medium text-slate-500 mt-1">Edit all public-facing text from one place. Click <strong className="text-slate-800">Publish</strong> to save changes.</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {isDirty && (
-                        <span className="text-xs text-amber-400 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" />
+                        <span className="text-xs font-medium text-amber-500 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block animate-pulse" />
                             Unsaved changes
                         </span>
                     )}
@@ -296,10 +299,10 @@ export function ContentEditor() {
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
                         onClick={loadContent}
-                        className="p-2 text-white/30 hover:text-white/60 border border-white/[0.06] rounded-xl transition"
+                        className="p-2.5 text-slate-400 hover:text-slate-600 border border-slate-200 bg-white rounded-xl shadow-sm transition"
                         title="Reload from file"
                     >
-                        <RefreshCw size={14} />
+                        <RefreshCw size={16} />
                     </motion.button>
                     <motion.button
                         whileHover={{ scale: 1.03 }}
@@ -307,6 +310,7 @@ export function ContentEditor() {
                         onClick={handleSave}
                         disabled={saving || !isDirty}
                         className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition disabled:opacity-40"
+                        // eslint-disable-next-line react/forbid-component-props
                         style={{ background: BRAND.gradient, boxShadow: isDirty ? BRAND.glow : "none" }}
                     >
                         {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
@@ -322,11 +326,10 @@ export function ContentEditor() {
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl border text-sm ${
-                            saveMsg.type === "success"
-                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
-                                : "bg-red-500/10 border-red-500/20 text-red-300"
-                        }`}
+                        className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl border text-sm ${saveMsg.type === "success"
+                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+                            : "bg-red-500/10 border-red-500/20 text-red-300"
+                            }`}
                     >
                         {saveMsg.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
                         {saveMsg.text}
@@ -335,9 +338,9 @@ export function ContentEditor() {
             </AnimatePresence>
 
             {/* Vercel notice */}
-            <div className="flex items-start gap-3 px-5 py-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] text-xs text-white/30">
-                <Info size={14} className="mt-0.5 shrink-0 text-white/20" />
-                <span>Changes are written to <code className="text-white/40 font-mono">content/site-content.json</code> on the local dev server. After publishing, <strong className="text-white/40">commit and push to GitHub</strong> to deploy the changes to your live site.</span>
+            <div className="flex items-start gap-3 px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-xs text-slate-500 font-medium">
+                <Info size={16} className="mt-0.5 shrink-0 text-slate-400" />
+                <span>Changes are written to <code className="text-slate-700 bg-slate-200/50 px-1.5 py-0.5 rounded font-mono">content/site-content.json</code> on the local dev server. After publishing, <strong className="text-slate-800">commit and push to GitHub</strong> to deploy the changes to your live site.</span>
             </div>
 
             {/* Section pills */}
@@ -349,14 +352,13 @@ export function ContentEditor() {
                         <button
                             key={s.key}
                             onClick={() => setActiveSection(s.key)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
-                                isActive
-                                    ? "text-white border-white/20"
-                                    : "text-white/30 border-white/[0.04] hover:text-white/60 hover:border-white/[0.08]"
-                            }`}
-                            style={isActive ? { background: BRAND.gradientSoft } : { background: "rgba(255,255,255,0.01)" }}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm border ${isActive
+                                ? "text-white border-transparent"
+                                : "text-slate-600 bg-white border-slate-200 hover:text-slate-900 hover:bg-slate-50"
+                                }`}
+                            style={isActive ? { background: BRAND.gradient, boxShadow: BRAND.glow } : undefined}
                         >
-                            <Icon size={14} />
+                            <Icon size={16} />
                             {s.label}
                         </button>
                     )
@@ -364,7 +366,7 @@ export function ContentEditor() {
             </div>
 
             {/* Section description */}
-            <p className="text-xs text-white/25">
+            <p className="text-sm font-medium text-slate-500 mt-2">
                 {SECTIONS.find(s => s.key === activeSection)?.desc}
             </p>
 
@@ -400,20 +402,20 @@ export function ContentEditor() {
                     {/* ── NAVIGATION ─────────────────────────────── */}
                     {activeSection === "navigation" && <>
                         <FullWidthGroup title="Navigation Items">
-                            <p className="text-xs text-white/30">Edit the array of navigation links below. Each item has a <code className="text-white/40 font-mono">label</code>, <code className="text-white/40 font-mono">href</code>, and an optional <code className="text-white/40 font-mono">badge</code>.</p>
+                            <p className="text-xs font-medium text-slate-500">Edit the array of navigation links below. Each item has a <code className="text-slate-700 bg-slate-100 px-1 py-0.5 rounded font-mono">label</code>, <code className="text-slate-700 bg-slate-100 px-1 py-0.5 rounded font-mono">href</code>, and an optional <code className="text-slate-700 bg-slate-100 px-1 py-0.5 rounded font-mono">badge</code>.</p>
                             {jf("Navigation Links (JSON)", "global.navigation", "Edit the label, href, and optional badge for each nav item. Save as valid JSON.")}
                         </FullWidthGroup>
 
-                        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-                            <h4 className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-3">Quick Labels</h4>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-4">Quick Labels</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {(content?.global?.navigation || []).map((_: any, i: number) => (
+                                {((getAt(content, "global.navigation") as unknown[] | null) ?? []).map((_: unknown, i: number) => (
                                     <div key={i} className="flex gap-3">
                                         <div className="flex-1">
-                                            {f(`Nav Item ${i + 1} — Label`, `global.navigation.${i}.label`)}
+                                            {f("Nav Item " + (i + 1) + " Label", "global.navigation." + i + ".label")}
                                         </div>
                                         <div className="flex-1">
-                                            {f(`Nav Item ${i + 1} — Href`, `global.navigation.${i}.href`)}
+                                            {f("Nav Item " + (i + 1) + " Href", "global.navigation." + i + ".href")}
                                         </div>
                                     </div>
                                 ))}
@@ -659,6 +661,7 @@ export function ContentEditor() {
                         onClick={handleSave}
                         disabled={saving}
                         className="flex items-center gap-2 px-6 py-3 text-white text-sm font-semibold rounded-2xl shadow-2xl transition disabled:opacity-50"
+                        // eslint-disable-next-line react/forbid-component-props
                         style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
                     >
                         {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
