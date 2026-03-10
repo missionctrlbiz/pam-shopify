@@ -180,7 +180,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
                 {/* Tab Navigation */}
-                <div className="flex gap-0.5 p-1 rounded-2xl mb-8 overflow-x-auto bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex gap-0.5 p-1 rounded-2xl mb-8 bg-white/[0.02] border border-white/[0.04]">
                     {tabs.map(tab => {
                         const isActive = activeTab === tab.key
                         return (
@@ -189,8 +189,9 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                 onClick={() => setActiveTab(tab.key)}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap relative ${isActive ? "text-white" : "text-white/30 hover:text-white/60"
-                                    }`}
+                                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${
+                                    isActive ? "text-white" : "text-white/30 hover:text-white/60"
+                                }`}
                             >
                                 {isActive && (
                                     <motion.div
@@ -213,7 +214,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                     {/* Overview Tab */}
                     {activeTab === "overview" && (
                         <motion.div key="overview" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                                 {statCards.map((s, i) => (
                                     <motion.div
                                         key={s.label}
