@@ -7,8 +7,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import {
     Users, Mail, BarChart3, LogOut, Plus,
-    Trash2, Search, Activity, RefreshCw, Loader2
+    Trash2, Search, Activity, RefreshCw, Loader2, FileEdit
 } from "lucide-react"
+import { ContentEditor } from "./ContentEditor"
 
 interface DashboardStats {
     totalBuyers: number
@@ -19,7 +20,7 @@ interface DashboardStats {
 interface BuyerRow { id: string; email: string; createdAt: string }
 interface LeadRow { id: string; email: string; name: string | null; source: string; createdAt: string }
 
-type Tab = "overview" | "buyers" | "leads" | "analytics"
+type Tab = "overview" | "buyers" | "leads" | "analytics" | "content"
 
 const BRAND = {
     red: "#ed415b",
@@ -122,6 +123,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
         { key: "buyers", label: "Buyers", icon: Users, iconName: "Users" },
         { key: "leads", label: "Leads", icon: Mail, iconName: "Mail" },
         { key: "analytics", label: "Analytics", icon: Activity, iconName: "Activity" },
+        { key: "content", label: "Content", icon: FileEdit, iconName: "FileEdit" },
     ]
 
     const statCards = [
@@ -251,6 +253,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                         { tab: "buyers" as Tab, iconName: "Plus", icon: Plus, label: "Add Buyer", desc: "Whitelist a new email", color: BRAND.red },
                                         { tab: "leads" as Tab, iconName: "Mail", icon: Mail, label: "View Leads", desc: "Browse captured emails", color: BRAND.pink },
                                         { tab: "analytics" as Tab, iconName: "Activity", icon: Activity, label: "Analytics", desc: "Track platform usage", color: BRAND.purple },
+                                        { tab: "content" as Tab, iconName: "FileEdit", icon: FileEdit, label: "Edit Content", desc: "Update site text & copy", color: BRAND.red },
                                     ].map(action => (
                                         <motion.button
                                             key={action.tab}
@@ -407,6 +410,13 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                     </p>
                                 </div>
                             </div>
+                        </motion.div>
+                    )}
+
+                    {/* Content Tab */}
+                    {activeTab === "content" && (
+                        <motion.div key="content" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                            <ContentEditor />
                         </motion.div>
                     )}
                 </AnimatePresence>

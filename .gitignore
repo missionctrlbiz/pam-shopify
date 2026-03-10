@@ -39,6 +39,10 @@ yarn-error.log*
 # local secrets — never commit
 VERCEL_ENV_SETUP.md
 
+# handover docs — local only, never push
+HANDOVER.md
+HANDOVER.html
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
