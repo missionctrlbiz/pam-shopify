@@ -189,9 +189,8 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                 onClick={() => setActiveTab(tab.key)}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${
-                                    isActive ? "text-white" : "text-white/30 hover:text-white/60"
-                                }`}
+                                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${isActive ? "text-white" : "text-white/30 hover:text-white/60"
+                                    }`}
                             >
                                 {isActive && (
                                     <motion.div
