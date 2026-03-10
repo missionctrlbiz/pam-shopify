@@ -271,17 +271,17 @@ export default function Home() {
 
             {/* Video Hero — 9:16 mockup, bezels cropped via scale + white fade masks */}
             <div className="flex justify-center items-center relative z-20 py-8">
-              <div className="relative w-full max-w-75 sm:max-w-[380px] aspect-9/16 rounded-2xl md:rounded-4xl overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] bg-white -rotate-2 hover:rotate-0 transition-transform duration-500">
-                {/* White fade masks to hide top/bottom phone bezels */}
-                <div className="absolute top-0 left-0 w-full h-[14%] bg-linear-to-b from-white to-transparent z-10 pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-full h-[14%] bg-linear-to-t from-white to-transparent z-10 pointer-events-none" />
+              <div className="relative w-full max-w-[320px] sm:max-w-[400px] aspect-9/16 rounded-2xl md:rounded-4xl overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] bg-white -rotate-2 hover:rotate-0 transition-transform duration-500">
+                {/* White fade masks — tall enough to fully cover bezels */}
+                <div className="absolute top-0 left-0 w-full h-[22%] z-10 pointer-events-none" style={{ background: "linear-gradient(to bottom, #ffffff 40%, transparent 100%)" }} />
+                <div className="absolute bottom-0 left-0 w-full h-[22%] z-10 pointer-events-none" style={{ background: "linear-gradient(to top, #ffffff 40%, transparent 100%)" }} />
                 <video
                   suppressHydrationWarning
                   autoPlay
                   loop
                   muted
                   playsInline
-                  className="absolute inset-0 w-full h-full object-cover scale-[1.24] [object-position:center_48%]"
+                  className="absolute inset-0 w-full h-full object-cover scale-[1.35] [object-position:center_48%]"
                   poster="/1.png"
                 >
                   <source src="/Mockup.webm" type="video/webm" />
