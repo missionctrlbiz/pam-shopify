@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    try {
     const body = await req.json() as { contentIdeaId?: string; voiceId?: string; scope?: string }
     const { contentIdeaId, voiceId } = body
 
@@ -131,6 +132,13 @@ export async function POST(req: NextRequest) {
 
     const entry = idea.calendarEntry
 
+    if (!entry) {
+        return NextResponse.json(
+            { error: `ContentIdea ${contentIdeaId} has no linked calendar entry` },
+            { status: 422 }
+        )
+    }
+
     if (entry.publishStatus !== "APPROVED") {
         return NextResponse.json(
             {
@@ -152,7 +160,12 @@ export async function POST(req: NextRequest) {
     }
 
     const master = idea.masterJson as Record<string, unknown>
-    const callbackUrl = `${process.env.NEXTAUTH_URL ?? process.env.VERCEL_URL}/api/production/render-done`
+
+    // Build callback URL — NEXTAUTH_URL must include https:// (no trailing slash)
+    const nextAuthUrl = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")
+    const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
+    const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
+    const callbackUrl = `${baseUrl}/api/production/render-done`
     const callbackSecret = process.env.RENDER_CALLBACK_SECRET ?? ""
 
     // All three must be present — GCP_SERVICE_ACCOUNT_JSON_B64 is the actual credential;
@@ -288,6 +301,11 @@ export async function POST(req: NextRequest) {
         },
         { status: 202 }
     )
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error("[assets/generate] Unhandled error:", err)
+        return NextResponse.json({ error: msg }, { status: 500 })
+    }
 }
 
 // ---------------------------------------------------------------------------
