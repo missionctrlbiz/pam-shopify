@@ -52,3 +52,6 @@ next-env.d.ts
 /lib/generated/prisma
 
 .vercel
+
+# Office temp lock files
+DOCS/~$*
