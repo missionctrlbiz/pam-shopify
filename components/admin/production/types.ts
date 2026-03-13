@@ -144,5 +144,6 @@ export interface GenerateAssetsResponse {
 export interface GenerateCycleResponse {
     generated: number
     failed: number
-    entries: CalendarEntryRow[]
+    entries: { dayNumber: number; entryId: string; topic: string }[]
+    errors?: string[]
 }

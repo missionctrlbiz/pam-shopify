@@ -17,7 +17,7 @@
  *   [breath]         → 0.3 s breath cue between scene transitions
  *   [emphasize:word] → the single most critical term per scene
  *
- * Model: gemini-2.0-flash (same as contentStrategist)
+ * Model: gemini-2.5-flash via PRODUCTION_MODEL import from contentStrategist
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai"

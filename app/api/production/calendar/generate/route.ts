@@ -24,6 +24,9 @@ import {
     PostType,
 } from "@prisma/client"
 
+// Allow up to 5 minutes for batch generation (Vercel Pro / Fluid compute)
+export const maxDuration = 300
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -86,6 +89,7 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json().catch(() => ({}))
         const days = Math.min(Number(body.days ?? 30), 30)
+        const offset = Math.max(Number(body.offset ?? 0), 0)
         const overwrite = Boolean(body.overwrite ?? false)
         const startDate = body.startDate
             ? new Date(body.startDate)
@@ -120,10 +124,11 @@ export async function POST(req: NextRequest) {
         const errors: string[] = []
 
         for (let i = 0; i < days; i++) {
-            const template = SCHEDULE_TEMPLATE[i % SCHEDULE_TEMPLATE.length]
-            const field = clinicalFields[i % clinicalFields.length]
+            const absoluteDay = offset + i
+            const template = SCHEDULE_TEMPLATE[absoluteDay % SCHEDULE_TEMPLATE.length]
+            const field = clinicalFields[absoluteDay % clinicalFields.length]
             const entryDate = new Date(startDate)
-            entryDate.setDate(startDate.getDate() + i)
+            entryDate.setDate(startDate.getDate() + absoluteDay)
 
             try {
                 const { masterJson, rawPrompt } = await generateContentIdea(
@@ -147,7 +152,7 @@ export async function POST(req: NextRequest) {
                 const entry = await prisma.$transaction(async (tx) => {
                     const calEntry = await tx.productionCalendarEntry.create({
                         data: {
-                            dayNumber: i + 1,
+                            dayNumber: absoluteDay + 1,
                             entryDate,
                             platform: template.platform,
                             topic: field.displayName,
@@ -174,11 +179,11 @@ export async function POST(req: NextRequest) {
                     return calEntry
                 })
 
-                results.push({ dayNumber: i + 1, entryId: entry.id, topic: field.displayName })
+                results.push({ dayNumber: absoluteDay + 1, entryId: entry.id, topic: field.displayName })
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err)
-                errors.push(`Day ${i + 1} (${field.fieldKey}): ${msg}`)
-                console.error(`[calendar/generate] Day ${i + 1} failed:`, err)
+                errors.push(`Day ${absoluteDay + 1} (${field.fieldKey}): ${msg}`)
+                console.error(`[calendar/generate] Day ${absoluteDay + 1} failed:`, err)
             }
         }
 
@@ -192,7 +197,12 @@ export async function POST(req: NextRequest) {
             { status: errors.length > 0 && results.length === 0 ? 500 : 207 }
         )
     } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
         console.error("[calendar/generate] Unexpected error:", err)
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+        const isDev = process.env.NODE_ENV === "development"
+        return NextResponse.json(
+            { error: "Internal server error", ...(isDev && { detail: errMsg }) },
+            { status: 500 }
+        )
     }
 }

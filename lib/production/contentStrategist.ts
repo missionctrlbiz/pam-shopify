@@ -7,7 +7,7 @@
  * Uses Gemini structured output (responseMimeType: "application/json") so the
  * response is always a valid, parseable JSON object — never free-form text.
  *
- * Model: gemini-2.0-flash (stable as of March 2026; thinking variant deprecated)
+ * Model: gemini-2.5-flash (gemini-2.0-flash unavailable for new API keys as of March 2026)
  * JSON mode: prompt-enforced + code-fence stripping.
  */
 
@@ -17,8 +17,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 // Model config
 // ---------------------------------------------------------------------------
 
-// Primary model — stable flash. Thinking variant was deprecated March 2026.
-export const PRODUCTION_MODEL = "gemini-2.0-flash"
+// Primary model — gemini-2.5-flash (gemini-2.0-flash deprecated for new API keys March 2026).
+export const PRODUCTION_MODEL = "gemini-2.5-flash"
 
 // ---------------------------------------------------------------------------
 // Types

@@ -1,40 +1,25 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const { PrismaClient } = require("@prisma/client")
-const bcrypt = require("bcryptjs")
+/**
+ * POST /api/admin/seed-fields
+ *
+ * Idempotent upsert of all 18 ClinicalField records.
+ * Safe to call on any environment — uses upsert so it never creates duplicates.
+ * Protected: admin only.
+ */
 
-const prisma = new PrismaClient()
+import { NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+import prisma from "@/lib/prisma"
+import type { FieldCategory } from "@prisma/client"
 
-async function main() {
-    console.log("🌱 Seeding database...\n")
-
-    // Create admin user
-    const adminPassword = await bcrypt.hash("PamAdmin2026!", 12)
-    const admin = await prisma.user.upsert({
-        where: { email: "anthoniaojomo22@gmail.com" },
-        update: { password: adminPassword, role: "admin" },
-        create: {
-            email: "anthoniaojomo22@gmail.com",
-            name: "Anthonia Ojomor",
-            password: adminPassword,
-            role: "admin",
-        },
-    })
-    console.log(`✅ Admin user created:`)
-    console.log(`   Email:    anthoniaojomo22@gmail.com`)
-    console.log(`   Password: PamAdmin2026!`)
-    console.log(`   Role:     ${admin.role}\n`)
-
-    // Seed the existing buyer
-    const buyer = await prisma.buyer.upsert({
-        where: { email: "charleschuck89@gmail.com" },
-        update: {},
-        create: { email: "charleschuck89@gmail.com" },
-    })
-    console.log(`✅ Buyer whitelisted: ${buyer.email}\n`)
-
-    // ── Seed ClinicalField records (required for calendar generation) ──────────
-    const clinicalFields = [
-        // CHIEF_COMPLAINT — 3 fields
+const CLINICAL_FIELDS: Array<{
+    fieldKey: string
+    fieldCategory: FieldCategory
+    displayName: string
+    description: string
+    clinicalContext: string
+    exampleValues: string[]
+}> = [
+        // ── CHIEF_COMPLAINT ───────────────────────────────────────────────────────
         {
             fieldKey: "presenting_chief_complaint",
             fieldCategory: "CHIEF_COMPLAINT",
@@ -59,7 +44,7 @@ async function main() {
             clinicalContext: "Biopsychosocial formulation requires clear articulation of precipitants vs baseline function — often tested on board exams.",
             exampleValues: ["recent job loss", "medication non-adherence", "substance use relapse"],
         },
-        // MSE — 3 fields
+        // ── MSE ───────────────────────────────────────────────────────────────────
         {
             fieldKey: "mse_thought_process",
             fieldCategory: "MSE",
@@ -84,7 +69,7 @@ async function main() {
             clinicalContext: "Poor insight is a core predictor of medication non-adherence and hospitalization risk. Critical for crisis assessment.",
             exampleValues: ["intact insight", "partial insight", "absent insight", "impaired judgment"],
         },
-        // DIAGNOSTIC — 3 fields
+        // ── DIAGNOSTIC ────────────────────────────────────────────────────────────
         {
             fieldKey: "bipolar_vs_mdd_differential",
             fieldCategory: "DIAGNOSTIC",
@@ -109,7 +94,7 @@ async function main() {
             clinicalContext: "Comorbidity is the rule in anxiety — over 60% have co-occurring depression. Correct hierarchy prevents incomplete treatment.",
             exampleValues: ["GAD ≥6 months excessive worry", "panic disorder uncued attacks + anticipatory anxiety", "PTSD requires trauma criterion A"],
         },
-        // RISK_ASSESSMENT — 3 fields
+        // ── RISK_ASSESSMENT ───────────────────────────────────────────────────────
         {
             fieldKey: "suicide_risk_stratification",
             fieldCategory: "RISK_ASSESSMENT",
@@ -134,7 +119,7 @@ async function main() {
             clinicalContext: "NSSI ≠ suicidal behavior though it is a risk amplifier. Students commonly conflate the two — a board exam and clinical safety issue.",
             exampleValues: ["emotion regulation function", "anti-dissociation function", "NSSI without suicidal intent"],
         },
-        // DOCUMENTATION — 3 fields
+        // ── DOCUMENTATION ─────────────────────────────────────────────────────────
         {
             fieldKey: "soap_note_documentation",
             fieldCategory: "DOCUMENTATION",
@@ -159,7 +144,7 @@ async function main() {
             clinicalContext: "Underdocumented informed consent is a common malpractice exposure area. Capacity assessment is legally distinct from competency.",
             exampleValues: ["medication risks/benefits/alternatives discussed", "patient demonstrates understanding", "capacity vs competency distinction"],
         },
-        // INTERVIEW — 3 fields
+        // ── INTERVIEW ─────────────────────────────────────────────────────────────
         {
             fieldKey: "psychiatric_interview_structure",
             fieldCategory: "INTERVIEW",
@@ -186,43 +171,56 @@ async function main() {
         },
     ]
 
-    let fieldsCreated = 0
-    for (const field of clinicalFields) {
-        await prisma.clinicalField.upsert({
-            where: { fieldKey: field.fieldKey },
-            update: {
-                displayName: field.displayName,
-                description: field.description,
-                clinicalContext: field.clinicalContext,
-                exampleValues: field.exampleValues,
-                isActive: true,
-            },
-            create: {
-                fieldKey: field.fieldKey,
-                fieldCategory: field.fieldCategory,
-                displayName: field.displayName,
-                description: field.description,
-                clinicalContext: field.clinicalContext || null,
-                exampleValues: field.exampleValues,
-                isActive: true,
-            },
-        })
-        fieldsCreated++
+export async function POST() {
+    const session = await auth()
+    if (!session || (session.user as { role?: string })?.role !== "admin") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-    console.log(`✅ Clinical fields upserted: ${fieldsCreated} records\n`)
 
-    console.log("🎉 Database seeded successfully!")
-    console.log("\n📋 Test Credentials:")
-    console.log("   URL:      http://localhost:3000/admin/login")
-    console.log("   Email:    anthoniaojomo22@gmail.com")
-    console.log("   Password: PamAdmin2026!")
+    let upserted = 0
+    const errors: string[] = []
+
+    for (const field of CLINICAL_FIELDS) {
+        try {
+            await prisma.clinicalField.upsert({
+                where: { fieldKey: field.fieldKey },
+                update: {
+                    displayName: field.displayName,
+                    description: field.description,
+                    clinicalContext: field.clinicalContext,
+                    exampleValues: field.exampleValues,
+                    isActive: true,
+                },
+                create: {
+                    fieldKey: field.fieldKey,
+                    fieldCategory: field.fieldCategory,
+                    displayName: field.displayName,
+                    description: field.description,
+                    clinicalContext: field.clinicalContext,
+                    exampleValues: field.exampleValues,
+                    isActive: true,
+                },
+            })
+            upserted++
+        } catch (e) {
+            errors.push(`${field.fieldKey}: ${(e as Error).message}`)
+        }
+    }
+
+    const count = await prisma.clinicalField.count()
+
+    return NextResponse.json({
+        upserted,
+        total: count,
+        errors: errors.length > 0 ? errors : undefined,
+    })
 }
 
-main()
-    .catch((e) => {
-        console.error("❌ Seed error:", e)
-        process.exit(1)
-    })
-    .finally(async () => {
-        await prisma.$disconnect()
-    })
+export async function GET() {
+    const session = await auth()
+    if (!session || (session.user as { role?: string })?.role !== "admin") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const count = await prisma.clinicalField.count({ where: { isActive: true } })
+    return NextResponse.json({ count })
+}

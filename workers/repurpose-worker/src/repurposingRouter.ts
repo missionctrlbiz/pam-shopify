@@ -5,7 +5,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const PRODUCTION_MODEL = "gemini-2.0-flash" // was: gemini-2.0-flash-thinking-exp-01-21 (deprecated)
+const PRODUCTION_MODEL = "gemini-2.5-flash" // gemini-2.0-flash deprecated for new API keys March 2026
 
 export interface RepurposeInput {
     hook: string

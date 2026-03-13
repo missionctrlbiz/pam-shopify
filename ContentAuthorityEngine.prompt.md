@@ -547,7 +547,7 @@ Blob path: `/production/[calendarEntryId]/[assetType]/[fileName]`
 | Admin auth guard          | `session.user.role !== "admin"`        | Consistent with all existing `/api/admin/` routes                                      |
 | Callback security         | HMAC with shared secret                | Mirrors Shopify webhook pattern in `app/api/webhooks/shopify/route.ts`                 |
 
-| Gemini model (March 2026) | `gemini-2.0-flash` | `gemini-2.0-flash-thinking-exp-01-21` was deprecated; flash is stable + faster |
+| Gemini model (March 2026) | `gemini-2.5-flash` | `gemini-2.0-flash` unavailable for new API keys; `gemini-2.5-flash` is the current stable model |
 
 ---
 
@@ -859,4 +859,4 @@ Content pool rules for Gemini prompt:
 
 ---
 
-_Last updated: March 2026 — Story Bank spec added (Sections K–L). Model fixed: gemini-2.0-flash._
+_Last updated: March 2026 — Story Bank spec added (Sections K–L). Model: gemini-2.5-flash (gemini-2.0-flash deprecated for new API keys)._

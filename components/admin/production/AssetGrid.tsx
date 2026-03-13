@@ -9,19 +9,19 @@ import type { ContentAsset, RenderJob, AssetStatus, AssetType } from "./types"
 import { PROD_BRAND } from "./CalendarTable"
 
 const ASSET_ICON: Record<AssetType, React.ReactNode> = {
-    CAROUSEL_PNG:      <Image   size={16} />,
-    VIDEO_MP4:         <Video   size={16} />,
-    TEXT_POST:         <FileText size={16} />,
-    EMAIL_HTML:        <FileText size={16} />,
-    AUDIO_MP3:         <Music   size={16} />,
+    CAROUSEL_PNG: <Image size={16} />,
+    VIDEO_MP4: <Video size={16} />,
+    TEXT_POST: <FileText size={16} />,
+    EMAIL_HTML: <FileText size={16} />,
+    AUDIO_MP3: <Music size={16} />,
     VIDEO_SCRIPT_JSON: <FileText size={16} />,
 }
 
 const ASSET_STATUS_STYLE: Record<AssetStatus, { icon: React.ReactNode; color: string; label: string }> = {
-    PENDING:    { icon: <Clock      size={12} />, color: PROD_BRAND.gray,  label: "Pending"    },
-    GENERATING: { icon: <Zap        size={12} />, color: PROD_BRAND.blue,  label: "Rendering…" },
-    COMPLETE:   { icon: <CheckCircle2 size={12} />, color: PROD_BRAND.green, label: "Complete" },
-    FAILED:     { icon: <AlertCircle size={12} />, color: PROD_BRAND.red,  label: "Failed"     },
+    PENDING: { icon: <Clock size={12} />, color: PROD_BRAND.gray, label: "Pending" },
+    GENERATING: { icon: <Zap size={12} />, color: PROD_BRAND.blue, label: "Rendering…" },
+    COMPLETE: { icon: <CheckCircle2 size={12} />, color: PROD_BRAND.green, label: "Complete" },
+    FAILED: { icon: <AlertCircle size={12} />, color: PROD_BRAND.red, label: "Failed" },
 }
 
 interface AssetGridProps {
@@ -52,7 +52,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
     const onPollTick = React.useRef<(() => void) | null>(null)
     useEffect(() => {
         if (onPollTick.current) onPollTick.current()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pollCount])
 
     return (
@@ -83,8 +83,8 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                     {generating || hasActiveJobs
                         ? <><RefreshCw size={12} className="animate-spin" /> Generating…</>
                         : hasAnyAssets
-                        ? <><RefreshCw size={12} /> Re-generate</>
-                        : <><Zap size={12} /> Generate Assets</>
+                            ? <><RefreshCw size={12} /> Re-generate</>
+                            : <><Zap size={12} /> Generate Assets</>
                     }
                 </button>
             </div>

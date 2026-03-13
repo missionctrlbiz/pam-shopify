@@ -25,9 +25,9 @@ function getTasksClient(): CloudTasksClient {
 }
 
 const WORKER_URL_MAP: Record<string, string | undefined> = {
-    CAROUSEL:  process.env.CAROUSEL_RENDERER_URL,
-    VIDEO:     process.env.VIDEO_RENDERER_URL,
-    AUDIO:     process.env.VIDEO_RENDERER_URL, // same worker
+    CAROUSEL: process.env.CAROUSEL_RENDERER_URL,
+    VIDEO: process.env.VIDEO_RENDERER_URL,
+    AUDIO: process.env.VIDEO_RENDERER_URL, // same worker
     REPURPOSE: process.env.REPURPOSE_WORKER_URL,
 }
 

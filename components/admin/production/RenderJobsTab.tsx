@@ -59,33 +59,33 @@ const PURPLE = "#af5ce9"
 const PURPLE_FAINT = "rgba(175,92,233,0.08)"
 
 const STATUS_CFG: Record<RenderJobStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-    QUEUED:   { label: "Queued",    color: PROD_BRAND.amber, bg: PROD_BRAND.amberFaint, icon: <Clock size={12} />                             },
-    RUNNING:  { label: "Running",   color: PROD_BRAND.blue,  bg: PROD_BRAND.blueFaint,  icon: <Zap size={12} />                               },
-    COMPLETE: { label: "Complete",  color: PROD_BRAND.green, bg: PROD_BRAND.greenFaint, icon: <CheckCircle2 size={12} />                       },
-    FAILED:   { label: "Failed",    color: PROD_BRAND.red,   bg: PROD_BRAND.redFaint,   icon: <AlertCircle size={12} />                        },
+    QUEUED: { label: "Queued", color: PROD_BRAND.amber, bg: PROD_BRAND.amberFaint, icon: <Clock size={12} /> },
+    RUNNING: { label: "Running", color: PROD_BRAND.blue, bg: PROD_BRAND.blueFaint, icon: <Zap size={12} /> },
+    COMPLETE: { label: "Complete", color: PROD_BRAND.green, bg: PROD_BRAND.greenFaint, icon: <CheckCircle2 size={12} /> },
+    FAILED: { label: "Failed", color: PROD_BRAND.red, bg: PROD_BRAND.redFaint, icon: <AlertCircle size={12} /> },
 }
 
 const JOB_TYPE_ICON: Record<JobType, React.ReactNode> = {
-    CAROUSEL:  <Image   size={14} />,
-    VIDEO:     <Video   size={14} />,
-    AUDIO:     <Music   size={14} />,
+    CAROUSEL: <Image size={14} />,
+    VIDEO: <Video size={14} />,
+    AUDIO: <Music size={14} />,
     REPURPOSE: <FileText size={14} />,
 }
 
 const ASSET_TYPE_ICON: Record<string, React.ReactNode> = {
-    CAROUSEL_PNG:      <Image    size={12} />,
-    VIDEO_MP4:         <Film     size={12} />,
-    AUDIO_MP3:         <Music    size={12} />,
-    TEXT_POST:         <FileText size={12} />,
-    EMAIL_HTML:        <FileText size={12} />,
+    CAROUSEL_PNG: <Image size={12} />,
+    VIDEO_MP4: <Film size={12} />,
+    AUDIO_MP3: <Music size={12} />,
+    TEXT_POST: <FileText size={12} />,
+    EMAIL_HTML: <FileText size={12} />,
     VIDEO_SCRIPT_JSON: <FileText size={12} />,
 }
 
 type FilterTab = "all" | "active" | "failed" | "complete"
 const FILTER_TABS: { id: FilterTab; label: string; status?: string }[] = [
-    { id: "all",      label: "All" },
-    { id: "active",   label: "Active",   status: "QUEUED,RUNNING" },
-    { id: "failed",   label: "Failed",   status: "FAILED" },
+    { id: "all", label: "All" },
+    { id: "active", label: "Active", status: "QUEUED,RUNNING" },
+    { id: "failed", label: "Failed", status: "FAILED" },
     { id: "complete", label: "Complete", status: "COMPLETE" },
 ]
 
@@ -435,8 +435,8 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                     {/* Timestamps */}
                     <div style={{ display: "flex", gap: 24, marginBottom: 14 }}>
                         {[
-                            { label: "Queued",    val: job.queuedAt    },
-                            { label: "Started",   val: job.startedAt   },
+                            { label: "Queued", val: job.queuedAt },
+                            { label: "Started", val: job.startedAt },
                             { label: "Completed", val: job.completedAt },
                         ].map(({ label, val }) => (
                             <div key={label}>

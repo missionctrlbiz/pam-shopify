@@ -36,8 +36,8 @@ const VIEWS: { key: ProdView; label: string; iconName: string; Icon: React.Eleme
     { key: "table", label: "Data Table", iconName: "Table", Icon: LayoutList },
     { key: "grid", label: "Calendar Grid", iconName: "CalendarDays", Icon: CalendarDays },
     { key: "import", label: "Import & Generate", iconName: "Upload", Icon: Upload },
-    { key: "storybank",   label: "Story Bank",    iconName: "BookOpen", Icon: BookOpen },
-    { key: "renderjobs",  label: "Render Queue",  iconName: "Layers",   Icon: Layers  },
+    { key: "storybank", label: "Story Bank", iconName: "BookOpen", Icon: BookOpen },
+    { key: "renderjobs", label: "Render Queue", iconName: "Layers", Icon: Layers },
 ]
 
 // ─── Stat Card (exact same pattern as admin overview) ─────────────────────────
@@ -219,12 +219,13 @@ function CalendarGridView({ entries }: { entries: CalendarEntryRow[] }) {
 }
 
 // ─── Generate Cycle Modal ─────────────────────────────────────────────────────
-function GenerateModal({ open, onClose, onConfirm, running, result }: {
+function GenerateModal({ open, onClose, onConfirm, running, result, progress }: {
     open: boolean
     onClose: () => void
     onConfirm: () => Promise<void>
     running: boolean
     result: GenerateCycleResponse | null
+    progress: number
 }) {
     return (
         <AnimatePresence>
@@ -277,6 +278,27 @@ function GenerateModal({ open, onClose, onConfirm, running, result }: {
                             </div>
                         )}
 
+                        {running && (
+                            <div className="mb-5">
+                                <div className="flex justify-between text-xs text-slate-500 font-bold mb-1.5">
+                                    <span>Generating entries…</span>
+                                    <span>{progress}%</span>
+                                </div>
+                                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-700"
+                                        style={{
+                                            width: `${progress}%`,
+                                            background: BRAND.gradient,
+                                        }}
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1.5">
+                                    Calling Gemini for each day — please keep this tab open.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="flex justify-end gap-3">
                             <button onClick={onClose}
                                 className="px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
@@ -309,7 +331,36 @@ function ImportTab({ onGenerate, generating, onDone }: {
     const [dragging, setDragging] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string } | null>(null)
+    const [fieldsCount, setFieldsCount] = useState<number | null>(null)
+    const [seeding, setSeeding] = useState(false)
+    const [seedMsg, setSeedMsg] = useState<{ ok: boolean; text: string } | null>(null)
     const fileRef = useRef<HTMLInputElement>(null)
+
+    // ── Fetch field count on mount ──────────────────────────────────────────
+    useEffect(() => {
+        fetch("/api/admin/seed-fields")
+            .then(r => r.json())
+            .then((d: { count: number }) => setFieldsCount(d.count))
+            .catch(() => setFieldsCount(0))
+    }, [])
+
+    const handleSeedFields = async () => {
+        setSeeding(true)
+        setSeedMsg(null)
+        try {
+            const res = await fetch("/api/admin/seed-fields", { method: "POST" })
+            const d = await res.json() as { upserted: number; total: number; errors?: string[] }
+            if (res.ok) {
+                setFieldsCount(d.total)
+                setSeedMsg({ ok: true, text: `✅ ${d.total} clinical fields ready — you can now generate content.` })
+            } else {
+                setSeedMsg({ ok: false, text: "❌ Seed failed. Check browser console." })
+            }
+        } catch {
+            setSeedMsg({ ok: false, text: "❌ Network error during seed." })
+        }
+        setSeeding(false)
+    }
 
     const handleFile = async (file: File) => {
         if (!file.name.endsWith(".csv")) {
@@ -340,6 +391,45 @@ function ImportTab({ onGenerate, generating, onDone }: {
 
     return (
         <div className="space-y-6">
+            {/* ── Step 0: Seed Clinical Fields ── */}
+            <div className={`bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/40 border relative overflow-hidden ${fieldsCount === 0 ? "border-red-200" : "border-slate-100"}`}>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-lg ${fieldsCount === 0 ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-600"}`}>
+                            {fieldsCount === 0 ? "⚠️" : "✅"}
+                        </div>
+                        <div>
+                            <p className="text-sm font-extrabold text-slate-700">
+                                Clinical Fields Database
+                                {fieldsCount !== null && (
+                                    <span className={`ml-2 text-xs font-bold px-2 py-0.5 rounded-full ${fieldsCount > 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
+                                        {fieldsCount} / 18 fields
+                                    </span>
+                                )}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                                {fieldsCount === 0
+                                    ? "⚠️ No clinical fields found. You MUST seed fields before generating content."
+                                    : "Clinical fields are ready. AI generation is enabled."}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleSeedFields}
+                        disabled={seeding}
+                        className="px-5 py-2 rounded-xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-50 shrink-0"
+                        style={{ background: fieldsCount === 0 ? "#EF4444" : "#10B981" }}
+                    >
+                        {seeding ? <><Loader2 size={14} className="animate-spin" />Seeding…</> : fieldsCount === 0 ? "⚡ Initialize Fields (Required)" : "↺ Re-seed Fields"}
+                    </button>
+                </div>
+                {seedMsg && (
+                    <div className={`mt-3 p-3 rounded-xl text-xs font-medium ${seedMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                        {seedMsg.text}
+                    </div>
+                )}
+            </div>
+
             {/* Generate with AI card */}
             <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/40 border border-slate-100 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 rounded-bl-full opacity-10" style={{ background: `radial-gradient(circle at top right, ${BRAND.purple}, transparent)` }} />
@@ -358,7 +448,8 @@ function ImportTab({ onGenerate, generating, onDone }: {
                     </div>
                     <button
                         onClick={onGenerate}
-                        disabled={generating}
+                        disabled={generating || fieldsCount === 0}
+                        title={fieldsCount === 0 ? "Seed clinical fields first (step above)" : undefined}
                         className="px-7 py-3.5 rounded-2xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-50 shadow-xl shrink-0"
                         style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
                     >
@@ -460,6 +551,7 @@ export function ProductionPanel() {
     const [generateModalOpen, setGenerateModalOpen] = useState(false)
     const [generating, setGenerating] = useState(false)
     const [generateResult, setGenerateResult] = useState<GenerateCycleResponse | null>(null)
+    const [generateProgress, setGenerateProgress] = useState(0)
 
     // ── Stats ───────────────────────────────────────────────────────────────
     const stats = React.useMemo(() => ({
@@ -509,13 +601,45 @@ export function ProductionPanel() {
     }, [])
 
     const handleGenerateCycle = async () => {
+        const TOTAL = 30
+        const BATCH = 5
         setGenerating(true)
-        try {
-            const res = await fetch("/api/production/calendar/generate", { method: "POST" })
-            const data = await res.json() as GenerateCycleResponse
-            setGenerateResult(data)
-            await fetchCalendar(1)
-        } catch { setGenerateResult({ generated: 0, failed: 0, entries: [] }) }
+        setGenerateProgress(0)
+        setGenerateResult(null)
+
+        const startDate = new Date()
+        startDate.setDate(startDate.getDate() + 1)
+        startDate.setHours(9, 0, 0, 0)
+        const startDateStr = startDate.toISOString()
+
+        let totalGenerated = 0
+        let totalFailed = 0
+
+        for (let offset = 0; offset < TOTAL; offset += BATCH) {
+            try {
+                const days = Math.min(BATCH, TOTAL - offset)
+                const res = await fetch("/api/production/calendar/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        days,
+                        offset,
+                        startDate: startDateStr,
+                        overwrite: offset === 0,
+                    }),
+                })
+                const data = await res.json() as GenerateCycleResponse
+                totalGenerated += data.generated ?? 0
+                totalFailed += data.failed ?? 0
+                setGenerateProgress(Math.round(((offset + days) / TOTAL) * 100))
+            } catch {
+                totalFailed += BATCH
+                setGenerateProgress(Math.round(((offset + BATCH) / TOTAL) * 100))
+            }
+        }
+
+        setGenerateResult({ generated: totalGenerated, failed: totalFailed, entries: [] })
+        await fetchCalendar(1)
         setGenerating(false)
     }
 
@@ -740,6 +864,7 @@ export function ProductionPanel() {
                 onConfirm={handleGenerateCycle}
                 running={generating}
                 result={generateResult}
+                progress={generateProgress}
             />
         </div>
     )

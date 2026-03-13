@@ -46,6 +46,15 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Hide scrollbar while keeping scroll behaviour */
+.no-scrollbar {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE / Edge legacy */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;                /* Chrome / Safari / Opera */
+}
+
 /* Animation delays for loading dots */
 .animate-bounce-1 {
   animation-delay: 0ms;
