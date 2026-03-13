@@ -52,7 +52,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
     const onPollTick = React.useRef<(() => void) | null>(null)
     useEffect(() => {
         if (onPollTick.current) onPollTick.current()
-         
+
     }, [pollCount])
 
     return (
@@ -70,21 +70,23 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
 
                 <button
                     onClick={onGenerateAssets}
-                    disabled={generating || hasActiveJobs}
+                    disabled={generating}
                     style={{
                         padding: "6px 14px", borderRadius: 6, border: "none",
-                        background: generating || hasActiveJobs ? PROD_BRAND.border : PROD_BRAND.navy,
-                        color: generating || hasActiveJobs ? PROD_BRAND.gray : PROD_BRAND.white,
+                        background: generating ? PROD_BRAND.border : hasActiveJobs ? PROD_BRAND.amber : PROD_BRAND.navy,
+                        color: generating ? PROD_BRAND.gray : PROD_BRAND.white,
                         fontSize: 12, fontWeight: 600,
-                        cursor: generating || hasActiveJobs ? "not-allowed" : "pointer",
+                        cursor: generating ? "not-allowed" : "pointer",
                         display: "flex", alignItems: "center", gap: 6,
                     }}
                 >
-                    {generating || hasActiveJobs
-                        ? <><RefreshCw size={12} className="animate-spin" /> Generating…</>
-                        : hasAnyAssets
-                            ? <><RefreshCw size={12} /> Re-generate</>
-                            : <><Zap size={12} /> Generate Assets</>
+                    {generating
+                        ? <><RefreshCw size={12} className="animate-spin" /> Queueing…</>
+                        : hasActiveJobs
+                            ? <><RefreshCw size={12} /> Force Retry</>
+                            : hasAnyAssets
+                                ? <><RefreshCw size={12} /> Re-generate</>
+                                : <><Zap size={12} /> Generate Assets</>
                     }
                 </button>
             </div>

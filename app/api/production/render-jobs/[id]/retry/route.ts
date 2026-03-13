@@ -62,27 +62,14 @@ export async function POST(
         return NextResponse.json({ error: "RenderJob not found" }, { status: 404 })
     }
 
-    if (original.status !== "FAILED") {
+    if (original.status === "COMPLETE") {
         return NextResponse.json(
-            { error: `Job is ${original.status} — only FAILED jobs can be retried` },
+            { error: `Job is already COMPLETE — no need to retry` },
             { status: 409 }
         )
     }
 
-    // Block if another job of same type is already QUEUED/RUNNING for this idea
-    const conflict = await prisma.renderJob.findFirst({
-        where: {
-            contentIdeaId: original.contentIdeaId,
-            jobType: original.jobType,
-            status: { in: ["QUEUED", "RUNNING"] },
-        },
-    })
-    if (conflict) {
-        return NextResponse.json(
-            { error: "A job of this type is already queued or running" },
-            { status: 409 }
-        )
-    }
+
 
     const workerUrl = WORKER_URL_MAP[original.jobType]
     if (!workerUrl) {

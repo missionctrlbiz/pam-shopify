@@ -149,17 +149,6 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // Block if any job is actively running
-        const running = idea.renderJobs.some((j) =>
-            ["QUEUED", "RUNNING"].includes(j.status)
-        )
-        if (running) {
-            return NextResponse.json(
-                { error: "Asset generation already in progress for this entry." },
-                { status: 409 }
-            )
-        }
-
         const master = idea.masterJson as Record<string, unknown>
 
         // Build callback URL — NEXTAUTH_URL must include https:// (no trailing slash)

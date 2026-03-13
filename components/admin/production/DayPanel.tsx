@@ -120,8 +120,8 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
     }
 
     const masterJson = entry?.contentIdea?.masterJson as Record<string, unknown> | null | undefined
-    const isApproved = entry?.publishStatus === "APPROVED"
-    const canApprove = entry?.publishStatus === "DRAFT" || entry?.publishStatus === "PENDING_APPROVAL"
+    const isApproved = ["APPROVED", "GENERATING"].includes(entry?.publishStatus ?? "")
+    const canApprove = ["DRAFT", "PENDING_APPROVAL", "APPROVED", "GENERATING", "FAILED"].includes(entry?.publishStatus ?? "")
     const canGenerate = isApproved
 
     return (

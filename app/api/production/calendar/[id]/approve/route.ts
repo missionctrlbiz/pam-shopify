@@ -63,7 +63,7 @@ export async function PUT(
         )
     }
 
-    if (!["DRAFT", "PENDING_APPROVAL"].includes(entry.publishStatus)) {
+    if (!["DRAFT", "PENDING_APPROVAL", "APPROVED", "GENERATING", "FAILED"].includes(entry.publishStatus)) {
         return NextResponse.json(
             {
                 error: `Entry is not in an approvable state. Current status: ${entry.publishStatus}`,
