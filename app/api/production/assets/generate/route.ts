@@ -155,7 +155,13 @@ export async function POST(req: NextRequest) {
     const callbackUrl = `${process.env.NEXTAUTH_URL ?? process.env.VERCEL_URL}/api/production/render-done`
     const callbackSecret = process.env.RENDER_CALLBACK_SECRET ?? ""
 
-    const gcpConfigured = !!(process.env.GCP_PROJECT_ID && process.env.WORKER_SA_EMAIL)
+    // All three must be present — GCP_SERVICE_ACCOUNT_JSON_B64 is the actual credential;
+    // without it getTasksClient() falls back to ADC which fails in local dev / Vercel.
+    const gcpConfigured = !!(
+        process.env.GCP_PROJECT_ID &&
+        process.env.WORKER_SA_EMAIL &&
+        process.env.GCP_SERVICE_ACCOUNT_JSON_B64
+    )
     const jobs: Array<{ jobType: RenderJobType; taskId: string; renderJobId: string }> = []
     const errors: string[] = []
 
