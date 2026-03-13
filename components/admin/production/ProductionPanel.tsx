@@ -7,7 +7,7 @@ import { MotionIcon } from "motion-icons-react"
 import {
     CalendarDays, LayoutList, Upload, Zap, RefreshCw, Loader2,
     Filter, ChevronLeft, ChevronRight, AlertCircle, X,
-    BarChart3, FileUp, Download, BookOpen,
+    BarChart3, FileUp, Download, BookOpen, Layers,
 } from "lucide-react"
 import type {
     CalendarEntryRow, CalendarListResponse,
@@ -16,6 +16,7 @@ import type {
 import { CalendarTable, STATUS_META, PLATFORM_META } from "./CalendarTable"
 import { DayPanel } from "./DayPanel"
 import { StoryBankTab } from "./StoryBankTab"
+import { RenderJobsTab } from "./RenderJobsTab"
 
 // ─── Same BRAND as AdminDashboardClient ───────────────────────────────────────
 const BRAND = {
@@ -28,14 +29,15 @@ const BRAND = {
     glow: "0 8px 24px rgba(175, 92, 233, 0.25)",
 }
 
-type ProdView = "overview" | "table" | "grid" | "import" | "storybank"
+type ProdView = "overview" | "table" | "grid" | "import" | "storybank" | "renderjobs"
 
 const VIEWS: { key: ProdView; label: string; iconName: string; Icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", iconName: "LayoutDashboard", Icon: BarChart3 },
     { key: "table", label: "Data Table", iconName: "Table", Icon: LayoutList },
     { key: "grid", label: "Calendar Grid", iconName: "CalendarDays", Icon: CalendarDays },
     { key: "import", label: "Import & Generate", iconName: "Upload", Icon: Upload },
-    { key: "storybank", label: "Story Bank", iconName: "BookOpen", Icon: BookOpen },
+    { key: "storybank",   label: "Story Bank",    iconName: "BookOpen", Icon: BookOpen },
+    { key: "renderjobs",  label: "Render Queue",  iconName: "Layers",   Icon: Layers  },
 ]
 
 // ─── Stat Card (exact same pattern as admin overview) ─────────────────────────
@@ -717,6 +719,13 @@ export function ProductionPanel() {
                             entries={entries}
                             onRefresh={() => fetchCalendar(pagination.page)}
                         />
+                    </motion.div>
+                )}
+
+                {/* ── RENDER QUEUE ── */}
+                {view === "renderjobs" && (
+                    <motion.div key="renderjobs" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                        <RenderJobsTab />
                     </motion.div>
                 )}
             </AnimatePresence>

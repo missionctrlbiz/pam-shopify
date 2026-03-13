@@ -105,7 +105,7 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
             const res = await fetch("/api/production/assets/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ calendarEntryId: entry.id }),
+                body: JSON.stringify({ contentIdeaId: entry.contentIdea?.id }),
             })
             const data = await res.json() as GenerateAssetsResponse
             if (!res.ok) throw new Error((data as unknown as { error: string }).error ?? "Generate failed")

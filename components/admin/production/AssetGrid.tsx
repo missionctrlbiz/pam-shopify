@@ -203,14 +203,25 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
 
                                     {/* Open link */}
                                     {asset.storageUrl && asset.assetStatus === "COMPLETE" && (
-                                        <a
-                                            href={asset.storageUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: PROD_BRAND.blue, textDecoration: "none" }}
-                                        >
-                                            Open <ExternalLink size={10} />
-                                        </a>
+                                        <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                                            <a
+                                                href={asset.storageUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: PROD_BRAND.blue, textDecoration: "none" }}
+                                            >
+                                                Open <ExternalLink size={10} />
+                                            </a>
+                                            {(asset.assetType === "VIDEO_MP4" || asset.assetType === "AUDIO_MP3" || asset.assetType === "CAROUSEL_PNG") && (
+                                                <a
+                                                    href={asset.storageUrl}
+                                                    download={asset.fileName ?? undefined}
+                                                    style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: PROD_BRAND.green, textDecoration: "none" }}
+                                                >
+                                                    DL <ExternalLink size={10} />
+                                                </a>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>

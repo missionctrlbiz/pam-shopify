@@ -103,7 +103,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { contentIdeaId } = await req.json() as { contentIdeaId?: string }
+    const body = await req.json() as { contentIdeaId?: string; voiceId?: string; scope?: string }
+    const { contentIdeaId, voiceId } = body
 
     if (!contentIdeaId || typeof contentIdeaId !== "string") {
         return NextResponse.json(
@@ -169,7 +170,8 @@ export async function POST(req: NextRequest) {
     const dispatch = async (
         jobType: RenderJobType,
         workerUrlEnvKey: string,
-        assetTypes: Array<{ assetType: AssetType; platform: Platform }>
+        assetTypes: Array<{ assetType: AssetType; platform: Platform }>,
+        extraPayload: Record<string, unknown> = {}
     ) => {
         const workerUrl = WORKER_URLS[workerUrlEnvKey]
         if (!workerUrl) {
@@ -199,6 +201,7 @@ export async function POST(req: NextRequest) {
                     postType: entry.postType,
                     topic: entry.topic,
                     entryDate: entry.entryDate.toISOString(),
+                    ...extraPayload,
                 } as object,
             },
         })
@@ -221,6 +224,7 @@ export async function POST(req: NextRequest) {
                 entryDate: entry.entryDate.toISOString(),
                 callbackUrl,
                 callbackSecret,
+                ...extraPayload,
             })
 
             // Store the task name on the job
@@ -253,7 +257,9 @@ export async function POST(req: NextRequest) {
         await dispatch("VIDEO", "VIDEO_RENDERER_URL", [
             { assetType: "VIDEO_MP4", platform: entry.platform },
             { assetType: "AUDIO_MP3", platform: entry.platform },
-        ])
+        ], {
+            voiceId: voiceId ?? null,
+        })
     }
 
     // Transition entry to GENERATING while workers are running
