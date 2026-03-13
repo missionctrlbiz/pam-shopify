@@ -7,7 +7,7 @@ import { MotionIcon } from "motion-icons-react"
 import {
     CalendarDays, LayoutList, Upload, Zap, RefreshCw, Loader2,
     Filter, ChevronLeft, ChevronRight, AlertCircle, X,
-    BarChart3, FileUp, Download,
+    BarChart3, FileUp, Download, BookOpen,
 } from "lucide-react"
 import type {
     CalendarEntryRow, CalendarListResponse,
@@ -15,6 +15,7 @@ import type {
 } from "./types"
 import { CalendarTable, STATUS_META, PLATFORM_META } from "./CalendarTable"
 import { DayPanel } from "./DayPanel"
+import { StoryBankTab } from "./StoryBankTab"
 
 // ─── Same BRAND as AdminDashboardClient ───────────────────────────────────────
 const BRAND = {
@@ -27,13 +28,14 @@ const BRAND = {
     glow: "0 8px 24px rgba(175, 92, 233, 0.25)",
 }
 
-type ProdView = "overview" | "table" | "grid" | "import"
+type ProdView = "overview" | "table" | "grid" | "import" | "storybank"
 
 const VIEWS: { key: ProdView; label: string; iconName: string; Icon: React.ElementType }[] = [
-    { key: "overview", label: "Overview",       iconName: "LayoutDashboard", Icon: BarChart3 },
-    { key: "table",    label: "Data Table",      iconName: "Table",           Icon: LayoutList },
-    { key: "grid",     label: "Calendar Grid",   iconName: "CalendarDays",    Icon: CalendarDays },
-    { key: "import",   label: "Import & Generate", iconName: "Upload",        Icon: Upload },
+    { key: "overview", label: "Overview", iconName: "LayoutDashboard", Icon: BarChart3 },
+    { key: "table", label: "Data Table", iconName: "Table", Icon: LayoutList },
+    { key: "grid", label: "Calendar Grid", iconName: "CalendarDays", Icon: CalendarDays },
+    { key: "import", label: "Import & Generate", iconName: "Upload", Icon: Upload },
+    { key: "storybank", label: "Story Bank", iconName: "BookOpen", Icon: BookOpen },
 ]
 
 // ─── Stat Card (exact same pattern as admin overview) ─────────────────────────
@@ -88,13 +90,13 @@ function ViewTabs({ active, onChange }: { active: ProdView; onChange: (v: ProdVi
 
 // ─── Status badge (Tailwind version) ─────────────────────────────────────────
 const STATUS_CLASSES: Record<PublishStatus, string> = {
-    DRAFT:            "bg-slate-100 text-slate-500",
+    DRAFT: "bg-slate-100 text-slate-500",
     PENDING_APPROVAL: "bg-amber-50 text-amber-600",
-    APPROVED:         "bg-emerald-50 text-emerald-600",
-    GENERATING:       "bg-blue-50 text-blue-600",
-    SCHEDULED:        "bg-violet-50 text-violet-600",
-    PUBLISHED:        "bg-emerald-50 text-emerald-700",
-    ARCHIVED:         "bg-slate-100 text-slate-400",
+    APPROVED: "bg-emerald-50 text-emerald-600",
+    GENERATING: "bg-blue-50 text-blue-600",
+    SCHEDULED: "bg-violet-50 text-violet-600",
+    PUBLISHED: "bg-emerald-50 text-emerald-700",
+    ARCHIVED: "bg-slate-100 text-slate-400",
 }
 
 // ─── Monthly Grid View ────────────────────────────────────────────────────────
@@ -108,7 +110,7 @@ function CalendarGridView({ entries }: { entries: CalendarEntryRow[] }) {
     const month = viewDate.getMonth()
 
     const firstDay = new Date(year, month, 1)
-    const lastDay  = new Date(year, month + 1, 0)
+    const lastDay = new Date(year, month + 1, 0)
     const startPad = firstDay.getDay() // 0=Sun
 
     const monthEntries = entries.filter(e => {
@@ -459,12 +461,12 @@ export function ProductionPanel() {
 
     // ── Stats ───────────────────────────────────────────────────────────────
     const stats = React.useMemo(() => ({
-        total:      pagination.total,
-        draft:      entries.filter(e => e.publishStatus === "DRAFT").length,
-        pending:    entries.filter(e => e.publishStatus === "PENDING_APPROVAL").length,
-        approved:   entries.filter(e => e.publishStatus === "APPROVED").length,
+        total: pagination.total,
+        draft: entries.filter(e => e.publishStatus === "DRAFT").length,
+        pending: entries.filter(e => e.publishStatus === "PENDING_APPROVAL").length,
+        approved: entries.filter(e => e.publishStatus === "APPROVED").length,
         generating: entries.filter(e => e.publishStatus === "GENERATING").length,
-        published:  entries.filter(e => e.publishStatus === "PUBLISHED").length,
+        published: entries.filter(e => e.publishStatus === "PUBLISHED").length,
     }), [entries, pagination.total])
 
     // ── Fetch ───────────────────────────────────────────────────────────────
@@ -516,11 +518,11 @@ export function ProductionPanel() {
     }
 
     const statCards = [
-        { label: "Total Entries",  value: stats.total,      color: BRAND.navy,     iconName: "CalendarDays",    sublabel: "All records" },
-        { label: "Draft",          value: stats.draft,      color: "#6B7280",      iconName: "FileText",        sublabel: "Awaiting review" },
-        { label: "Pending",        value: stats.pending,    color: "#F59E0B",      iconName: "Clock",           sublabel: "Needs approval" },
-        { label: "Approved",       value: stats.approved,   color: "#10B981",      iconName: "CheckCircle",     sublabel: "Ready to render" },
-        { label: "Published",      value: stats.published,  color: BRAND.purple,   iconName: "Send",            sublabel: "Live content" },
+        { label: "Total Entries", value: stats.total, color: BRAND.navy, iconName: "CalendarDays", sublabel: "All records" },
+        { label: "Draft", value: stats.draft, color: "#6B7280", iconName: "FileText", sublabel: "Awaiting review" },
+        { label: "Pending", value: stats.pending, color: "#F59E0B", iconName: "Clock", sublabel: "Needs approval" },
+        { label: "Approved", value: stats.approved, color: "#10B981", iconName: "CheckCircle", sublabel: "Ready to render" },
+        { label: "Published", value: stats.published, color: BRAND.purple, iconName: "Send", sublabel: "Live content" },
     ]
 
     if (loading) {
@@ -691,7 +693,7 @@ export function ProductionPanel() {
                             ? <div className="bg-white rounded-3xl p-16 text-center shadow-xl shadow-slate-200/40 border border-slate-100">
                                 <CalendarDays size={48} className="mx-auto mb-4 text-slate-300" />
                                 <p className="text-slate-500 font-medium">No calendar entries yet. Generate a 30-day cycle or import a CSV.</p>
-                              </div>
+                            </div>
                             : <CalendarGridView entries={entries} />
                         }
                     </motion.div>
@@ -704,6 +706,16 @@ export function ProductionPanel() {
                             onGenerate={() => { setGenerateResult(null); setGenerateModalOpen(true) }}
                             generating={generating}
                             onDone={() => fetchCalendar(1)}
+                        />
+                    </motion.div>
+                )}
+
+                {/* ── STORY BANK ── */}
+                {view === "storybank" && (
+                    <motion.div key="storybank" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                        <StoryBankTab
+                            entries={entries}
+                            onRefresh={() => fetchCalendar(pagination.page)}
                         />
                     </motion.div>
                 )}

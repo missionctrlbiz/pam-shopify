@@ -7,9 +7,8 @@
  * Uses Gemini structured output (responseMimeType: "application/json") so the
  * response is always a valid, parseable JSON object — never free-form text.
  *
- * Model: gemini-2.0-flash-thinking-exp-01-21
- * Note: thinking models do not support responseMimeType/responseSchema —
- * JSON is enforced via strict prompt instructions + code-fence stripping.
+ * Model: gemini-2.0-flash (stable as of March 2026; thinking variant deprecated)
+ * JSON mode: prompt-enforced + code-fence stripping.
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai"
@@ -18,7 +17,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 // Model config
 // ---------------------------------------------------------------------------
 
-export const PRODUCTION_MODEL = "gemini-2.0-flash-thinking-exp-01-21"
+// Primary model — stable flash. Thinking variant was deprecated March 2026.
+export const PRODUCTION_MODEL = "gemini-2.0-flash"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,6 +46,51 @@ export interface PlatformAdaptation {
     charEstimate: number
 }
 
+// ─── Story Bank scene model ───────────────────────────────────────────────────
+
+export interface PAMScene {
+    type: "COVER" | "TEACHING" | "CTA"
+    /** Seconds: COVER=5, TEACHING=4–8 (word-count based), CTA=5–6 */
+    durationSecs: number
+    /** Voiceover text including [pause] / [breath] / [emphasize:word] cues */
+    voiceoverText: string
+    /** 1–2 sentence Canva / Remotion visual direction */
+    visualDirection: string
+    /** Headline shown on-screen */
+    textOverlay: string
+    emojiAccent?: string
+}
+
+export interface PlatformPromptBank {
+    IG_CAROUSEL: {
+        canvaSlidePrompts: string[]   // 1 per slide, up to 10
+        captionHook: string
+        hashtagSet: string[]
+    }
+    TIKTOK_VIDEO: {
+        spokenScript: string          // complete TikTok voiceover, hook-first
+        textOverlays: string[]        // per-scene overlay text
+        soundSuggestion: string
+    }
+    LINKEDIN: {
+        professionalPost: string      // 150–300 word authority post
+        postHook: string
+        cta: string
+    }
+    EMAIL: {
+        subjectLine: string
+        preheaderText: string
+        bodyThreeParagraphs: string[] // [hook_para, teaching_para, cta_para]
+    }
+    VIDEO: {
+        sceneDirectorNotes: string[]  // one note per PAMScene
+        thumbnailConceptPrompt: string
+        descriptionSEO: string
+    }
+}
+
+// ─── Master idea JSON ─────────────────────────────────────────────────────────
+
 export interface ContentIdeaMasterJson {
     hook: string
     teachingPoints: string[]
@@ -58,8 +103,13 @@ export interface ContentIdeaMasterJson {
         LINKEDIN: PlatformAdaptation
         EMAIL: { subjectLine: string; previewText: string; bodyOutline: string }
     }
-    slideTextBlocks: string[]   // 6 condensed lines for carousel slides
+    slideTextBlocks: string[]        // up to 10 condensed lines for carousel slides
     estimatedReadTimeSecs: number
+    // ─── Story Bank fields (populated by sceneDirector.ts) ────────────────────
+    scenes?: PAMScene[]
+    voiceoverFull?: string           // complete script with gesture cue markers
+    platformPromptBank?: PlatformPromptBank
+    totalDurationSecs?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -84,8 +134,8 @@ CLINICAL FIELD CONTEXT:
   Field Key:       ${field.fieldKey}
   Category:        ${field.fieldCategory}
   Display Name:    ${field.displayName}
-  Description:     ${field.description || "See field key for context."}
-  ${field.clinicalContext ? `Extended Clinical Context: ${field.clinicalContext}` : ""}
+  Description:     ${field.description || `This field maps to the psychiatric assessment concept: "${field.displayName}" in the ${field.fieldCategory} domain.`}
+  ${field.clinicalContext ? `Extended Clinical Context: ${field.clinicalContext}` : `Provide clinically accurate context for ${field.displayName} as it applies to PMHNP-level assessment.`}
 
 CONTENT SCHEDULING CONTEXT:
   Platform:        ${meta.platform}
@@ -107,9 +157,14 @@ DELIVERABLES — return a single JSON object matching this exact structure:
     "LINKEDIN": { "caption": "Professional 1300-char LinkedIn post. Lead with the clinical insight. Close with a question to drive comments.", "charEstimate": 0 },
     "EMAIL": { "subjectLine": "Subject line — curiosity-gap or clinical-stakes driven, max 50 chars", "previewText": "Preview text, max 90 chars", "bodyOutline": "3-paragraph outline: (1) hook/problem, (2) teaching point, (3) CTA to PAM bundle" }
   },
-  "slideTextBlocks": ["Slide 1 text (title/hook)", "Slide 2", "Slide 3", "Slide 4", "Slide 5", "Slide 6 (CTA)"],
-  "estimatedReadTimeSecs": 45
+  "slideTextBlocks": ["Slide 1 text (title/hook — max 12 words)", "Slide 2 teaching point", "Slide 3", "Slide 4", "Slide 5", "Slide 6", "Slide 7 (optional)", "Slide 8 (optional)", "Slide 9 (optional)", "Slide 10 CTA (optional)"],
+  "estimatedReadTimeSecs": 60
 }
+
+INSTRUCTIONS for slideTextBlocks:
+- Minimum 6 slides, maximum 10 slides. Remove optional slots you do not use.
+- Each slide text must be 8-12 words maximum — designed for on-screen Canva layout.
+- estimatedReadTimeSecs should reflect actual slide count: 6 slides ≈ 45s, 8 slides ≈ 60s, 10 slides ≈ 80s.
 
 STRICT FORMAT: Return ONLY the JSON object. No markdown code fences. No explanation text.
 `.trim()
@@ -152,11 +207,11 @@ export async function generateContentIdea(
         )
     }
 
-    // Ensure slideTextBlocks always has exactly 6 entries
+    // Ensure slideTextBlocks has 6–10 entries
     while (masterJson.slideTextBlocks.length < 6) {
         masterJson.slideTextBlocks.push("")
     }
-    masterJson.slideTextBlocks = masterJson.slideTextBlocks.slice(0, 6)
+    masterJson.slideTextBlocks = masterJson.slideTextBlocks.slice(0, 10)
 
     return { masterJson, rawPrompt }
 }

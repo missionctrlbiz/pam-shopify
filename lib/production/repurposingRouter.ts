@@ -10,8 +10,8 @@
  *
  * The same function can be imported directly in Next.js for local dev / testing.
  *
- * Model: gemini-2.0-flash-thinking-exp-01-21 (same as contentStrategist)
- * JSON mode: prompt-enforced + code-fence stripping (thinking model limitation)
+ * Model: gemini-2.0-flash (same as contentStrategist — stable as of March 2026)
+ * JSON mode: prompt-enforced + code-fence stripping
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai"
