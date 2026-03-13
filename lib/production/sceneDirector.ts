@@ -44,7 +44,7 @@ function hasRequiredESLMarkers(scenes: PAMScene[]): boolean {
     return (
         voiceover.includes("[pause]") &&
         voiceover.includes("[breath]") &&
-        /\[emphasize:[a-zA-Z]+\]/.test(voiceover)
+        /\[emphasize:[^\]]+\]/.test(voiceover)
     )
 }
 
@@ -227,12 +227,9 @@ export async function expandToSceneDirectorScript(
                     "\n\nPREVIOUS OUTPUT REJECTED: Missing required [pause], [breath], or [emphasize:word] cues in voiceoverText. You MUST include all three types of ESL markers. Retry with corrected output."
             )
 
-            const text = response.response
-                .text()
-                .trim()
-                .replace(/^```(?:json)?\s*/i, "")
-                .replace(/\s*```$/i, "")
-                .trim()
+            const textResponse = response.response.text().trim()
+            const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+            const text = match ? match[1].trim() : textResponse
 
             const parsed = JSON.parse(text) as SceneDirectorResult
 

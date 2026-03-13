@@ -52,7 +52,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
     const onPollTick = React.useRef<(() => void) | null>(null)
     useEffect(() => {
         if (onPollTick.current) onPollTick.current()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [pollCount])
 
     return (

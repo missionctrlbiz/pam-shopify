@@ -238,15 +238,13 @@ export function ProductionDashboardClient() {
         setRefreshing(false)
     }, [statusFilter, platformFilter])
 
-    useEffect(() => { fetchCalendar(1) }, [fetchCalendar])
-
-    // ── Polling: refresh if any row is GENERATING ─────────────────────────────
     useEffect(() => {
-        const hasGenerating = entries.some(e => e.publishStatus === "GENERATING")
-        if (!hasGenerating) return
-        const t = setInterval(() => fetchCalendar(pagination.page, true), 8000)
-        return () => clearInterval(t)
-    }, [entries, pagination.page, fetchCalendar])
+        // Delay fetch slightly to avoid setting state during the render cycle
+        const t = setTimeout(() => fetchCalendar(1), 0)
+        return () => clearTimeout(t)
+    }, [fetchCalendar])
+
+    // NO auto-polling — user clicks Sync manually to refresh
 
     // ── Handle row update from DayPanel ──────────────────────────────────────
     const handleEntryUpdated = useCallback((id: string, newStatus: string) => {
@@ -356,11 +354,11 @@ export function ProductionDashboardClient() {
 
                 {/* Stats row */}
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 24 }}>
-                    <StatCard label="Total Entries" value={stats.total}      color={PROD_BRAND.navy}  />
-                    <StatCard label="Approved"      value={stats.approved}   color={PROD_BRAND.green} sublabel="Ready to render" />
-                    <StatCard label="Pending"       value={stats.pending}    color={PROD_BRAND.amber} sublabel="Needs review" />
-                    <StatCard label="Generating"    value={stats.generating} color={PROD_BRAND.blue}  sublabel="Cloud Run active" />
-                    <StatCard label="Published"     value={stats.published}  color={PROD_BRAND.green} sublabel="Live content" />
+                    <StatCard label="Total Entries" value={stats.total} color={PROD_BRAND.navy} />
+                    <StatCard label="Approved" value={stats.approved} color={PROD_BRAND.green} sublabel="Ready to render" />
+                    <StatCard label="Pending" value={stats.pending} color={PROD_BRAND.amber} sublabel="Needs review" />
+                    <StatCard label="Generating" value={stats.generating} color={PROD_BRAND.blue} sublabel="Cloud Run active" />
+                    <StatCard label="Published" value={stats.published} color={PROD_BRAND.green} sublabel="Live content" />
                 </div>
 
                 {/* Filter bar */}

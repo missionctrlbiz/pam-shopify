@@ -148,7 +148,7 @@ export const RenderJobsTab: React.FC = () => {
     useEffect(() => {
         fetchJobs()
         setSelected(new Set())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [fetchJobs])
 
     // Auto-poll every 5 s when any active job exists

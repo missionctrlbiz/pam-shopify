@@ -135,12 +135,9 @@ export async function generateRepurposedContent(
     const prompt = buildRepurposePrompt(input)
     const result = await model.generateContent(prompt)
 
-    const text = result.response
-        .text()
-        .trim()
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim()
+    const textResponse = result.response.text().trim()
+    const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+    const text = match ? match[1].trim() : textResponse
 
     let captions: PlatformCaptions
     try {
@@ -152,14 +149,19 @@ export async function generateRepurposedContent(
     }
 
     // Compute char estimates if missing
+    captions.ig = captions.ig ?? { caption: "", hashtagBlock: "", charEstimate: 0 }
     if (!captions.ig.charEstimate) {
-        captions.ig.charEstimate = captions.ig.caption.length + captions.ig.hashtagBlock.length
+        captions.ig.charEstimate = (captions.ig.caption?.length ?? 0) + (captions.ig.hashtagBlock?.length ?? 0)
     }
+
+    captions.fb = captions.fb ?? { caption: "", hashtagBlock: "", charEstimate: 0 }
     if (!captions.fb.charEstimate) {
-        captions.fb.charEstimate = captions.fb.caption.length
+        captions.fb.charEstimate = captions.fb.caption?.length ?? 0
     }
+
+    captions.linkedin = captions.linkedin ?? { post: "", charEstimate: 0 }
     if (!captions.linkedin.charEstimate) {
-        captions.linkedin.charEstimate = captions.linkedin.post.length
+        captions.linkedin.charEstimate = captions.linkedin.post?.length ?? 0
     }
 
     return captions

@@ -38,8 +38,8 @@ export async function POST(
     const { id } = await params
 
     // ── Parse optional body ─────────────────────────────────────────────────
-    let platform = "IG"
-    let postType = "CAROUSEL"
+    let platform = undefined
+    let postType = undefined
     let forceRefresh = false
     try {
         const body = await req.json()
@@ -98,7 +98,7 @@ export async function POST(
     }
 
     // ── Expand via Gemini ────────────────────────────────────────────────────
-    const result = await expandToSceneDirectorScript(masterJson, platform, postType)
+    const result = await expandToSceneDirectorScript(masterJson, platform || entry.platform, postType || entry.postType)
 
     // ── Upsert VideoScript ───────────────────────────────────────────────────
     const scriptJsonPayload = {

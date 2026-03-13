@@ -8,26 +8,26 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 const PRODUCTION_MODEL = "gemini-2.5-flash" // gemini-2.0-flash deprecated for new API keys March 2026
 
 export interface RepurposeInput {
-    hook: string
-    teachingPoints: string[]
-    cta: string
-    clinicalGrounding: string
-    platform: string
-    postType: string
-    topic: string
-    entryDate: string
+  hook: string
+  teachingPoints: string[]
+  cta: string
+  clinicalGrounding: string
+  platform: string
+  postType: string
+  topic: string
+  entryDate: string
 }
 
 export interface PlatformCaptions {
-    ig: { caption: string; hashtagBlock: string; charEstimate: number }
-    fb: { caption: string; hashtagBlock: string; charEstimate: number }
-    tiktok: { script: string; hashtagBlock: string; durationEstimateSecs: number }
-    linkedin: { post: string; charEstimate: number }
-    email: { subjectLine: string; previewText: string; body: string }
+  ig: { caption: string; hashtagBlock: string; charEstimate: number }
+  fb: { caption: string; hashtagBlock: string; charEstimate: number }
+  tiktok: { script: string; hashtagBlock: string; durationEstimateSecs: number }
+  linkedin: { post: string; charEstimate: number }
+  email: { subjectLine: string; previewText: string; body: string }
 }
 
 function buildPrompt(input: RepurposeInput): string {
-    return `
+  return `
 You are the Content Repurposing Specialist for Psychiatric Assessment Mastery™ (PAM).
 Adapt the master content idea into 5 platform-specific formats.
 Preserve clinical specificity — no generic wellness filler.
@@ -57,27 +57,29 @@ STRICT FORMAT: Return ONLY the JSON object. No markdown. No explanation.
 }
 
 export async function generateRepurposedContent(input: RepurposeInput): Promise<PlatformCaptions> {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) throw new Error("GEMINI_API_KEY not set")
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error("GEMINI_API_KEY not set")
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: PRODUCTION_MODEL })
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({ model: PRODUCTION_MODEL })
 
-    const result = await model.generateContent(buildPrompt(input))
+  const result = await model.generateContent(buildPrompt(input))
 
-    const text = result.response
-        .text()
-        .trim()
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim()
+  const textResponse = result.response.text().trim()
+  const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+  const text = match ? match[1].trim() : textResponse
 
-    const captions = JSON.parse(text) as PlatformCaptions
+  const captions = JSON.parse(text) as PlatformCaptions
 
-    // Fill in missing char estimates
-    captions.ig.charEstimate ||= captions.ig.caption.length + captions.ig.hashtagBlock.length
-    captions.fb.charEstimate ||= captions.fb.caption.length
-    captions.linkedin.charEstimate ||= captions.linkedin.post.length
+  // Fill in missing char estimates
+  captions.ig = captions.ig ?? { caption: "", hashtagBlock: "", charEstimate: 0 }
+  captions.ig.charEstimate ||= (captions.ig.caption?.length ?? 0) + (captions.ig.hashtagBlock?.length ?? 0)
 
-    return captions
+  captions.fb = captions.fb ?? { caption: "", hashtagBlock: "", charEstimate: 0 }
+  captions.fb.charEstimate ||= captions.fb.caption?.length ?? 0
+
+  captions.linkedin = captions.linkedin ?? { post: "", charEstimate: 0 }
+  captions.linkedin.charEstimate ||= captions.linkedin.post?.length ?? 0
+
+  return captions
 }

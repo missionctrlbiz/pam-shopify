@@ -10,7 +10,9 @@ export function ThemeToggle() {
     const { theme, setTheme } = useTheme();
 
     useEffect(() => {
-        setMounted(true);
+        // use a timeout to ensure setting state does not occur synchronously inside the first render effect loop
+        const timer = setTimeout(() => setMounted(true), 0);
+        return () => clearTimeout(timer);
     }, []);
 
     if (!mounted) {

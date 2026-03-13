@@ -310,7 +310,7 @@ export function ContentEditor() {
                         onClick={handleSave}
                         disabled={saving || !isDirty}
                         className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition disabled:opacity-40"
-                        // eslint-disable-next-line react/forbid-component-props
+                         
                         style={{ background: BRAND.gradient, boxShadow: isDirty ? BRAND.glow : "none" }}
                     >
                         {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
@@ -661,7 +661,7 @@ export function ContentEditor() {
                         onClick={handleSave}
                         disabled={saving}
                         className="flex items-center gap-2 px-6 py-3 text-white text-sm font-semibold rounded-2xl shadow-2xl transition disabled:opacity-50"
-                        // eslint-disable-next-line react/forbid-component-props
+                         
                         style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
                     >
                         {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}

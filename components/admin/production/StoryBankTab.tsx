@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useMemo, useState, useCallback } from "react"
+import React, { useMemo, useState, useCallback, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     BookOpen, LayoutGrid, LayoutList, Search, Filter, RefreshCw,
-    Wand2, Loader2, ChevronDown,
+    Wand2, Loader2, ChevronDown, ChevronLeft, ChevronRight,
 } from "lucide-react"
 import type { CalendarEntryRow, Platform, PostType, PublishStatus } from "./types"
 import { IdeaCard } from "./IdeaCard"
@@ -166,6 +166,14 @@ export function StoryBankTab({ entries, onRefresh }: StoryBankTabProps) {
             return true
         })
     }, [entries, platformFilter, postTypeFilter, statusFilter, search])
+
+    // ── Pagination ────────────────────────────────────────────────────────
+    const PAGE_SIZE = 12
+    const [storyPage, setStoryPage] = useState(1)
+    // Reset page when filters change
+    useEffect(() => { setStoryPage(1) }, [search, platformFilter, postTypeFilter, statusFilter])
+    const totalStoryPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+    const paginatedFiltered = filtered.slice((storyPage - 1) * PAGE_SIZE, storyPage * PAGE_SIZE)
 
     // ── Bulk generate all without scenes ────────────────────────────────────
     const handleBulkGenerate = useCallback(async () => {
@@ -455,7 +463,7 @@ export function StoryBankTab({ entries, onRefresh }: StoryBankTabProps) {
                     }
                 >
                     <AnimatePresence mode="popLayout">
-                        {filtered.map((entry) => (
+                        {paginatedFiltered.map((entry) => (
                             <IdeaCard
                                 key={entry.id}
                                 entry={entry}
@@ -464,6 +472,29 @@ export function StoryBankTab({ entries, onRefresh }: StoryBankTabProps) {
                         ))}
                     </AnimatePresence>
                 </motion.div>
+            )}
+
+            {/* ── Pagination controls ───────────────────────────────────── */}
+            {totalStoryPages > 1 && (
+                <div className="flex items-center justify-center gap-3 pt-2">
+                    <button
+                        disabled={storyPage === 1}
+                        onClick={() => setStoryPage(p => Math.max(1, p - 1))}
+                        className="p-2 rounded-xl border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition"
+                    >
+                        <ChevronLeft size={14} />
+                    </button>
+                    <span className="text-xs font-bold text-slate-500">
+                        Page {storyPage} of {totalStoryPages}
+                    </span>
+                    <button
+                        disabled={storyPage >= totalStoryPages}
+                        onClick={() => setStoryPage(p => Math.min(totalStoryPages, p + 1))}
+                        className="p-2 rounded-xl border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition"
+                    >
+                        <ChevronRight size={14} />
+                    </button>
+                </div>
             )}
 
             {/* Pool progress bar */}

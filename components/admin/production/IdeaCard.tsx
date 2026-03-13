@@ -34,12 +34,31 @@ const SCENE_COLOR: Record<string, string> = {
 
 // Platform labels
 const PLATFORM_LABEL: Record<Platform, string> = {
-    IG: "Instagram",
-    FB: "Facebook",
+    IG: "IG",
+    FB: "FB",
     TIKTOK: "TikTok",
     LINKEDIN: "LinkedIn",
     EMAIL: "Email",
     VIDEO: "Video",
+}
+
+const POST_TYPE_LABEL: Record<string, string> = {
+    CAROUSEL: "Carousel",
+    VIDEO: "Video",
+    TEXT_POST: "Text Post",
+    REEL: "Reel",
+    STORY: "Story",
+    EMAIL_LESSON: "Email",
+}
+
+const STATUS_LABEL: Record<string, string> = {
+    DRAFT: "Draft",
+    PENDING_APPROVAL: "Pending",
+    APPROVED: "Approved",
+    GENERATING: "Rendering",
+    SCHEDULED: "Scheduled",
+    PUBLISHED: "Published",
+    ARCHIVED: "Archived",
 }
 
 // ElevenLabs voice options
@@ -382,14 +401,14 @@ export function IdeaCard({ entry, onRefresh }: IdeaCardProps) {
                     </span>
                     {/* Post type */}
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                        {entry.postType}
+                        {POST_TYPE_LABEL[entry.postType] ?? entry.postType.replace(/_/g, " ")}
                     </span>
                     {/* Status */}
                     <span
                         className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
                         style={{ background: statusColor[entry.publishStatus] ?? "#6B7280" }}
                     >
-                        {entry.publishStatus}
+                        {STATUS_LABEL[entry.publishStatus] ?? entry.publishStatus.replace(/_/g, " ")}
                     </span>
                 </div>
 

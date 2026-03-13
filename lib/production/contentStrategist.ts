@@ -92,6 +92,7 @@ export interface PlatformPromptBank {
 // ─── Master idea JSON ─────────────────────────────────────────────────────────
 
 export interface ContentIdeaMasterJson {
+    title?: string
     hook: string
     teachingPoints: string[]
     cta: string
@@ -146,7 +147,8 @@ CONTENT SCHEDULING CONTEXT:
 
 DELIVERABLES — return a single JSON object matching this exact structure:
 {
-  "hook": "One sentence (max 15 words). Must create clinical tension or name a real diagnostic mistake.",
+  "title": "A clear, compelling 5-8 word content title. Examples: 'The 3 Risks Behind Every Depressed Mood', 'Why Your MSE Thought Process Is Wrong', 'Bipolar vs MDD: The Assessment Trap'. Must be readable, specific, and professional — never abbreviated or cryptic.",
+  "hook": "One compelling sentence (10-20 words). Must create clinical tension, name a real diagnostic mistake, or challenge a common assumption. Write it as a complete, clear English sentence — NOT an abbreviation or code. Examples: 'Most PMHNPs miss these three critical risks hiding behind a depressed mood chief complaint.', 'Your MSE thought process documentation probably confuses content with process — here is why it matters.'",
   "teachingPoints": ["3-5 bullet points — each a concrete, actionable clinical insight rooted in ${field.displayName}"],
   "cta": "One sentence driving the reader toward PAM workbook, the PAM Mastery Bundle, or saving/sharing.",
   "clinicalGrounding": "1-2 sentences explaining WHY this topic matters clinically, citing DSM-5-TR patterns or assessment evidence.",
@@ -160,6 +162,11 @@ DELIVERABLES — return a single JSON object matching this exact structure:
   "slideTextBlocks": ["Slide 1 text (title/hook — max 12 words)", "Slide 2 teaching point", "Slide 3", "Slide 4", "Slide 5", "Slide 6", "Slide 7 (optional)", "Slide 8 (optional)", "Slide 9 (optional)", "Slide 10 CTA (optional)"],
   "estimatedReadTimeSecs": 60
 }
+
+CRITICAL — title and hook quality requirements:
+- The "title" must be a SHORT, READABLE phrase a human would use as a content title. NEVER use field codes, abbreviations, or technical variable names.
+- The "hook" must be a complete English sentence that creates curiosity. It must make sense when read aloud.
+- Both title and hook must reference the CLINICAL CONCEPT, not the field key or field code.
 
 INSTRUCTIONS for slideTextBlocks:
 - Minimum 6 slides, maximum 10 slides. Remove optional slots you do not use.
@@ -191,12 +198,9 @@ export async function generateContentIdea(
     const result = await model.generateContent(rawPrompt)
 
     // Strip markdown code fences the thinking model may emit around JSON output
-    const text = result.response
-        .text()
-        .trim()
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim()
+    const textResponse = result.response.text().trim()
+    const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+    const text = match ? match[1].trim() : textResponse
 
     let masterJson: ContentIdeaMasterJson
     try {
@@ -206,6 +210,8 @@ export async function generateContentIdea(
             `Gemini returned non-parseable JSON for field "${field.fieldKey}": ${text.slice(0, 200)}`
         )
     }
+
+    masterJson.slideTextBlocks = masterJson.slideTextBlocks ?? []
 
     // Ensure slideTextBlocks has 6–10 entries
     while (masterJson.slideTextBlocks.length < 6) {

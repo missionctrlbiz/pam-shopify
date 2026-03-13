@@ -121,12 +121,9 @@ export async function runQualityGate(
     const result = await model.generateContent(prompt)
 
     // Strip markdown code fences the thinking model may emit
-    const text = result.response
-        .text()
-        .trim()
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim()
+    const textResponse = result.response.text().trim()
+    const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+    const text = match ? match[1].trim() : textResponse
 
     let raw: {
         score1: number; score2: number; score3: number; score4: number; score5: number
@@ -140,7 +137,7 @@ export async function runQualityGate(
     }
 
     // Clamp scores to valid 1–5 range
-    const clamp = (n: number) => Math.min(5, Math.max(1, Math.round(n)))
+    const clamp = (n: number | string | undefined | null) => Math.min(5, Math.max(1, Math.round(Number(n) || 1)))
     const s1 = clamp(raw.score1)
     const s2 = clamp(raw.score2)
     const s3 = clamp(raw.score3)

@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
                             dayNumber: absoluteDay + 1,
                             entryDate,
                             platform: template.platform,
-                            topic: field.displayName,
+                            topic: masterJson.title || masterJson.hook || field.displayName,
                             contentGoal: template.contentGoal,
                             funnelStage: template.funnelStage,
                             postType: template.postType,
@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
                     return calEntry
                 })
 
-                results.push({ dayNumber: absoluteDay + 1, entryId: entry.id, topic: field.displayName })
+                results.push({ dayNumber: absoluteDay + 1, entryId: entry.id, topic: masterJson.title || masterJson.hook || field.displayName })
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err)
                 errors.push(`Day ${absoluteDay + 1} (${field.fieldKey}): ${msg}`)

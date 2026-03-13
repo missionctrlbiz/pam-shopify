@@ -42,10 +42,10 @@ function AnimatedIcon({ iconName, color, size = 20, animation = "pulse" }: { ico
     return (
         <span style={color ? { color } : {}} className="inline-flex">
             <MotionIcon
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 name={iconName as any}
                 size={size}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 animation={animation as any}
             />
         </span>

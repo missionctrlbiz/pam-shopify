@@ -382,7 +382,7 @@ const ContentTab: React.FC<{
                         <div style={{ fontSize: 12, fontWeight: 700, color: PROD_BRAND.blue }}>
                             {entry.contentIdea.clinicalField.displayName}
                             <span style={{ fontSize: 10, fontWeight: 400, marginLeft: 8, color: PROD_BRAND.gray }}>
-                                {entry.contentIdea.clinicalField.fieldCategory}
+                                {entry.contentIdea.clinicalField.fieldCategory.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()).toLowerCase().replace(/^\w/, c => c.toUpperCase())}
                             </span>
                         </div>
                         {entry.contentIdea.clinicalField.description && (

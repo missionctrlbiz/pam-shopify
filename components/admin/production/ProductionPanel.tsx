@@ -102,11 +102,31 @@ const STATUS_CLASSES: Record<PublishStatus, string> = {
 }
 
 // ─── Monthly Grid View ────────────────────────────────────────────────────────
-function CalendarGridView({ entries }: { entries: CalendarEntryRow[] }) {
+function CalendarGridView() {
+    const [allEntries, setAllEntries] = useState<CalendarEntryRow[]>([])
+    const [gridLoading, setGridLoading] = useState(true)
+
+    // Fetch ALL entries for grid display (no filters, high limit)
+    useEffect(() => {
+        setGridLoading(true)
+        fetch("/api/production/calendar?limit=500")
+            .then(r => r.json())
+            .then((data: CalendarListResponse) => setAllEntries(data.entries))
+            .catch(() => { })
+            .finally(() => setGridLoading(false))
+    }, [])
+
     const [viewDate, setViewDate] = useState<Date>(() => {
-        if (entries.length > 0) return new Date(entries[0].entryDate)
+        if (allEntries.length > 0) return new Date(allEntries[0].entryDate)
         return new Date()
     })
+
+    // Update viewDate when entries load
+    useEffect(() => {
+        if (allEntries.length > 0) {
+            setViewDate(new Date(allEntries[0].entryDate))
+        }
+    }, [allEntries])
 
     const year = viewDate.getFullYear()
     const month = viewDate.getMonth()
@@ -115,7 +135,7 @@ function CalendarGridView({ entries }: { entries: CalendarEntryRow[] }) {
     const lastDay = new Date(year, month + 1, 0)
     const startPad = firstDay.getDay() // 0=Sun
 
-    const monthEntries = entries.filter(e => {
+    const monthEntries = allEntries.filter(e => {
         const d = new Date(e.entryDate)
         return d.getFullYear() === year && d.getMonth() === month
     })
@@ -135,6 +155,24 @@ function CalendarGridView({ entries }: { entries: CalendarEntryRow[] }) {
     while (cells.length < 42) cells.push(null)
 
     const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    if (gridLoading) {
+        return (
+            <div className="bg-white rounded-3xl p-16 text-center shadow-xl shadow-slate-200/40 border border-slate-100">
+                <Loader2 size={32} className="mx-auto animate-spin" style={{ color: BRAND.purple }} />
+                <p className="text-slate-500 font-medium mt-4">Loading calendar data…</p>
+            </div>
+        )
+    }
+
+    if (allEntries.length === 0) {
+        return (
+            <div className="bg-white rounded-3xl p-16 text-center shadow-xl shadow-slate-200/40 border border-slate-100">
+                <CalendarDays size={48} className="mx-auto mb-4 text-slate-300" />
+                <p className="text-slate-500 font-medium">No calendar entries yet. Generate entries or import a CSV.</p>
+            </div>
+        )
+    }
 
     return (
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
@@ -243,11 +281,11 @@ function GenerateModal({ open, onClose, onConfirm, running, result, progress }: 
                         <div className="flex items-start justify-between mb-5">
                             <div>
                                 <h3 className="text-xl font-extrabold tracking-tight mb-1" style={{ color: BRAND.navy }}>
-                                    Generate 30-Day Cycle
+                                    Generate 5 Entries
                                 </h3>
                                 <p className="text-sm text-slate-500 leading-relaxed">
-                                    Calls Gemini for each platform &amp; day — creates 30 draft calendar entries.
-                                    Takes 2–5 minutes. Existing <strong>DRAFT</strong> entries are overwritten.
+                                    Calls Gemini for 5 platform/day combinations — creates 5 draft calendar entries.
+                                    Click again to generate the next batch. Existing <strong>DRAFT</strong> entries are overwritten on first batch.
                                 </p>
                             </div>
                             <button onClick={onClose} aria-label="Close" className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition ml-4">
@@ -589,21 +627,17 @@ export function ProductionPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { void fetchCalendar(1) }, [statusFilter, platformFilter])
 
-    // Poll while any row is GENERATING
-    useEffect(() => {
-        if (!entries.some(e => e.publishStatus === "GENERATING")) return
-        const t = setInterval(() => fetchCalendar(pagination.page, true), 8000)
-        return () => clearInterval(t)
-    }, [entries, pagination.page, fetchCalendar])
+    // NO auto-polling — user clicks Sync manually to refresh
 
     const handleEntryUpdated = useCallback((id: string, newStatus: string) => {
         setEntries(prev => prev.map(e => e.id === id ? { ...e, publishStatus: newStatus as PublishStatus } : e))
     }, [])
 
+    // Track how many entries have already been generated (to compute offset)
+    const [generatedSoFar, setGeneratedSoFar] = useState(0)
+
     const handleGenerateCycle = async () => {
-        const TOTAL = 30
-        // 1 entry per request — avoids Vercel function timeouts (1 Gemini call ≈ 5s)
-        const BATCH = 1
+        const BATCH_SIZE = 5
         setGenerating(true)
         setGenerateProgress(0)
         setGenerateResult(null)
@@ -615,38 +649,39 @@ export function ProductionPanel() {
 
         let totalGenerated = 0
         let totalFailed = 0
+        const offset = generatedSoFar
 
-        for (let offset = 0; offset < TOTAL; offset += BATCH) {
+        // Generate 5 entries, one API call per entry to avoid timeouts
+        for (let i = 0; i < BATCH_SIZE; i++) {
             try {
-                const days = Math.min(BATCH, TOTAL - offset)
                 const res = await fetch("/api/production/calendar/generate", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        days,
-                        offset,
+                        days: 1,
+                        offset: offset + i,
                         startDate: startDateStr,
-                        overwrite: offset === 0,
+                        overwrite: offset === 0 && i === 0,
                     }),
                 })
                 const ct = res.headers.get("content-type") ?? ""
                 if (!ct.includes("application/json")) {
-                    // Vercel returned an HTML error page (timeout / crash)
-                    console.error(`[generate] offset ${offset} returned non-JSON (${res.status})`)
-                    totalFailed += days
-                    setGenerateProgress(Math.round(((offset + days) / TOTAL) * 100))
+                    console.error(`[generate] entry ${offset + i} returned non-JSON (${res.status})`)
+                    totalFailed += 1
+                    setGenerateProgress(Math.round(((i + 1) / BATCH_SIZE) * 100))
                     continue
                 }
                 const data = await res.json() as GenerateCycleResponse
                 totalGenerated += data.generated ?? 0
                 totalFailed += data.failed ?? 0
-                setGenerateProgress(Math.round(((offset + days) / TOTAL) * 100))
+                setGenerateProgress(Math.round(((i + 1) / BATCH_SIZE) * 100))
             } catch {
-                totalFailed += BATCH
-                setGenerateProgress(Math.round(((offset + BATCH) / TOTAL) * 100))
+                totalFailed += 1
+                setGenerateProgress(Math.round(((i + 1) / BATCH_SIZE) * 100))
             }
         }
 
+        setGeneratedSoFar(prev => prev + totalGenerated)
         setGenerateResult({ generated: totalGenerated, failed: totalFailed, entries: [] })
         await fetchCalendar(1)
         setGenerating(false)
@@ -691,7 +726,7 @@ export function ProductionPanel() {
                         className="flex items-center gap-2 px-5 py-2 text-white rounded-xl text-sm font-bold shadow-lg"
                         style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
                     >
-                        <Zap size={14} /> Generate Cycle
+                        <Zap size={14} /> Generate 5
                     </button>
                 </div>
             </div>
@@ -824,13 +859,7 @@ export function ProductionPanel() {
                 {/* ── CALENDAR GRID ── */}
                 {view === "grid" && (
                     <motion.div key="grid" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                        {entries.length === 0
-                            ? <div className="bg-white rounded-3xl p-16 text-center shadow-xl shadow-slate-200/40 border border-slate-100">
-                                <CalendarDays size={48} className="mx-auto mb-4 text-slate-300" />
-                                <p className="text-slate-500 font-medium">No calendar entries yet. Generate a 30-day cycle or import a CSV.</p>
-                            </div>
-                            : <CalendarGridView entries={entries} />
-                        }
+                        <CalendarGridView />
                     </motion.div>
                 )}
 
