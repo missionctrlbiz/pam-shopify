@@ -15,6 +15,12 @@ interface TeachingSceneProps {
     totalPoints: number
     text: string
     sceneDuration: number
+    /** Scene-director on-screen text (already merged into text by buildScenes) */
+    textOverlay?: string
+    /** Visual direction note — shown as a small caption hint */
+    visualDirection?: string
+    /** Decorative emoji badge */
+    emojiAccent?: string
 }
 
 /**
@@ -37,6 +43,8 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
     totalPoints,
     text,
     sceneDuration,
+    visualDirection,
+    emojiAccent,
 }) => {
     const frame = useCurrentFrame()
     const { fps } = useVideoConfig()
@@ -239,6 +247,43 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
 
             {/* SCENE COUNTER — bottom-right */}
             <SceneCounter current={pointIndex + 1} total={totalPoints} />
+
+            {/* Emoji accent badge — bottom-left, spring-animated */}
+            {emojiAccent && (
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: 110,
+                        left: 72,
+                        fontSize: 56,
+                        lineHeight: 1,
+                        opacity: numOpacity,
+                        transform: `translateX(${numTranslate}px)`,
+                    }}
+                >
+                    {emojiAccent}
+                </div>
+            )}
+
+            {/* Visual direction hint — very small caption at bottom */}
+            {visualDirection && (
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: 52,
+                        left: 72,
+                        right: 120,
+                        fontFamily: FONTS.body,
+                        fontSize: 18,
+                        fontWeight: 400,
+                        color: COLORS.gray,
+                        letterSpacing: "0.04em",
+                        opacity: 0.4,
+                    }}
+                >
+                    {visualDirection}
+                </div>
+            )}
         </AbsoluteFill>
     )
 }

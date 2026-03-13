@@ -2,6 +2,7 @@ import { renderMedia, selectComposition } from "@remotion/renderer"
 import path from "path"
 import os from "os"
 import fs from "fs"
+import type { PAMSceneData } from "./types"
 
 interface VideoInput {
     hook: string
@@ -9,6 +10,8 @@ interface VideoInput {
     cta: string
     audioUrl: string
     topic: string
+    /** Scene-director scenes — when provided, drives per-scene timing */
+    scenes?: PAMSceneData[]
 }
 
 /**
@@ -41,6 +44,8 @@ export async function renderVideo(input: VideoInput): Promise<Buffer> {
         cta: input.cta,
         audioUrl: input.audioUrl,
         topic: input.topic,
+        // Pass scene-director data when available — drives per-scene timing + overlays
+        ...(input.scenes && input.scenes.length > 0 ? { scenes: input.scenes } : {}),
     }
 
     // Select the composition to get its metadata (fps, durationInFrames, etc.)

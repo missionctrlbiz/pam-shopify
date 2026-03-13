@@ -15,6 +15,10 @@ interface CoverSceneProps {
     topic: string
     /** Total frames in the entire video — for the scene-transition fade */
     sceneDuration: number
+    /** Scene-director on-screen text (supplementary subtitle below hook) */
+    textOverlay?: string
+    /** Decorative emoji — spring-animated badge */
+    emojiAccent?: string
 }
 
 /**
@@ -32,9 +36,20 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
     hook,
     topic,
     sceneDuration,
+    textOverlay,
+    emojiAccent,
 }) => {
     const frame = useCurrentFrame()
     const { fps } = useVideoConfig()
+
+    // Emoji badge spring (appears at frame 8, top-right corner)
+    const emojiBadgeSpring = spring({
+        frame: Math.max(0, frame - 8),
+        fps,
+        config: { mass: 1, damping: 12, stiffness: 180 },
+    })
+    const emojiBadgeScale = interpolate(emojiBadgeSpring, [0, 1], [0.4, 1])
+    const emojiBadgeOpacity = interpolate(emojiBadgeSpring, [0, 1], [0, 1])
 
     // Scene-exit fade in the last 10 frames
     const exitFade = interpolate(
@@ -186,7 +201,22 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                     }}
                 />
 
-                {/* "Swipe to learn ↓" subdued hint */}
+                {/* textOverlay — scene-director subtitle */}
+                {textOverlay && textOverlay !== hook && (
+                    <AnimatedText
+                        text={textOverlay}
+                        fontSize={34}
+                        fontWeight={600}
+                        fontFamily={FONTS.body}
+                        color={COLORS.blue}
+                        delayFrames={36}
+                        lineHeight={1.35}
+                        textAlign="left"
+                        style={{ marginBottom: 28 }}
+                    />
+                )}
+
+                {/* "Read on →" subdued hint */}
                 <AnimatedText
                     text="Read on →"
                     fontSize={26}
@@ -198,6 +228,24 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                     style={{ letterSpacing: "0.08em" }}
                 />
             </div>
+
+            {/* Emoji accent badge — top-right floating */}
+            {emojiAccent && (
+                <div
+                    style={{
+                        position: "absolute",
+                        top: 90,
+                        right: 72,
+                        fontSize: 72,
+                        lineHeight: 1,
+                        opacity: emojiBadgeOpacity,
+                        transform: `scale(${emojiBadgeScale})`,
+                        transformOrigin: "top right",
+                    }}
+                >
+                    {emojiAccent}
+                </div>
+            )}
 
             {/* Bottom decorative accent — horizontal blue strip */}
             <div

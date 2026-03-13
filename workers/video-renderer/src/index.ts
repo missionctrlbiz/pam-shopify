@@ -14,6 +14,7 @@ app.get("/", (_req: Request, res: Response) => {
 app.post("/", async (req: Request, res: Response) => {
     const payload = req.body as RenderPayload
     const { renderJobId, contentIdeaId, masterJson, platform, topic, entryDate, callbackUrl, callbackSecret } = payload
+    const voiceId = payload.voiceId  // undefined → generateAudio falls back to default
 
     console.log(`[video-renderer] Job ${renderJobId} started — topic: ${topic}`)
 
@@ -30,8 +31,9 @@ app.post("/", async (req: Request, res: Response) => {
 
         const blobFolder = `production/${contentIdeaId}`
 
-        // Build voiceover text from teaching points
-        const voiceoverText = [
+        // Build voiceover text — prefer scene-director's full script (includes ESL cues),
+        // else assemble from flat masterJson fields. ESL markers are stripped inside generateAudio.
+        const voiceoverText = masterJson.voiceoverFull ?? [
             masterJson.hook,
             ...masterJson.teachingPoints,
             masterJson.cta,
@@ -39,7 +41,7 @@ app.post("/", async (req: Request, res: Response) => {
 
         // 1. Generate audio via ElevenLabs
         console.log(`[video-renderer] Generating audio for job ${renderJobId}`)
-        const audioBuffer = await generateAudio(voiceoverText)
+        const audioBuffer = await generateAudio(voiceoverText, voiceId)
 
         const audioFilename = `PAM_${platform}_${date}_${topicSlug}_v1.mp3`
         const audioBlob = await uploadAsset(
@@ -57,6 +59,8 @@ app.post("/", async (req: Request, res: Response) => {
             cta: masterJson.cta,
             audioUrl: audioBlob.url,
             topic,
+            // Use scene-director scenes when available for per-scene timing + overlays
+            ...(masterJson.scenes ? { scenes: masterJson.scenes } : {}),
         })
 
         const videoFilename = `PAM_${platform}_${date}_${topicSlug}_v1.mp4`

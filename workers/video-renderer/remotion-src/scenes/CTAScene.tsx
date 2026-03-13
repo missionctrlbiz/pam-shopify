@@ -14,6 +14,10 @@ interface CTASceneProps {
     cta: string
     topic: string
     sceneDuration: number
+    /** Scene-director CTA text (overrides cta when provided) */
+    textOverlay?: string
+    /** Decorative emoji badge */
+    emojiAccent?: string
 }
 
 /**
@@ -34,9 +38,14 @@ export const CTAScene: React.FC<CTASceneProps> = ({
     cta,
     topic,
     sceneDuration,
+    textOverlay,
+    emojiAccent,
 }) => {
     const frame = useCurrentFrame()
     const { fps } = useVideoConfig()
+
+    // Use scene-director textOverlay if available — it’s more specific and concise
+    const ctaText = textOverlay ?? cta
 
     // Scene enter: fade in
     const enterFade = interpolate(frame, [0, 10], [0, 1], {
@@ -52,8 +61,8 @@ export const CTAScene: React.FC<CTASceneProps> = ({
     })
     const divWidth = interpolate(divSpring, [0, 1], [0, 100])
 
-    // Split CTA into lines
-    const ctaLines = splitIntoLines(cta, 30)
+    // Split CTA into lines — prefer scene-director ctaText
+    const ctaLines = splitIntoLines(ctaText, 30)
 
     // Bottom decorative fade
     const bottomBarSpring = spring({
@@ -175,6 +184,22 @@ export const CTAScene: React.FC<CTASceneProps> = ({
                     background: `linear-gradient(180deg, ${COLORS.blue}22, ${COLORS.blueLight}44, transparent)`,
                 }}
             />
+
+            {/* Emoji accent badge — bottom-right, above PAM footer */}
+            {emojiAccent && (
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: 160,
+                        right: 72,
+                        fontSize: 64,
+                        lineHeight: 1,
+                        opacity: bottomBarOpacity,
+                    }}
+                >
+                    {emojiAccent}
+                </div>
+            )}
         </AbsoluteFill>
     )
 }

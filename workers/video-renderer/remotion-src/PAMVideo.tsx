@@ -72,6 +72,8 @@ const SceneSequence: React.FC<{ scene: AnyScene }> = ({ scene }) => {
                     hook={scene.hook}
                     topic={scene.topic}
                     sceneDuration={scene.durationInFrames}
+                    textOverlay={scene.textOverlay}
+                    emojiAccent={scene.emojiAccent}
                 />
             </Sequence>
         )
@@ -89,6 +91,9 @@ const SceneSequence: React.FC<{ scene: AnyScene }> = ({ scene }) => {
                     totalPoints={scene.totalPoints}
                     text={scene.text}
                     sceneDuration={scene.durationInFrames}
+                    textOverlay={scene.textOverlay}
+                    emojiAccent={scene.emojiAccent}
+                    visualDirection={scene.visualDirection}
                 />
             </Sequence>
         )
@@ -105,6 +110,8 @@ const SceneSequence: React.FC<{ scene: AnyScene }> = ({ scene }) => {
                     cta={scene.cta}
                     topic={scene.topic}
                     sceneDuration={scene.durationInFrames}
+                    textOverlay={scene.textOverlay}
+                    emojiAccent={scene.emojiAccent}
                 />
             </Sequence>
         )

@@ -18,8 +18,8 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import type { Platform, PostType, FunnelStage } from "@prisma/client"
 
-const VALID_PLATFORMS   = new Set(["IG", "FB", "TIKTOK", "LINKEDIN", "EMAIL", "VIDEO"])
-const VALID_POST_TYPES  = new Set(["CAROUSEL", "VIDEO", "TEXT_POST", "REEL", "STORY", "EMAIL_LESSON"])
+const VALID_PLATFORMS = new Set(["IG", "FB", "TIKTOK", "LINKEDIN", "EMAIL", "VIDEO"])
+const VALID_POST_TYPES = new Set(["CAROUSEL", "VIDEO", "TEXT_POST", "REEL", "STORY", "EMAIL_LESSON"])
 const VALID_FUNNEL_STAGES = new Set(["AWARENESS", "CONSIDERATION", "CONVERSION", "RETENTION"])
 
 function parseCSV(csvText: string): Record<string, string>[] {
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     }
 
     let imported = 0
-    let skipped  = 0
+    let skipped = 0
     const errors: string[] = []
 
     for (let i = 0; i < rows.length; i++) {
@@ -69,11 +69,11 @@ export async function POST(req: Request) {
         const rowLabel = `Row ${i + 2}` // +2 for 1-based + header row
 
         // Required fields
-        const dayNumber   = parseInt(row["day_number"] ?? "", 10)
+        const dayNumber = parseInt(row["day_number"] ?? "", 10)
         const entryDateRaw = row["entry_date"] ?? ""
-        const platform    = (row["platform"] ?? "").toUpperCase() as Platform
-        const postType    = (row["post_type"] ?? "").toUpperCase().replace(/ /g, "_") as PostType
-        const topic       = row["topic"] ?? ""
+        const platform = (row["platform"] ?? "").toUpperCase() as Platform
+        const postType = (row["post_type"] ?? "").toUpperCase().replace(/ /g, "_") as PostType
+        const topic = row["topic"] ?? ""
         const contentGoal = row["content_goal"] ?? ""
 
         if (isNaN(dayNumber) || dayNumber < 1) {
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
             ? (funnelStageRaw as FunnelStage)
             : "AWARENESS"
         const hook = row["hook"] ?? ""
-        const cta  = row["cta"]  ?? ""
+        const cta = row["cta"] ?? ""
 
         try {
             await prisma.productionCalendarEntry.create({

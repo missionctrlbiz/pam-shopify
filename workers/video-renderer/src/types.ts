@@ -1,3 +1,13 @@
+/** Mirrors PAMScene from lib/production/contentStrategist.ts */
+export interface PAMSceneData {
+    type: "COVER" | "TEACHING" | "CTA"
+    durationSecs: number
+    voiceoverText: string       // includes [pause]/[breath]/[emphasize:word] — stripped before TTS
+    visualDirection: string
+    textOverlay: string
+    emojiAccent?: string
+}
+
 export interface MasterJson {
     hook: string
     teachingPoints: string[]
@@ -6,6 +16,10 @@ export interface MasterJson {
     slideTextBlocks: string[]
     platformAdaptations: Record<string, unknown>
     estimatedReadTimeSecs: number
+    // Story Bank fields — populated by sceneDirector.ts
+    scenes?: PAMSceneData[]
+    voiceoverFull?: string
+    totalDurationSecs?: number
 }
 
 export interface RenderPayload {
@@ -18,6 +32,10 @@ export interface RenderPayload {
     entryDate: string
     callbackUrl: string
     callbackSecret: string
+    /** ElevenLabs voice ID — defaults to Sarah (EXAVITQu4vr4xnSDxMaL) */
+    voiceId?: string
+    /** Background music track key: "ambient" | "pulse" | null */
+    backgroundMusic?: string | null
 }
 
 export interface CallbackAsset {

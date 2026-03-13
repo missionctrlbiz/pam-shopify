@@ -1,3 +1,16 @@
+/**
+ * PAMSceneData — mirrors lib/production/contentStrategist.ts PAMScene.
+ * Kept self-contained so the Remotion bundle has no dependency on the Next.js lib.
+ */
+export interface PAMSceneData {
+    type: "COVER" | "TEACHING" | "CTA"
+    durationSecs: number
+    voiceoverText: string
+    visualDirection: string
+    textOverlay: string
+    emojiAccent?: string
+}
+
 /** Props passed from remotion.ts → inputProps → PAMVideo composition */
 export interface PAMVideoProps {
     hook: string
@@ -5,6 +18,8 @@ export interface PAMVideoProps {
     cta: string
     audioUrl: string
     topic: string
+    /** Scene-director result — when present, overrides fixed SCENE_DURATIONS */
+    scenes?: PAMSceneData[]
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -25,6 +40,8 @@ export interface CoverSceneData extends Scene {
     type: "COVER"
     hook: string
     topic: string
+    textOverlay?: string    // from scene director — supplementary on-screen text
+    emojiAccent?: string    // decorative emoji badge
 }
 
 export interface TeachingSceneData extends Scene {
@@ -32,12 +49,17 @@ export interface TeachingSceneData extends Scene {
     pointIndex: number   // 0-based
     totalPoints: number
     text: string
+    textOverlay?: string    // replaces/supplements text when scene-director driven
+    emojiAccent?: string
+    visualDirection?: string  // scene-director visual note (shown as caption hint)
 }
 
 export interface CTASceneData extends Scene {
     type: "CTA"
     cta: string
     topic: string
+    textOverlay?: string
+    emojiAccent?: string
 }
 
 export type AnyScene = CoverSceneData | TeachingSceneData | CTASceneData
@@ -83,6 +105,57 @@ export const FONTS = {
 
 /** Build a flat array of AnyScene from raw video props */
 export function buildScenes(props: PAMVideoProps): AnyScene[] {
+    // ── Scene-director-driven path ──────────────────────────────────────────
+    if (props.scenes && props.scenes.length > 0) {
+        const output: AnyScene[] = []
+        let cursor = 0
+        const teachingSlots = props.scenes.filter((s) => s.type === "TEACHING")
+        const totalPoints = teachingSlots.length
+        let teachingIdx = 0
+
+        for (const s of props.scenes) {
+            const durationInFrames = Math.round(s.durationSecs * FPS)
+            if (s.type === "COVER") {
+                output.push({
+                    type: "COVER",
+                    startFrame: cursor,
+                    durationInFrames,
+                    hook: props.hook,
+                    topic: props.topic,
+                    textOverlay: s.textOverlay,
+                    emojiAccent: s.emojiAccent,
+                })
+            } else if (s.type === "TEACHING") {
+                output.push({
+                    type: "TEACHING",
+                    startFrame: cursor,
+                    durationInFrames,
+                    pointIndex: teachingIdx,
+                    totalPoints,
+                    // textOverlay from scene director is the primary on-screen text
+                    text: s.textOverlay || props.teachingPoints[teachingIdx] || "",
+                    textOverlay: s.textOverlay,
+                    emojiAccent: s.emojiAccent,
+                    visualDirection: s.visualDirection,
+                })
+                teachingIdx++
+            } else if (s.type === "CTA") {
+                output.push({
+                    type: "CTA",
+                    startFrame: cursor,
+                    durationInFrames,
+                    cta: props.cta,
+                    topic: props.topic,
+                    textOverlay: s.textOverlay,
+                    emojiAccent: s.emojiAccent,
+                })
+            }
+            cursor += durationInFrames
+        }
+        return output
+    }
+
+    // ── Legacy flat-props path ──────────────────────────────────────────────
     const scenes: AnyScene[] = []
     let cursor = 0
 
@@ -124,6 +197,11 @@ export function buildScenes(props: PAMVideoProps): AnyScene[] {
 
 /** Total frame count derived from the actual props */
 export function calculateTotalFrames(props: PAMVideoProps): number {
+    if (props.scenes && props.scenes.length > 0) {
+        return Math.round(
+            props.scenes.reduce((sum, s) => sum + s.durationSecs, 0) * FPS
+        )
+    }
     const scenes = buildScenes(props)
     const last = scenes[scenes.length - 1]
     return last.startFrame + last.durationInFrames
