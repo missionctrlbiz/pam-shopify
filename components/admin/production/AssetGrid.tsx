@@ -126,7 +126,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
             ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
                     {assets.map(asset => {
-                        const statusMeta = ASSET_STATUS_STYLE[asset.assetStatus]
+                        const statusMeta = ASSET_STATUS_STYLE[asset.assetStatus] ?? { icon: <Clock size={12} />, color: PROD_BRAND.gray, label: asset.assetStatus }
                         const isImage = asset.assetType === "CAROUSEL_PNG"
                         const isVideo = asset.assetType === "VIDEO_MP4"
 

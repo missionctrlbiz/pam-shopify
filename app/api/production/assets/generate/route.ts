@@ -153,9 +153,9 @@ export async function POST(req: NextRequest) {
 
     const master = idea.masterJson as Record<string, unknown>
     const callbackUrl = `${process.env.NEXTAUTH_URL ?? process.env.VERCEL_URL}/api/production/render-done`
-    const callbackSecret = process.env.RENDER_CALLBACK_SECRET!
+    const callbackSecret = process.env.RENDER_CALLBACK_SECRET ?? ""
 
-    const client = getTasksClient()
+    const gcpConfigured = !!(process.env.GCP_PROJECT_ID && process.env.WORKER_SA_EMAIL)
     const jobs: Array<{ jobType: RenderJobType; taskId: string; renderJobId: string }> = []
     const errors: string[] = []
 
@@ -174,10 +174,6 @@ export async function POST(req: NextRequest) {
         extraPayload: Record<string, unknown> = {}
     ) => {
         const workerUrl = WORKER_URLS[workerUrlEnvKey]
-        if (!workerUrl) {
-            errors.push(`${workerUrlEnvKey} is not set — skipping ${jobType} job`)
-            return
-        }
 
         // Create ContentAsset placeholders
         const assetCreates = assetTypes.map(({ assetType, platform }) => ({
@@ -212,8 +208,16 @@ export async function POST(req: NextRequest) {
             skipDuplicates: true,
         })
 
-        // Enqueue to Cloud Tasks
+        // Enqueue to Cloud Tasks (skipped if GCP not configured or worker URL missing — dev mode)
+        if (!gcpConfigured || !workerUrl) {
+            const reason = !workerUrl ? `${workerUrlEnvKey} not set` : "GCP not configured"
+            errors.push(`[dev] ${reason} — ${jobType} job queued in DB only`)
+            jobs.push({ jobType, taskId: "dev-no-gcp", renderJobId: renderJob.id })
+            return
+        }
+
         try {
+            const client = getTasksClient()
             const taskName = await enqueueTask(client, workerUrl, {
                 renderJobId: renderJob.id,
                 contentIdeaId,

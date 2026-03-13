@@ -320,13 +320,14 @@ export function IdeaCard({ entry, onRefresh }: IdeaCardProps) {
 
     // ── Generate assets ───────────────────────────────────────────────────────
     const handleGenerate = useCallback(async () => {
+        if (!entry.contentIdea?.id) return
         setGenerating(true)
         try {
             await fetch("/api/production/assets/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    entryIds: [entry.id],
+                    contentIdeaId: entry.contentIdea.id,
                     scope: selectedScope.toUpperCase(),
                     voiceId: selectedVoice,
                     backgroundMusic: selectedMusic !== "off" ? selectedMusic : null,
@@ -577,8 +578,9 @@ export function IdeaCard({ entry, onRefresh }: IdeaCardProps) {
                                     </select>
                                     <button
                                         onClick={handleGenerate}
-                                        disabled={generating}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-80 disabled:opacity-50"
+                                        disabled={generating || entry.publishStatus !== "APPROVED" || !entry.contentIdea?.id}
+                                        title={entry.publishStatus !== "APPROVED" ? "Entry must be APPROVED before generating assets" : "Generate assets"}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
                                     >
                                         {generating ? (

@@ -161,7 +161,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                     </Link>
                 </div>
 
-                <div className="flex flex-col gap-1 p-4 flex-grow overflow-y-auto no-scrollbar">
+                <div className="flex flex-col gap-1 p-4 flex-grow overflow-y-auto">
                     <p className="px-3 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 mt-4">Menu</p>
                     {tabs.map(tab => {
                         const isActive = activeTab === tab.key
@@ -240,7 +240,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
 
 
             {/* Main Content Area */}
-            <main className="flex-1 flex flex-col h-screen overflow-y-auto no-scrollbar">
+            <main className="flex-1 flex flex-col h-screen overflow-y-auto">
                 <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 hidden md:block">
                     <div className="px-8 h-16 flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -382,7 +382,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                             />
                                         </div>
                                     </div>
-                                    <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto no-scrollbar">
+                                    <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
                                         {filteredBuyers.length === 0 ? (
                                             <div className="text-center py-16">
                                                 <p className="text-slate-400 font-medium">No verified buyers found matching your criteria.</p>
