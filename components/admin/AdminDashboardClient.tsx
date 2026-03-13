@@ -2,6 +2,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { MotionIcon } from "motion-icons-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -51,8 +52,22 @@ function AnimatedIcon({ iconName, color, size = 20, animation = "pulse" }: { ico
     )
 }
 
+const VALID_TABS: Tab[] = ["overview", "buyers", "leads", "analytics", "content", "production"]
+
 export function AdminDashboardClient({ session }: { session: any }) {
-    const [activeTab, setActiveTab] = useState<Tab>("overview")
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const initialTab = (searchParams.get("panel") as Tab | null)
+    const [activeTab, setActiveTab] = useState<Tab>(
+        initialTab && VALID_TABS.includes(initialTab) ? initialTab : "overview"
+    )
+
+    const switchTab = useCallback((tab: Tab) => {
+        setActiveTab(tab)
+        const params = new URLSearchParams(searchParams.toString())
+        params.set("panel", tab)
+        router.replace(`/admin?${params.toString()}`, { scroll: false })
+    }, [router, searchParams])
     const [newBuyerEmail, setNewBuyerEmail] = useState("")
     const [addingBuyer, setAddingBuyer] = useState(false)
     const [buyerMsg, setBuyerMsg] = useState("")
@@ -168,7 +183,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                         return (
                             <button
                                 key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
+                                onClick={() => switchTab(tab.key)}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all w-full text-left relative ${isActive ? "text-[#041f50] bg-slate-50 shadow-sm border border-slate-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50/50"
                                     }`}
                             >
@@ -228,7 +243,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                     return (
                         <button
                             key={tab.key}
-                            onClick={() => setActiveTab(tab.key)}
+                            onClick={() => switchTab(tab.key)}
                             className={`flex whitespace-nowrap items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${isActive ? "text-white shadow-md" : "text-slate-500 bg-slate-50 border border-slate-100"}`}
                             style={isActive ? { background: BRAND.gradient } : {}}
                         >
@@ -314,7 +329,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                         ].map(action => (
                                             <button
                                                 key={action.tab}
-                                                onClick={() => setActiveTab(action.tab)}
+                                                onClick={() => switchTab(action.tab)}
                                                 className="p-5 border border-slate-100 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 rounded-2xl text-left transition-all group"
                                             >
                                                 <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center mb-4 text-slate-700 group-hover:text-[#af5ce9] transition-colors">
