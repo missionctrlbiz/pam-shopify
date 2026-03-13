@@ -8,10 +8,11 @@ import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import {
     Users, Mail, BarChart3, LogOut, Plus,
-    Trash2, Search, Activity, RefreshCw, Loader2, FileEdit
+    Trash2, Search, Activity, RefreshCw, Loader2, FileEdit, CalendarDays
 } from "lucide-react"
 import { ContentEditor } from "./ContentEditor"
 import Link from "next/link"
+import { ProductionPanel } from "./production/ProductionPanel"
 
 interface DashboardStats {
     totalBuyers: number
@@ -22,7 +23,7 @@ interface DashboardStats {
 interface BuyerRow { id: string; email: string; createdAt: string }
 interface LeadRow { id: string; email: string; name: string | null; source: string; createdAt: string }
 
-type Tab = "overview" | "buyers" | "leads" | "analytics" | "content"
+type Tab = "overview" | "buyers" | "leads" | "analytics" | "content" | "production"
 
 const BRAND = {
     red: "#ed415b",
@@ -129,6 +130,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
         { key: "leads", label: "Captured Leads", icon: Mail, iconName: "Mail" },
         { key: "analytics", label: "Platform Analytics", icon: Activity, iconName: "Activity" },
         { key: "content", label: "Site Content", icon: FileEdit, iconName: "FileEdit" },
+        { key: "production", label: "Production Calendar", icon: CalendarDays, iconName: "CalendarDays" },
     ]
 
     const statCards = [
@@ -184,6 +186,8 @@ export function AdminDashboardClient({ session }: { session: any }) {
                         )
                     })}
                 </div>
+
+
 
                 <div className="p-4 border-t border-slate-100 mt-auto space-y-3">
                     <div className="flex items-center gap-3 px-2">
@@ -306,6 +310,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                             { tab: "leads" as Tab, iconName: "Mail", icon: Mail, label: "View Leads", desc: "Captured emails", color: BRAND.pink },
                                             { tab: "analytics" as Tab, iconName: "Activity", icon: Activity, label: "Analytics", desc: "Track usage", color: BRAND.purple },
                                             { tab: "content" as Tab, iconName: "FileEdit", icon: FileEdit, label: "Edit Site", desc: "Update copy", color: BRAND.red },
+                                            { tab: "production" as Tab, iconName: "CalendarDays", icon: CalendarDays, label: "Production", desc: "Content calendar", color: BRAND.purple },
                                         ].map(action => (
                                             <button
                                                 key={action.tab}
@@ -490,6 +495,13 @@ export function AdminDashboardClient({ session }: { session: any }) {
                         {activeTab === "content" && (
                             <motion.div key="content" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="bg-white rounded-3xl p-6 md:p-8 shadow-xl shadow-slate-200/40 border border-slate-100">
                                 <ContentEditor />
+                            </motion.div>
+                        )}
+
+                        {/* Production Calendar Tab */}
+                        {activeTab === "production" && (
+                            <motion.div key="production" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                                <ProductionPanel />
                             </motion.div>
                         )}
                     </AnimatePresence>

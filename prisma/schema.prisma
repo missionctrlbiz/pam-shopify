@@ -26,6 +26,10 @@ model User {
   leads         Lead[]
   soapHistories SoapHistory[]
   usageEvents   UsageEvent[]
+
+  // Content Engine relations (additive — do not remove existing relations above)
+  approvedEntries ProductionCalendarEntry[]
+  contentIdeas    ContentIdea[]
 }
 
 model Account {
@@ -119,4 +123,254 @@ model UsageEvent {
 
   @@index([action])
   @@index([createdAt])
+}
+
+// ==========================================
+// CONTENT ENGINE — ENUMS
+// ==========================================
+
+enum Platform {
+  IG
+  FB
+  TIKTOK
+  LINKEDIN
+  EMAIL
+  VIDEO
+}
+
+enum FunnelStage {
+  AWARENESS
+  CONSIDERATION
+  CONVERSION
+  RETENTION
+}
+
+enum PostType {
+  CAROUSEL
+  VIDEO
+  TEXT_POST
+  REEL
+  STORY
+  EMAIL_LESSON
+}
+
+enum PublishStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  GENERATING
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AssetType {
+  CAROUSEL_PNG
+  VIDEO_MP4
+  TEXT_POST
+  EMAIL_HTML
+  AUDIO_MP3
+  VIDEO_SCRIPT_JSON
+}
+
+enum AssetStatus {
+  PENDING
+  GENERATING
+  COMPLETE
+  FAILED
+}
+
+enum RenderJobType {
+  CAROUSEL
+  VIDEO
+  AUDIO
+  REPURPOSE
+}
+
+enum RenderJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETE
+  FAILED
+}
+
+enum QualityGateStatus {
+  PENDING
+  PASSED
+  FAILED
+  BYPASSED
+}
+
+enum FieldCategory {
+  CHIEF_COMPLAINT
+  MSE
+  DIAGNOSTIC
+  RISK_ASSESSMENT
+  DOCUMENTATION
+  INTERVIEW
+}
+
+// ==========================================
+// CONTENT ENGINE — MODEL 1: ClinicalField
+// ==========================================
+
+model ClinicalField {
+  id              String        @id @default(cuid())
+  fieldKey        String        @unique
+  fieldCategory   FieldCategory
+  displayName     String
+  description     String        @default("")
+  exampleValues   Json          @default("[]")
+  clinicalContext String?
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+
+  contentIdeas ContentIdea[]
+}
+
+// ==========================================
+// CONTENT ENGINE — MODEL 2: ProductionCalendarEntry
+// ==========================================
+
+model ProductionCalendarEntry {
+  id            String        @id @default(cuid())
+  dayNumber     Int
+  entryDate     DateTime
+  platform      Platform
+  topic         String
+  contentGoal   String
+  funnelStage   FunnelStage
+  postType      PostType
+  hook          String
+  cta           String
+  publishStatus PublishStatus  @default(DRAFT)
+  approvedAt    DateTime?
+  approvedById  String?
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  approvedBy  User?        @relation(fields: [approvedById], references: [id], onDelete: SetNull)
+  contentIdea ContentIdea?
+
+  @@index([entryDate])
+  @@index([publishStatus])
+  @@index([platform])
+}
+
+// ==========================================
+// CONTENT ENGINE — MODEL 3: ContentIdea
+// ==========================================
+
+model ContentIdea {
+  id                String            @id @default(cuid())
+  calendarEntryId   String            @unique
+  clinicalFieldId   String?
+  masterJson        Json
+  rawGeminiPrompt   String
+  qualityGateStatus QualityGateStatus @default(PENDING)
+  generatedById     String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  calendarEntry     ProductionCalendarEntry @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
+  clinicalField     ClinicalField?          @relation(fields: [clinicalFieldId], references: [id], onDelete: SetNull)
+  generatedBy       User                    @relation(fields: [generatedById], references: [id])
+
+  assets            ContentAsset[]
+  qualityGateResult QualityGateResult?
+  videoScript       VideoScript?
+  renderJobs        RenderJob[]
+}
+
+// ==========================================
+// CONTENT ENGINE — MODEL 4: QualityGateResult
+// ==========================================
+
+model QualityGateResult {
+  id                String      @id @default(cuid())
+  contentIdeaId     String      @unique
+  question1         String
+  question2         String
+  question3         String
+  question4         String
+  question5         String
+  score1            Int
+  score2            Int
+  score3            Int
+  score4            Int
+  score5            Int
+  overallScore      Decimal
+  passed            Boolean
+  geminiRawResponse Json
+  evaluatedAt       DateTime    @default(now())
+
+  contentIdea ContentIdea @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// CONTENT ENGINE — MODEL 5: VideoScript
+// ==========================================
+
+model VideoScript {
+  id                String      @id @default(cuid())
+  contentIdeaId     String      @unique
+  scriptJson        Json
+  totalDurationSecs Int
+  elevenLabsJobId   String?
+  audioStorageUrl   String?
+  audioStatus       AssetStatus @default(PENDING)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  contentIdea ContentIdea @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// CONTENT ENGINE — MODEL 6: ContentAsset
+// ==========================================
+
+model ContentAsset {
+  id            String      @id @default(cuid())
+  contentIdeaId String
+  renderJobId   String?
+  platform      Platform
+  assetType     AssetType
+  fileName      String
+  storageUrl    String?
+  storagePath   String?
+  version       Int         @default(1)
+  status        AssetStatus @default(PENDING)
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  contentIdea ContentIdea @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
+  renderJob   RenderJob?  @relation(fields: [renderJobId], references: [id], onDelete: SetNull)
+
+  @@index([contentIdeaId, platform])
+  @@index([status])
+}
+
+// ==========================================
+// CONTENT ENGINE — MODEL 7: RenderJob
+// ==========================================
+
+model RenderJob {
+  id                  String          @id @default(cuid())
+  contentIdeaId       String
+  jobType             RenderJobType
+  cloudRunExecutionId String?
+  cloudTasksTaskId    String?
+  status              RenderJobStatus @default(QUEUED)
+  inputPayload        Json
+  queuedAt            DateTime        @default(now())
+  startedAt           DateTime?
+  completedAt         DateTime?
+  errorMessage        String?
+  retryCount          Int             @default(0)
+
+  contentIdea ContentIdea    @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
+  assets      ContentAsset[]
 }

@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Prevent Turbopack from bundling GCP packages that use dynamic require()
+  // for native gRPC/protobuf bindings — let Node.js resolve them at runtime.
+  serverExternalPackages: [
+    "@google-cloud/tasks",
+    "@grpc/grpc-js",
+    "@grpc/proto-loader",
+    "google-gax",
+    "google-auth-library",
+  ],
   async redirects() {
     return [
       // Redirect Shopify download links from custom domain to myshopify.com

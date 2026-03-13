@@ -7,10 +7,15 @@
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
+    "@google-cloud/tasks": "^6.2.1",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.4.1",
     "@vercel/kv": "^3.0.0",
@@ -43,6 +48,7 @@
     "eslint-config-next": "16.1.6",
     "prisma": "^6.4.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

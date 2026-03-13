@@ -16,5 +16,11 @@
     "tailwindCSS.lint.invalidTailwindDirective": "ignore",
     "tailwindCSS.lint.invalidVariant": "ignore",
     "tailwindCSS.lint.recommendedVariantOrder": "ignore",
-    "Codegeex.SidebarUI.LanguagePreference": "English"
+    "tailwindCSS.lint.suggestCanonicalClasses": "ignore",
+    "Codegeex.SidebarUI.LanguagePreference": "English",
+    "sonarlint.rules": {
+        "typescript:S6656": {
+            "level": "off"
+        }
+    }
 }
