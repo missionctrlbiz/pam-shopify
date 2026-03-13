@@ -597,8 +597,8 @@ export function IdeaCard({ entry, onRefresh }: IdeaCardProps) {
                                     </select>
                                     <button
                                         onClick={handleGenerate}
-                                        disabled={generating || entry.publishStatus !== "APPROVED" || !entry.contentIdea?.id}
-                                        title={entry.publishStatus !== "APPROVED" ? "Entry must be APPROVED before generating assets" : "Generate assets"}
+                                        disabled={generating || !["APPROVED", "GENERATING"].includes(entry.publishStatus) || !entry.contentIdea?.id}
+                                        title={!["APPROVED", "GENERATING"].includes(entry.publishStatus) ? "Entry must be APPROVED or RENDERING before generating assets" : "Generate assets"}
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
                                     >

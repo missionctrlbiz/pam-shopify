@@ -196,10 +196,17 @@ export async function POST(req: NextRequest) {
     // ------------------------------------------------------------------
     const allJobs = await prisma.renderJob.findMany({
         where: { contentIdeaId },
-        select: { status: true },
+        orderBy: { queuedAt: "desc" },
     })
 
-    const allDone = allJobs.every((j) => j.status === "COMPLETE")
+    const latestJobs = new Map<string, string>()
+    for (const job of allJobs) {
+        if (!latestJobs.has(job.jobType)) {
+            latestJobs.set(job.jobType, job.status)
+        }
+    }
+
+    const allDone = Array.from(latestJobs.values()).every((status) => status === "COMPLETE")
 
     if (allDone) {
         await prisma.productionCalendarEntry.update({

@@ -140,10 +140,10 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        if (entry.publishStatus !== "APPROVED") {
+        if (!["APPROVED", "GENERATING"].includes(entry.publishStatus)) {
             return NextResponse.json(
                 {
-                    error: `Entry must be APPROVED before generating assets. Current: ${entry.publishStatus}`,
+                    error: `Entry must be APPROVED or GENERATING before generating assets. Current: ${entry.publishStatus}`,
                 },
                 { status: 409 }
             )
