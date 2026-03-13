@@ -22,14 +22,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
-import { CloudTasksClient } from "@google-cloud/tasks"
 import { AssetType, Platform, RenderJobType } from "@prisma/client"
 
 // ---------------------------------------------------------------------------
-// GCP helpers
+// GCP helpers — dynamic import to avoid module-level crash when native
+// gRPC bindings are unavailable (e.g. Vercel serverless cold start).
 // ---------------------------------------------------------------------------
 
-function getTasksClient(): CloudTasksClient {
+async function getTasksClient() {
+    const { CloudTasksClient } = await import("@google-cloud/tasks")
     const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64
     if (b64) {
         const credentials = JSON.parse(
@@ -42,10 +43,10 @@ function getTasksClient(): CloudTasksClient {
 }
 
 async function enqueueTask(
-    client: CloudTasksClient,
     workerUrl: string,
     payload: Record<string, unknown>
 ): Promise<string> {
+    const client = await getTasksClient()
     const projectId = process.env.GCP_PROJECT_ID!
     const location = process.env.GCP_LOCATION ?? "us-central1"
     const queue = process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue"
@@ -104,203 +105,202 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-    const body = await req.json() as { contentIdeaId?: string; voiceId?: string; scope?: string }
-    const { contentIdeaId, voiceId } = body
+        const body = await req.json() as { contentIdeaId?: string; voiceId?: string; scope?: string }
+        const { contentIdeaId, voiceId } = body
 
-    if (!contentIdeaId || typeof contentIdeaId !== "string") {
-        return NextResponse.json(
-            { error: "contentIdeaId is required" },
-            { status: 400 }
-        )
-    }
+        if (!contentIdeaId || typeof contentIdeaId !== "string") {
+            return NextResponse.json(
+                { error: "contentIdeaId is required" },
+                { status: 400 }
+            )
+        }
 
-    // Fetch idea + entry + existing render jobs
-    const idea = await prisma.contentIdea.findUnique({
-        where: { id: contentIdeaId },
-        include: {
-            calendarEntry: true,
-            renderJobs: { select: { id: true, status: true } },
-        },
-    })
-
-    if (!idea) {
-        return NextResponse.json(
-            { error: `ContentIdea not found: ${contentIdeaId}` },
-            { status: 404 }
-        )
-    }
-
-    const entry = idea.calendarEntry
-
-    if (!entry) {
-        return NextResponse.json(
-            { error: `ContentIdea ${contentIdeaId} has no linked calendar entry` },
-            { status: 422 }
-        )
-    }
-
-    if (entry.publishStatus !== "APPROVED") {
-        return NextResponse.json(
-            {
-                error: `Entry must be APPROVED before generating assets. Current: ${entry.publishStatus}`,
+        // Fetch idea + entry + existing render jobs
+        const idea = await prisma.contentIdea.findUnique({
+            where: { id: contentIdeaId },
+            include: {
+                calendarEntry: true,
+                renderJobs: { select: { id: true, status: true } },
             },
-            { status: 409 }
+        })
+
+        if (!idea) {
+            return NextResponse.json(
+                { error: `ContentIdea not found: ${contentIdeaId}` },
+                { status: 404 }
+            )
+        }
+
+        const entry = idea.calendarEntry
+
+        if (!entry) {
+            return NextResponse.json(
+                { error: `ContentIdea ${contentIdeaId} has no linked calendar entry` },
+                { status: 422 }
+            )
+        }
+
+        if (entry.publishStatus !== "APPROVED") {
+            return NextResponse.json(
+                {
+                    error: `Entry must be APPROVED before generating assets. Current: ${entry.publishStatus}`,
+                },
+                { status: 409 }
+            )
+        }
+
+        // Block if any job is actively running
+        const running = idea.renderJobs.some((j) =>
+            ["QUEUED", "RUNNING"].includes(j.status)
         )
-    }
+        if (running) {
+            return NextResponse.json(
+                { error: "Asset generation already in progress for this entry." },
+                { status: 409 }
+            )
+        }
 
-    // Block if any job is actively running
-    const running = idea.renderJobs.some((j) =>
-        ["QUEUED", "RUNNING"].includes(j.status)
-    )
-    if (running) {
-        return NextResponse.json(
-            { error: "Asset generation already in progress for this entry." },
-            { status: 409 }
+        const master = idea.masterJson as Record<string, unknown>
+
+        // Build callback URL — NEXTAUTH_URL must include https:// (no trailing slash)
+        const nextAuthUrl = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")
+        const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
+        const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
+        const callbackUrl = `${baseUrl}/api/production/render-done`
+        const callbackSecret = process.env.RENDER_CALLBACK_SECRET ?? ""
+
+        // All three must be present — GCP_SERVICE_ACCOUNT_JSON_B64 is the actual credential;
+        // without it getTasksClient() falls back to ADC which fails in local dev / Vercel.
+        const gcpConfigured = !!(
+            process.env.GCP_PROJECT_ID &&
+            process.env.WORKER_SA_EMAIL &&
+            process.env.GCP_SERVICE_ACCOUNT_JSON_B64
         )
-    }
+        const jobs: Array<{ jobType: RenderJobType; taskId: string; renderJobId: string }> = []
+        const errors: string[] = []
 
-    const master = idea.masterJson as Record<string, unknown>
+        // Determine which workers to run
+        const needsCarousel = ["CAROUSEL"].includes(entry.postType)
+        const needsVideo = ["VIDEO", "REEL"].includes(entry.postType)
+        const needsRepurpose = true // always
 
-    // Build callback URL — NEXTAUTH_URL must include https:// (no trailing slash)
-    const nextAuthUrl = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")
-    const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
-    const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
-    const callbackUrl = `${baseUrl}/api/production/render-done`
-    const callbackSecret = process.env.RENDER_CALLBACK_SECRET ?? ""
+        // ------------------------------------------------------------------
+        // Helper: create RenderJob row + enqueue task
+        // ------------------------------------------------------------------
+        const dispatch = async (
+            jobType: RenderJobType,
+            workerUrlEnvKey: string,
+            assetTypes: Array<{ assetType: AssetType; platform: Platform }>,
+            extraPayload: Record<string, unknown> = {}
+        ) => {
+            const workerUrl = WORKER_URLS[workerUrlEnvKey]
 
-    // All three must be present — GCP_SERVICE_ACCOUNT_JSON_B64 is the actual credential;
-    // without it getTasksClient() falls back to ADC which fails in local dev / Vercel.
-    const gcpConfigured = !!(
-        process.env.GCP_PROJECT_ID &&
-        process.env.WORKER_SA_EMAIL &&
-        process.env.GCP_SERVICE_ACCOUNT_JSON_B64
-    )
-    const jobs: Array<{ jobType: RenderJobType; taskId: string; renderJobId: string }> = []
-    const errors: string[] = []
-
-    // Determine which workers to run
-    const needsCarousel = ["CAROUSEL"].includes(entry.postType)
-    const needsVideo = ["VIDEO", "REEL"].includes(entry.postType)
-    const needsRepurpose = true // always
-
-    // ------------------------------------------------------------------
-    // Helper: create RenderJob row + enqueue task
-    // ------------------------------------------------------------------
-    const dispatch = async (
-        jobType: RenderJobType,
-        workerUrlEnvKey: string,
-        assetTypes: Array<{ assetType: AssetType; platform: Platform }>,
-        extraPayload: Record<string, unknown> = {}
-    ) => {
-        const workerUrl = WORKER_URLS[workerUrlEnvKey]
-
-        // Create ContentAsset placeholders
-        const assetCreates = assetTypes.map(({ assetType, platform }) => ({
-            contentIdeaId,
-            platform,
-            assetType,
-            fileName: buildFileName(platform, entry.entryDate, entry.topic, assetType, 1),
-            status: "PENDING" as const,
-        }))
-
-        // Create the RenderJob row first so we have its ID for the payload
-        const renderJob = await prisma.renderJob.create({
-            data: {
+            // Create ContentAsset placeholders
+            const assetCreates = assetTypes.map(({ assetType, platform }) => ({
                 contentIdeaId,
-                jobType,
-                status: "QUEUED",
-                inputPayload: {
+                platform,
+                assetType,
+                fileName: buildFileName(platform, entry.entryDate, entry.topic, assetType, 1),
+                status: "PENDING" as const,
+            }))
+
+            // Create the RenderJob row first so we have its ID for the payload
+            const renderJob = await prisma.renderJob.create({
+                data: {
+                    contentIdeaId,
+                    jobType,
+                    status: "QUEUED",
+                    inputPayload: {
+                        contentIdeaId,
+                        masterJson: master,
+                        platform: entry.platform,
+                        postType: entry.postType,
+                        topic: entry.topic,
+                        entryDate: entry.entryDate.toISOString(),
+                        ...extraPayload,
+                    } as object,
+                },
+            })
+
+            // Create assets linked to the job
+            await prisma.contentAsset.createMany({
+                data: assetCreates.map((a) => ({ ...a, renderJobId: renderJob.id })),
+                skipDuplicates: true,
+            })
+
+            // Enqueue to Cloud Tasks (skipped if GCP not configured or worker URL missing — dev mode)
+            if (!gcpConfigured || !workerUrl) {
+                const reason = !workerUrl ? `${workerUrlEnvKey} not set` : "GCP not configured"
+                errors.push(`[dev] ${reason} — ${jobType} job queued in DB only`)
+                jobs.push({ jobType, taskId: "dev-no-gcp", renderJobId: renderJob.id })
+                return
+            }
+
+            try {
+                const taskName = await enqueueTask(workerUrl, {
+                    renderJobId: renderJob.id,
                     contentIdeaId,
                     masterJson: master,
                     platform: entry.platform,
                     postType: entry.postType,
                     topic: entry.topic,
                     entryDate: entry.entryDate.toISOString(),
+                    callbackUrl,
+                    callbackSecret,
                     ...extraPayload,
-                } as object,
+                })
+
+                // Store the task name on the job
+                await prisma.renderJob.update({
+                    where: { id: renderJob.id },
+                    data: { cloudTasksTaskId: taskName },
+                })
+
+                jobs.push({ jobType, taskId: taskName, renderJobId: renderJob.id })
+            } catch (err) {
+                errors.push(`Failed to enqueue ${jobType}: ${(err as Error).message}`)
+                await prisma.renderJob.update({
+                    where: { id: renderJob.id },
+                    data: { status: "FAILED", errorMessage: (err as Error).message },
+                })
+            }
+        }
+
+        if (needsCarousel) {
+            await dispatch("CAROUSEL", "CAROUSEL_RENDERER_URL", [
+                { assetType: "CAROUSEL_PNG", platform: entry.platform },
+            ])
+        }
+
+        if (needsRepurpose) {
+            await dispatch("REPURPOSE", "REPURPOSE_WORKER_URL", REPURPOSE_ASSET_TYPES)
+        }
+
+        if (needsVideo) {
+            await dispatch("VIDEO", "VIDEO_RENDERER_URL", [
+                { assetType: "VIDEO_MP4", platform: entry.platform },
+                { assetType: "AUDIO_MP3", platform: entry.platform },
+            ], {
+                voiceId: voiceId ?? null,
+            })
+        }
+
+        // Transition entry to GENERATING while workers are running
+        if (jobs.length > 0) {
+            await prisma.productionCalendarEntry.update({
+                where: { id: entry.id },
+                data: { publishStatus: "GENERATING" },
+            })
+        }
+
+        return NextResponse.json(
+            {
+                queued: jobs.length,
+                jobs,
+                errors: errors.length > 0 ? errors : undefined,
             },
-        })
-
-        // Create assets linked to the job
-        await prisma.contentAsset.createMany({
-            data: assetCreates.map((a) => ({ ...a, renderJobId: renderJob.id })),
-            skipDuplicates: true,
-        })
-
-        // Enqueue to Cloud Tasks (skipped if GCP not configured or worker URL missing — dev mode)
-        if (!gcpConfigured || !workerUrl) {
-            const reason = !workerUrl ? `${workerUrlEnvKey} not set` : "GCP not configured"
-            errors.push(`[dev] ${reason} — ${jobType} job queued in DB only`)
-            jobs.push({ jobType, taskId: "dev-no-gcp", renderJobId: renderJob.id })
-            return
-        }
-
-        try {
-            const client = getTasksClient()
-            const taskName = await enqueueTask(client, workerUrl, {
-                renderJobId: renderJob.id,
-                contentIdeaId,
-                masterJson: master,
-                platform: entry.platform,
-                postType: entry.postType,
-                topic: entry.topic,
-                entryDate: entry.entryDate.toISOString(),
-                callbackUrl,
-                callbackSecret,
-                ...extraPayload,
-            })
-
-            // Store the task name on the job
-            await prisma.renderJob.update({
-                where: { id: renderJob.id },
-                data: { cloudTasksTaskId: taskName },
-            })
-
-            jobs.push({ jobType, taskId: taskName, renderJobId: renderJob.id })
-        } catch (err) {
-            errors.push(`Failed to enqueue ${jobType}: ${(err as Error).message}`)
-            await prisma.renderJob.update({
-                where: { id: renderJob.id },
-                data: { status: "FAILED", errorMessage: (err as Error).message },
-            })
-        }
-    }
-
-    if (needsCarousel) {
-        await dispatch("CAROUSEL", "CAROUSEL_RENDERER_URL", [
-            { assetType: "CAROUSEL_PNG", platform: entry.platform },
-        ])
-    }
-
-    if (needsRepurpose) {
-        await dispatch("REPURPOSE", "REPURPOSE_WORKER_URL", REPURPOSE_ASSET_TYPES)
-    }
-
-    if (needsVideo) {
-        await dispatch("VIDEO", "VIDEO_RENDERER_URL", [
-            { assetType: "VIDEO_MP4", platform: entry.platform },
-            { assetType: "AUDIO_MP3", platform: entry.platform },
-        ], {
-            voiceId: voiceId ?? null,
-        })
-    }
-
-    // Transition entry to GENERATING while workers are running
-    if (jobs.length > 0) {
-        await prisma.productionCalendarEntry.update({
-            where: { id: entry.id },
-            data: { publishStatus: "GENERATING" },
-        })
-    }
-
-    return NextResponse.json(
-        {
-            queued: jobs.length,
-            jobs,
-            errors: errors.length > 0 ? errors : undefined,
-        },
-        { status: 202 }
-    )
+            { status: 202 }
+        )
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error("[assets/generate] Unhandled error:", err)
