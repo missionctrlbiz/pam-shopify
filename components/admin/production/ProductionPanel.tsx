@@ -602,7 +602,8 @@ export function ProductionPanel() {
 
     const handleGenerateCycle = async () => {
         const TOTAL = 30
-        const BATCH = 5
+        // 1 entry per request — avoids Vercel function timeouts (1 Gemini call ≈ 5s)
+        const BATCH = 1
         setGenerating(true)
         setGenerateProgress(0)
         setGenerateResult(null)
@@ -628,6 +629,14 @@ export function ProductionPanel() {
                         overwrite: offset === 0,
                     }),
                 })
+                const ct = res.headers.get("content-type") ?? ""
+                if (!ct.includes("application/json")) {
+                    // Vercel returned an HTML error page (timeout / crash)
+                    console.error(`[generate] offset ${offset} returned non-JSON (${res.status})`)
+                    totalFailed += days
+                    setGenerateProgress(Math.round(((offset + days) / TOTAL) * 100))
+                    continue
+                }
                 const data = await res.json() as GenerateCycleResponse
                 totalGenerated += data.generated ?? 0
                 totalFailed += data.failed ?? 0

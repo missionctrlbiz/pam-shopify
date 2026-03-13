@@ -255,17 +255,48 @@ export function ProductionDashboardClient() {
         ))
     }, [])
 
-    // ── Generate 30-day cycle ─────────────────────────────────────────────────
+    // ── Generate 30-day cycle — 1 entry per request to avoid Vercel timeouts ──
     const handleGenerateCycle = async () => {
+        const TOTAL = 30
         setGenerating(true)
-        try {
-            const res = await fetch("/api/production/calendar/generate", { method: "POST" })
-            const data = await res.json() as GenerateCycleResponse
-            setGenerateResult(data)
-            await fetchCalendar(1)
-        } catch (e) {
-            setGenerateResult({ generated: 0, failed: 0, entries: [] })
+
+        const startDate = new Date()
+        startDate.setDate(startDate.getDate() + 1)
+        startDate.setHours(9, 0, 0, 0)
+        const startDateStr = startDate.toISOString()
+
+        let totalGenerated = 0
+        let totalFailed = 0
+
+        for (let offset = 0; offset < TOTAL; offset++) {
+            try {
+                const res = await fetch("/api/production/calendar/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        days: 1,
+                        offset,
+                        startDate: startDateStr,
+                        overwrite: offset === 0,
+                    }),
+                })
+                const ct = res.headers.get("content-type") ?? ""
+                if (!ct.includes("application/json")) {
+                    // Vercel returned an HTML error page (timeout / crash)
+                    console.error(`[generate] offset ${offset} returned non-JSON (${res.status})`)
+                    totalFailed++
+                    continue
+                }
+                const data = await res.json() as GenerateCycleResponse
+                totalGenerated += data.generated ?? 0
+                totalFailed += data.failed ?? 0
+            } catch {
+                totalFailed++
+            }
         }
+
+        setGenerateResult({ generated: totalGenerated, failed: totalFailed, entries: [] })
+        await fetchCalendar(1)
         setGenerating(false)
     }
 

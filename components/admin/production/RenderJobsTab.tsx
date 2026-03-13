@@ -5,6 +5,7 @@ import {
     RefreshCw, AlertCircle, CheckCircle2, Clock, Zap,
     Download, Image, Video, Music, FileText, Film,
     RotateCcw, ChevronDown, ChevronUp,
+    Trash2, Square, CheckSquare,
 } from "lucide-react"
 import { PROD_BRAND, PLATFORM_META, POST_TYPE_META } from "./CalendarTable"
 import type { Platform, PostType } from "./types"
@@ -118,6 +119,8 @@ export const RenderJobsTab: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [retrying, setRetrying] = useState<Set<string>>(new Set())
     const [expanded, setExpanded] = useState<Set<string>>(new Set())
+    const [selected, setSelected] = useState<Set<string>>(new Set())
+    const [bulkActing, setBulkActing] = useState(false)
     const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null)
     const pollRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -141,9 +144,11 @@ export const RenderJobsTab: React.FC = () => {
         if (!quiet) setLoading(false)
     }, [filter])
 
-    // Re-fetch when filter changes
+    // Re-fetch when filter changes; also clear selection
     useEffect(() => {
         fetchJobs()
+        setSelected(new Set())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fetchJobs])
 
     // Auto-poll every 5 s when any active job exists
@@ -176,8 +181,49 @@ export const RenderJobsTab: React.FC = () => {
             return s
         })
 
+    // ── Bulk select ────────────────────────────────────────────────────────
+    const toggleSelect = (id: string) =>
+        setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+
+    const selectAll = () => setSelected(new Set(jobs.map(j => j.id)))
+    const clearSelect = () => setSelected(new Set())
+
+    const handleBulkRetry = async () => {
+        const ids = [...selected].filter(id => jobs.find(j => j.id === id)?.status === "FAILED")
+        if (!ids.length) { showToast("No failed jobs in selection", "err"); return }
+        setBulkActing(true)
+        try {
+            await Promise.all(ids.map(id =>
+                fetch(`/api/production/render-jobs/${id}/retry`, { method: "POST" })
+            ))
+            showToast(`Retried ${ids.length} job${ids.length !== 1 ? "s" : ""}`)
+            clearSelect()
+            await fetchJobs()
+        } catch (e) { showToast(String(e), "err") }
+        setBulkActing(false)
+    }
+
+    const handleBulkDelete = async () => {
+        if (!confirm(`Permanently delete ${selected.size} job${selected.size !== 1 ? "s" : ""}?`)) return
+        setBulkActing(true)
+        try {
+            const res = await fetch("/api/production/render-jobs/bulk", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ids: [...selected] }),
+            })
+            if (!res.ok) throw new Error("Delete failed")
+            showToast(`Deleted ${selected.size} job${selected.size !== 1 ? "s" : ""}`)
+            clearSelect()
+            await fetchJobs()
+        } catch (e) { showToast(String(e), "err") }
+        setBulkActing(false)
+    }
+
     // ── Render ────────────────────────────────────────────────────────────
     const jobs = data?.jobs ?? []
+    const allSelected = jobs.length > 0 && selected.size === jobs.length
+    const someSelected = selected.size > 0 && selected.size < jobs.length
 
     return (
         <div style={{ position: "relative" }}>
@@ -261,6 +307,78 @@ export const RenderJobsTab: React.FC = () => {
                 </div>
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {/* Select-all row */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 4px 6px", borderBottom: `1px solid ${PROD_BRAND.border}`, marginBottom: 4 }}>
+                        <button
+                            onClick={allSelected ? clearSelect : selectAll}
+                            style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, padding: 0, color: allSelected || someSelected ? PURPLE : PROD_BRAND.gray }}
+                        >
+                            {allSelected
+                                ? <CheckSquare size={15} />
+                                : someSelected
+                                    ? <CheckSquare size={15} style={{ opacity: 0.5 }} />
+                                    : <Square size={15} />
+                            }
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>
+                                {allSelected ? "Deselect all" : "Select all"}
+                            </span>
+                        </button>
+                        {selected.size > 0 && (
+                            <span style={{ fontSize: 12, color: PURPLE, fontWeight: 700 }}>
+                                {selected.size} selected
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Bulk action bar */}
+                    {selected.size > 0 && (
+                        <div style={{
+                            display: "flex", alignItems: "center", gap: 8,
+                            padding: "10px 14px", borderRadius: 8,
+                            background: PURPLE_FAINT, border: `1px solid ${PURPLE}33`,
+                            marginBottom: 4,
+                        }}>
+                            <span style={{ fontSize: 12, color: PROD_BRAND.gray, marginRight: 4 }}>
+                                Bulk actions:
+                            </span>
+                            <button
+                                onClick={handleBulkRetry}
+                                disabled={bulkActing}
+                                style={{
+                                    display: "inline-flex", alignItems: "center", gap: 5,
+                                    padding: "5px 12px", borderRadius: 6, border: "none",
+                                    background: PURPLE, color: "#fff",
+                                    fontSize: 11, fontWeight: 700,
+                                    cursor: bulkActing ? "not-allowed" : "pointer", opacity: bulkActing ? 0.6 : 1,
+                                }}
+                            >
+                                <RotateCcw size={10} /> Retry Failed
+                            </button>
+                            <button
+                                onClick={handleBulkDelete}
+                                disabled={bulkActing}
+                                style={{
+                                    display: "inline-flex", alignItems: "center", gap: 5,
+                                    padding: "5px 12px", borderRadius: 6, border: "none",
+                                    background: PROD_BRAND.red, color: "#fff",
+                                    fontSize: 11, fontWeight: 700,
+                                    cursor: bulkActing ? "not-allowed" : "pointer", opacity: bulkActing ? 0.6 : 1,
+                                }}
+                            >
+                                <Trash2 size={10} /> Delete
+                            </button>
+                            <button
+                                onClick={clearSelect}
+                                style={{
+                                    marginLeft: "auto", background: "none", border: "none",
+                                    color: PROD_BRAND.gray, fontSize: 11, cursor: "pointer", fontWeight: 600,
+                                }}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    )}
+
                     {jobs.map(job => <JobCard
                         key={job.id}
                         job={job}
@@ -268,6 +386,8 @@ export const RenderJobsTab: React.FC = () => {
                         onToggle={() => toggleExpand(job.id)}
                         onRetry={() => handleRetry(job.id)}
                         isRetrying={retrying.has(job.id)}
+                        isSelected={selected.has(job.id)}
+                        onSelect={() => toggleSelect(job.id)}
                     />)}
                 </div>
             )}
@@ -285,9 +405,11 @@ interface JobCardProps {
     onToggle: () => void
     onRetry: () => void
     isRetrying: boolean
+    isSelected: boolean
+    onSelect: () => void
 }
 
-const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, isRetrying }) => {
+const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, isRetrying, isSelected, onSelect }) => {
     const entry = job.contentIdea.calendarEntry
     const cfg = STATUS_CFG[job.status]
     const isActive = job.status === "QUEUED" || job.status === "RUNNING"
@@ -308,9 +430,18 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                 style={{
                     display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
                     cursor: "pointer",
-                    background: isActive ? PROD_BRAND.blueFaint : "transparent",
+                    background: isSelected ? `${PURPLE_CONST}11` : isActive ? PROD_BRAND.blueFaint : "transparent",
                 }}
             >
+                {/* Checkbox */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onSelect() }}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", flexShrink: 0, color: isSelected ? PURPLE_CONST : PROD_BRAND.gray }}
+                    title={isSelected ? "Deselect" : "Select"}
+                >
+                    {isSelected ? <CheckSquare size={15} /> : <Square size={15} />}
+                </button>
+
                 {/* Job type icon */}
                 <div style={{
                     width: 32, height: 32, borderRadius: 8, flexShrink: 0,
