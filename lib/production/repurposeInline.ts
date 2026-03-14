@@ -1,16 +1,45 @@
 /**
- * Inline repurposing — runs the Gemini repurpose job directly inside the
+ * Inline generation — runs all Gemini jobs directly inside the
  * Next.js serverless function. No Cloud Tasks or Cloud Run required.
  *
- * Used when GCP_SERVICE_ACCOUNT_JSON_B64 is not configured (Vercel-only deploy).
- * One Gemini call produces all 5 platform variants in ~5–15 s, well within
- * Vercel Pro's 60 s function timeout.
+ * Covers:
+ *   REPURPOSE  → IG / FB / TikTok / LinkedIn / Email captions
+ *   CAROUSEL   → 6 PNG slides rendered via satori + @resvg/resvg-js
+ *   VIDEO      → shot-by-shot script (Gemini) + MP3 voiceover (ElevenLabs)
+ *
+ * All assets are uploaded to Vercel Blob (real public URLs).
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai"
+import { put } from "@vercel/blob"
+import satori from "satori"
+import { Resvg } from "@resvg/resvg-js"
 import prisma from "@/lib/prisma"
 
 const PRODUCTION_MODEL = "gemini-2.5-flash"
+
+// ---------------------------------------------------------------------------
+// Markdown stripper
+// ---------------------------------------------------------------------------
+function cleanText(s: string): string {
+    return s
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .replace(/\*(.+?)\*/g, "$1")
+        .replace(/__(.+?)__/g, "$1")
+        .replace(/_(.+?)_/g, "$1")
+        .replace(/#{1,6}\s+/g, "")
+        .replace(/`{1,3}[^`]*`{1,3}/g, "")
+        .replace(/\[(.+?)\]\(.+?\)/g, "$1")
+        .trim()
+}
+
+function cleanObj<T extends Record<string, unknown>>(obj: T): T {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(obj)) {
+        out[k] = typeof v === "string" ? cleanText(v) : v
+    }
+    return out as T
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,85 +54,181 @@ export interface RepurposeInlineInput {
     postType: string
     topic: string
     entryDate: string
+    voiceId?: string
 }
 
 interface PlatformCaptions {
-    ig: { caption: string; hashtagBlock: string; charEstimate: number }
-    fb: { caption: string; hashtagBlock: string; charEstimate: number }
-    tiktok: { script: string; hashtagBlock: string; durationEstimateSecs: number }
-    linkedin: { post: string; charEstimate: number }
-    email: { subjectLine: string; previewText: string; body: string }
+    ig:       { caption: string; hashtagBlock: string; charEstimate: number }
+    fb:       { caption: string; hashtagBlock: string; charEstimate: number }
+    tiktok:   { script: string;  hashtagBlock: string; durationEstimateSecs: number }
+    linkedin: { post: string;    charEstimate: number }
+    email:    { subjectLine: string; previewText: string; body: string }
+}
+
+export interface CarouselSlide {
+    slideNumber: number
+    headline: string
+    bodyText: string
+    speakerNote?: string
+}
+
+export interface CarouselScript {
+    title: string
+    slides: CarouselSlide[]
+    coverText: string
+    ctaSlide: string
+}
+
+export interface VideoScript {
+    title: string
+    durationEstimateSecs: number
+    hook: string
+    segments: Array<{ timecode: string; visual: string; voiceover: string }>
+    ctaOutro: string
+    captionVersion: string
 }
 
 // ---------------------------------------------------------------------------
-// Prompt builder — identical to the Cloud Run worker
+// Prompts
 // ---------------------------------------------------------------------------
 
-function buildPrompt(input: RepurposeInlineInput): string {
-    const m = input.masterJson as {
-        hook?: string
-        teachingPoints?: string[]
-        cta?: string
-        clinicalGrounding?: string
-    }
-    const teachingPoints = (m.teachingPoints ?? [])
-        .map((p, i) => `    ${i + 1}. ${p}`)
-        .join("\n")
-
-    return `
-You are the Content Repurposing Specialist for Psychiatric Assessment Mastery™ (PAM).
-Adapt the master content idea into 5 platform-specific formats.
-Preserve clinical specificity — no generic wellness filler.
+function buildRepurposePrompt(input: RepurposeInlineInput): string {
+    const m = input.masterJson as { hook?: string; teachingPoints?: string[]; cta?: string; clinicalGrounding?: string }
+    const tp = (m.teachingPoints ?? []).map((p, i) => `    ${i + 1}. ${p}`).join("\n")
+    return `You are the Content Repurposing Specialist for Psychiatric Assessment Mastery(tm) (PAM).
+Adapt the master content idea into 5 platform-specific formats. Preserve clinical specificity.
 
 ORIGINAL CONTENT:
   Topic: ${input.topic}
   Platform: ${input.platform}
   Hook: ${m.hook ?? ""}
   Teaching Points:
-${teachingPoints}
+${tp}
   CTA: ${m.cta ?? ""}
   Clinical Grounding: ${m.clinicalGrounding ?? ""}
 
-BRAND RULES: PMHNP graduate-level language. Unmistakably PAM-specific. No "mental health matters" filler. All CTAs → PAM Mastery Bundle.
+BRAND RULES:
+- PMHNP graduate-level language. Unmistakably PAM-specific.
+- No "mental health matters" filler. All CTAs to PAM Mastery Bundle.
+- PLAIN TEXT ONLY. No asterisks, no bold, no markdown of any kind.
 
-Return a single JSON object:
+Return ONLY a JSON object (no fences):
 {
   "ig":       { "caption": "...", "hashtagBlock": "#PMHNP #PsychNP #PsychiatricAssessment #PAMastery", "charEstimate": 0 },
   "fb":       { "caption": "...", "hashtagBlock": "#PMHNP #PsychiatricAssessment #PAMastery", "charEstimate": 0 },
   "tiktok":   { "script": "...", "hashtagBlock": "#PMHNP #PsychTok #MedTok #PAMastery", "durationEstimateSecs": 75 },
   "linkedin": { "post": "...", "charEstimate": 0 },
   "email":    { "subjectLine": "...", "previewText": "...", "body": "..." }
+}`
 }
 
-STRICT FORMAT: Return ONLY the JSON object. No markdown. No explanation.
-`.trim()
+function buildCarouselPrompt(input: RepurposeInlineInput): string {
+    const m = input.masterJson as { hook?: string; teachingPoints?: string[]; cta?: string; clinicalGrounding?: string }
+    return `You are the Visual Content Specialist for Psychiatric Assessment Mastery(tm) (PAM).
+Create a 6-slide carousel script for Instagram/LinkedIn.
+
+TOPIC: ${input.topic}
+HOOK: ${m.hook ?? ""}
+TEACHING POINTS: ${(m.teachingPoints ?? []).join(" | ")}
+CTA: ${m.cta ?? ""}
+CLINICAL GROUNDING: ${m.clinicalGrounding ?? ""}
+
+RULES:
+- Slide 1: Hook/cover headline (max 10 words), bodyText = ""
+- Slides 2-5: headline (max 8 words) + 2-3 sentence body
+- Slide 6: CTA slide headline + action sentence
+- PLAIN TEXT ONLY. No asterisks, bold, markdown.
+
+Return ONLY a JSON object:
+{
+  "title": "...",
+  "coverText": "...",
+  "slides": [
+    { "slideNumber": 1, "headline": "...", "bodyText": "", "speakerNote": "..." },
+    { "slideNumber": 2, "headline": "...", "bodyText": "...", "speakerNote": "..." },
+    { "slideNumber": 3, "headline": "...", "bodyText": "...", "speakerNote": "..." },
+    { "slideNumber": 4, "headline": "...", "bodyText": "...", "speakerNote": "..." },
+    { "slideNumber": 5, "headline": "...", "bodyText": "...", "speakerNote": "..." },
+    { "slideNumber": 6, "headline": "...", "bodyText": "CTA + link", "speakerNote": "..." }
+  ],
+  "ctaSlide": "..."
+}`
+}
+
+function buildVideoPrompt(input: RepurposeInlineInput): string {
+    const m = input.masterJson as { hook?: string; teachingPoints?: string[]; cta?: string }
+    return `You are the Video Production Specialist for Psychiatric Assessment Mastery(tm) (PAM).
+Write a 60-90 second Instagram Reel / TikTok video script.
+
+TOPIC: ${input.topic}
+HOOK: ${m.hook ?? ""}
+TEACHING POINTS: ${(m.teachingPoints ?? []).join(" | ")}
+CTA: ${m.cta ?? ""}
+
+RULES:
+- Hook in first 3 seconds. 4-5 segments.  CTA at end: PAM Mastery Bundle.
+- PLAIN TEXT ONLY. No asterisks, no markdown.
+
+Return ONLY a JSON object:
+{
+  "title": "...",
+  "durationEstimateSecs": 75,
+  "hook": "...",
+  "segments": [
+    { "timecode": "0:00-0:03", "visual": "...", "voiceover": "..." },
+    { "timecode": "0:03-0:20", "visual": "...", "voiceover": "..." },
+    { "timecode": "0:20-0:45", "visual": "...", "voiceover": "..." },
+    { "timecode": "0:45-1:05", "visual": "...", "voiceover": "..." },
+    { "timecode": "1:05-1:20", "visual": "...", "voiceover": "..." }
+  ],
+  "ctaOutro": "...",
+  "captionVersion": "..."
+}`
 }
 
 // ---------------------------------------------------------------------------
-// Gemini call
+// Gemini caller
 // ---------------------------------------------------------------------------
 
-async function callGemini(input: RepurposeInlineInput): Promise<PlatformCaptions> {
+async function callGemini(prompt: string): Promise<string> {
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) throw new Error("GEMINI_API_KEY not set")
-
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({ model: PRODUCTION_MODEL })
-    const result = await model.generateContent(buildPrompt(input))
-
+    const result = await model.generateContent(prompt)
     const raw = result.response.text().trim()
     const match = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-    const text = match ? match[1].trim() : raw
-
-    const captions = JSON.parse(text) as PlatformCaptions
-    captions.ig.charEstimate ||= (captions.ig.caption?.length ?? 0) + (captions.ig.hashtagBlock?.length ?? 0)
-    captions.fb.charEstimate ||= captions.fb.caption?.length ?? 0
-    captions.linkedin.charEstimate ||= captions.linkedin.post?.length ?? 0
-    return captions
+    return match ? match[1].trim() : raw
 }
 
 // ---------------------------------------------------------------------------
-// Platform → DB asset mapping
+// Vercel Blob helper
+// ---------------------------------------------------------------------------
+
+async function storeBlob(pathname: string, content: string | Buffer, contentType: string): Promise<string> {
+    const token = process.env.BLOB_READ_WRITE_TOKEN
+    if (!token) throw new Error("BLOB_READ_WRITE_TOKEN not set")
+    const blob = await put(pathname, content, { access: "public", contentType, token })
+    return blob.url
+}
+
+// ---------------------------------------------------------------------------
+// File name slug helper
+// ---------------------------------------------------------------------------
+
+function makeSlug(entryDate: string, topic: string): { date: string; slug: string } {
+    const date = new Date(entryDate).toISOString().slice(0, 10).replace(/-/g, "")
+    const slug = topic
+        .replace(/[^a-zA-Z0-9 ]/g, "")
+        .split(" ")
+        .slice(0, 3)
+        .map(w => (w[0]?.toUpperCase() ?? "") + w.slice(1))
+        .join("")
+    return { date, slug }
+}
+
+// ---------------------------------------------------------------------------
+// REPURPOSE platform map
 // ---------------------------------------------------------------------------
 
 const PLATFORM_MAP: Array<{
@@ -111,127 +236,366 @@ const PLATFORM_MAP: Array<{
     platform: "IG" | "FB" | "TIKTOK" | "LINKEDIN" | "EMAIL"
     assetType: "TEXT_POST" | "EMAIL_HTML"
     extractContent: (c: PlatformCaptions) => string
-    extractMeta: (c: PlatformCaptions) => Record<string, unknown>
+    extractMeta:    (c: PlatformCaptions) => Record<string, unknown>
 }> = [
-        {
-            key: "ig", platform: "IG", assetType: "TEXT_POST",
-            extractContent: c => `${c.ig.caption}\n\n${c.ig.hashtagBlock}`,
-            extractMeta: c => ({ caption: c.ig.caption, hashtagBlock: c.ig.hashtagBlock, charEstimate: c.ig.charEstimate }),
-        },
-        {
-            key: "fb", platform: "FB", assetType: "TEXT_POST",
-            extractContent: c => `${c.fb.caption}\n\n${c.fb.hashtagBlock}`,
-            extractMeta: c => ({ caption: c.fb.caption, hashtagBlock: c.fb.hashtagBlock, charEstimate: c.fb.charEstimate }),
-        },
-        {
-            key: "tiktok", platform: "TIKTOK", assetType: "TEXT_POST",
-            extractContent: c => `${c.tiktok.script}\n\n${c.tiktok.hashtagBlock}`,
-            extractMeta: c => ({ script: c.tiktok.script, hashtagBlock: c.tiktok.hashtagBlock, durationEstimateSecs: c.tiktok.durationEstimateSecs }),
-        },
-        {
-            key: "linkedin", platform: "LINKEDIN", assetType: "TEXT_POST",
-            extractContent: c => c.linkedin.post,
-            extractMeta: c => ({ post: c.linkedin.post, charEstimate: c.linkedin.charEstimate }),
-        },
-        {
-            key: "email", platform: "EMAIL", assetType: "EMAIL_HTML",
-            extractContent: c => c.email.body,
-            extractMeta: c => ({ subjectLine: c.email.subjectLine, previewText: c.email.previewText, body: c.email.body }),
-        },
-    ]
+    {
+        key: "ig", platform: "IG", assetType: "TEXT_POST",
+        extractContent: c => `${cleanText(c.ig.caption)}\n\n${c.ig.hashtagBlock}`,
+        extractMeta:    c => cleanObj({ caption: c.ig.caption, hashtagBlock: c.ig.hashtagBlock, charEstimate: c.ig.charEstimate }),
+    },
+    {
+        key: "fb", platform: "FB", assetType: "TEXT_POST",
+        extractContent: c => `${cleanText(c.fb.caption)}\n\n${c.fb.hashtagBlock}`,
+        extractMeta:    c => cleanObj({ caption: c.fb.caption, hashtagBlock: c.fb.hashtagBlock, charEstimate: c.fb.charEstimate }),
+    },
+    {
+        key: "tiktok", platform: "TIKTOK", assetType: "TEXT_POST",
+        extractContent: c => `${cleanText(c.tiktok.script)}\n\n${c.tiktok.hashtagBlock}`,
+        extractMeta:    c => cleanObj({ script: c.tiktok.script, hashtagBlock: c.tiktok.hashtagBlock, durationEstimateSecs: c.tiktok.durationEstimateSecs }),
+    },
+    {
+        key: "linkedin", platform: "LINKEDIN", assetType: "TEXT_POST",
+        extractContent: c => cleanText(c.linkedin.post),
+        extractMeta:    c => cleanObj({ post: c.linkedin.post, charEstimate: c.linkedin.charEstimate }),
+    },
+    {
+        key: "email", platform: "EMAIL", assetType: "EMAIL_HTML",
+        extractContent: c => cleanText(c.email.body),
+        extractMeta:    c => cleanObj({ subjectLine: c.email.subjectLine, previewText: c.email.previewText, body: c.email.body }),
+    },
+]
 
 // ---------------------------------------------------------------------------
-// Main export
+// Shared: post-job completion check
 // ---------------------------------------------------------------------------
 
-/**
- * Runs the REPURPOSE job inline:
- * 1. Marks job RUNNING
- * 2. Calls Gemini (single request → all 5 platforms)
- * 3. Updates ContentAsset rows with generated content in metadata
- * 4. Marks job COMPLETE
- * 5. If all jobs for the idea are now COMPLETE → transitions entry → APPROVED
- *
- * Errors are caught, stored on the job as FAILED, and re-thrown so the
- * caller can surface them in the API response.
- */
-export async function runRepurposeInline(input: RepurposeInlineInput): Promise<void> {
-    const { renderJobId, contentIdeaId, calendarEntryId } = input
-    const now = new Date()
-
-    // ── 1. Mark RUNNING ────────────────────────────────────────────────────
-    await prisma.renderJob.update({
-        where: { id: renderJobId },
-        data: { status: "RUNNING", startedAt: now },
-    })
-
+async function checkAllComplete(contentIdeaId: string, calendarEntryId: string) {
     try {
-        // ── 2. Call Gemini ────────────────────────────────────────────────────
-        const captions = await callGemini(input)
-
-        // ── 3. Update each ContentAsset ───────────────────────────────────────
-        for (const mapping of PLATFORM_MAP) {
-            const content = mapping.extractContent(captions)
-            const meta = mapping.extractMeta(captions)
-
-            await prisma.contentAsset.updateMany({
-                where: {
-                    renderJobId,
-                    platform: mapping.platform,
-                    assetType: mapping.assetType,
-                },
-                data: {
-                    status: "COMPLETE",
-                    // Store content in storageUrl as a data URI so it can be copied/previewed
-                    storageUrl: `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`,
-                    metadata: { content, ...meta },
-                },
-            })
-        }
-
-        // ── 4. Mark job COMPLETE ───────────────────────────────────────────────
-        await prisma.renderJob.update({
-            where: { id: renderJobId },
-            data: { status: "COMPLETE", completedAt: new Date() },
-        })
-
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        console.error("[repurposeInline] Job failed:", renderJobId, msg)
-        await prisma.renderJob.update({
-            where: { id: renderJobId },
-            data: { status: "FAILED", completedAt: new Date(), errorMessage: msg },
-        })
-        await prisma.contentAsset.updateMany({
-            where: { renderJobId },
-            data: { status: "FAILED" },
-        })
-        throw err
-    }
-
-    // ── 5. Check if ALL render jobs for this idea are done → APPROVED ───────
-    try {
-        const allJobs = await prisma.renderJob.findMany({
-            where: { contentIdeaId },
-            orderBy: { queuedAt: "desc" },
-        })
-
-        // Keep only the latest job of each type
+        const allJobs = await prisma.renderJob.findMany({ where: { contentIdeaId }, orderBy: { queuedAt: "desc" } })
         const latestStatus = new Map<string, string>()
         for (const job of allJobs) {
             if (!latestStatus.has(job.jobType)) latestStatus.set(job.jobType, job.status)
         }
-
-        const allDone = Array.from(latestStatus.values()).every(s => s === "COMPLETE")
+        const relevantStatuses = Array.from(latestStatus.values()).filter(s => s !== "QUEUED")
+        const allDone = relevantStatuses.length > 0 && relevantStatuses.every(s => s === "COMPLETE")
         if (allDone && calendarEntryId) {
-            await prisma.productionCalendarEntry.update({
-                where: { id: calendarEntryId },
-                data: { publishStatus: "APPROVED" },
-            })
-            console.log(`[repurposeInline] All jobs done → entry ${calendarEntryId} → APPROVED`)
+            await prisma.productionCalendarEntry.update({ where: { id: calendarEntryId }, data: { publishStatus: "APPROVED" } })
+            console.log(`[inline] All jobs done -> entry ${calendarEntryId} -> APPROVED`)
         }
     } catch (e) {
-        // Non-fatal — job succeeded even if status transition fails
-        console.error("[repurposeInline] Post-completion status update failed:", e)
+        console.error("[inline] Post-completion check failed:", e)
     }
+}
+
+// ---------------------------------------------------------------------------
+// REPURPOSE inline
+// ---------------------------------------------------------------------------
+
+export async function runRepurposeInline(input: RepurposeInlineInput): Promise<void> {
+    const { renderJobId, contentIdeaId, calendarEntryId, entryDate, topic } = input
+    await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "RUNNING", startedAt: new Date() } })
+
+    try {
+        const raw = await callGemini(buildRepurposePrompt(input))
+        const captions = JSON.parse(raw) as PlatformCaptions
+        const { date, slug } = makeSlug(entryDate, topic)
+
+        for (const mapping of PLATFORM_MAP) {
+            const content = mapping.extractContent(captions)
+            const meta    = mapping.extractMeta(captions)
+            const ext     = mapping.assetType === "EMAIL_HTML" ? "html" : "txt"
+            const fileName = `PAM_${mapping.platform}_${date}_${slug}_v1.${ext}`
+            const contentType = mapping.assetType === "EMAIL_HTML" ? "text/html" : "text/plain"
+            const storageUrl = await storeBlob(`production/${contentIdeaId}/${mapping.assetType}/${fileName}`, content, contentType)
+
+            await prisma.contentAsset.updateMany({
+                where: { renderJobId, platform: mapping.platform, assetType: mapping.assetType },
+                data: { status: "COMPLETE", storageUrl, metadata: { content, ...meta } },
+            })
+        }
+
+        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "COMPLETE", completedAt: new Date() } })
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error("[repurposeInline] failed:", msg)
+        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "FAILED", completedAt: new Date(), errorMessage: msg } })
+        await prisma.contentAsset.updateMany({ where: { renderJobId }, data: { status: "FAILED" } })
+        throw err
+    }
+
+    await checkAllComplete(contentIdeaId, calendarEntryId)
+}
+
+// ---------------------------------------------------------------------------
+// CAROUSEL inline — renders actual 1080x1080 PNGs via satori + @resvg/resvg-js
+// ---------------------------------------------------------------------------
+
+async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuffer> {
+    const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}&display=swap`
+    const css = await (await fetch(cssUrl, { headers: { "User-Agent": "Mozilla/5.0 (compatible)" } })).text()
+    const matches = [...css.matchAll(/src:\s*url\(([^)]+\.woff2)\)/g)]
+    const fontUrl = matches[matches.length - 1]?.[1]
+    if (!fontUrl) throw new Error(`No woff2 URL in Google Fonts CSS for ${family} ${weight}`)
+    return (await fetch(fontUrl)).arrayBuffer()
+}
+
+function makeSlideElement(slide: CarouselSlide, totalSlides: number): object {
+    const isCover = slide.slideNumber === 1
+    const isCTA   = slide.slideNumber === totalSlides
+    const isDark  = isCover || isCTA
+    const bgColor    = isDark ? "#1F2A44" : "#FFFFFF"
+    const textColor  = isDark ? "#FFFFFF" : "#1F2A44"
+    const bodyColor  = isDark ? "#CBD5E1" : "#374151"
+    const mutedColor = isDark ? "rgba(255,255,255,0.35)" : "rgba(31,42,68,0.25)"
+
+    const children: object[] = []
+
+    if (!isCover) {
+        children.push({
+            type: "div",
+            props: {
+                style: { fontSize: 15, fontWeight: 600, color: mutedColor, letterSpacing: 2, marginBottom: 24 },
+                children: `${slide.slideNumber} / ${totalSlides}`,
+            },
+        })
+    }
+
+    children.push({
+        type: "div",
+        props: {
+            style: { fontSize: isCover ? 60 : 44, fontWeight: 700, color: textColor, textAlign: "center", lineHeight: 1.2, marginBottom: slide.bodyText ? 28 : 0 },
+            children: slide.headline,
+        },
+    })
+
+    if (slide.bodyText) {
+        children.push({
+            type: "div",
+            props: {
+                style: { fontSize: 28, fontWeight: 400, color: bodyColor, textAlign: "center", lineHeight: 1.6, maxWidth: 860 },
+                children: slide.bodyText,
+            },
+        })
+    }
+
+    if (isCover) {
+        children.push({
+            type: "div",
+            props: { style: { width: 80, height: 4, background: "#4F9CF9", borderRadius: 2, marginTop: 24 }, children: "" },
+        })
+    }
+
+    children.push({
+        type: "div",
+        props: {
+            style: { fontSize: 13, fontWeight: 700, color: mutedColor, letterSpacing: 4, marginTop: isCover ? 40 : 32 },
+            children: "PSYCHIATRIC ASSESSMENT MASTERY",
+        },
+    })
+
+    return {
+        type: "div",
+        props: {
+            style: {
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: bgColor,
+                padding: "80px",
+                borderTopWidth: 8,
+                borderTopStyle: "solid",
+                borderTopColor: "#4F9CF9",
+            },
+            children,
+        },
+    }
+}
+
+async function renderSlideToPng(
+    slide: CarouselSlide,
+    totalSlides: number,
+    boldFont: ArrayBuffer,
+    regularFont: ArrayBuffer
+): Promise<Buffer> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const svg = await satori(makeSlideElement(slide, totalSlides) as any, {
+        width: 1080,
+        height: 1080,
+        fonts: [
+            { name: "Montserrat", data: boldFont,    weight: 700, style: "normal" },
+            { name: "Montserrat", data: regularFont, weight: 400, style: "normal" },
+        ],
+    })
+    const resvg = new Resvg(svg, { fitTo: { mode: "width", value: 1080 } })
+    return Buffer.from(resvg.render().asPng())
+}
+
+export async function runCarouselInline(input: RepurposeInlineInput): Promise<void> {
+    const { renderJobId, contentIdeaId, calendarEntryId, entryDate, topic } = input
+    await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "RUNNING", startedAt: new Date() } })
+
+    try {
+        const raw    = await callGemini(buildCarouselPrompt(input))
+        const script = JSON.parse(raw) as CarouselScript
+
+        script.title     = cleanText(script.title)
+        script.coverText = cleanText(script.coverText)
+        script.ctaSlide  = cleanText(script.ctaSlide)
+        script.slides    = script.slides.map(s => ({
+            ...s,
+            headline:    cleanText(s.headline),
+            bodyText:    cleanText(s.bodyText),
+            speakerNote: s.speakerNote ? cleanText(s.speakerNote) : undefined,
+        }))
+
+        const [boldFont, regularFont] = await Promise.all([
+            loadGoogleFont("Montserrat", 700),
+            loadGoogleFont("Montserrat", 400),
+        ])
+
+        const { date, slug } = makeSlug(entryDate, topic)
+        const slideUrls: string[] = []
+
+        for (const slide of script.slides) {
+            const png = await renderSlideToPng(slide, script.slides.length, boldFont, regularFont)
+            const fileName = `PAM_CAROUSEL_${date}_${slug}_slide${slide.slideNumber}_v1.png`
+            const url = await storeBlob(`production/${contentIdeaId}/CAROUSEL_PNG/${fileName}`, png, "image/png")
+            slideUrls.push(url)
+        }
+
+        const readable = [
+            `CAROUSEL: ${script.title}`,
+            `COVER: ${script.coverText}`,
+            "",
+            ...script.slides.map(s =>
+                `SLIDE ${s.slideNumber}: ${s.headline}${s.bodyText ? `\n${s.bodyText}` : ""}${s.speakerNote ? `\nNote: ${s.speakerNote}` : ""}`
+            ),
+            "",
+            `CTA: ${script.ctaSlide}`,
+        ].join("\n")
+
+        await prisma.contentAsset.updateMany({
+            where: { renderJobId, assetType: "CAROUSEL_PNG" },
+            data: { status: "COMPLETE", storageUrl: slideUrls[0], metadata: JSON.parse(JSON.stringify({ content: readable, slideUrls, script })) },
+        })
+
+        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "COMPLETE", completedAt: new Date() } })
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error("[carouselInline] failed:", msg)
+        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "FAILED", completedAt: new Date(), errorMessage: msg } })
+        await prisma.contentAsset.updateMany({ where: { renderJobId }, data: { status: "FAILED" } })
+        throw err
+    }
+
+    await checkAllComplete(contentIdeaId, calendarEntryId)
+}
+
+// ---------------------------------------------------------------------------
+// AUDIO inline — ElevenLabs TTS -> Vercel Blob MP3
+// ---------------------------------------------------------------------------
+
+async function runAudioInline(
+    contentIdeaId: string,
+    voiceoverText: string,
+    fileName: string,
+    voiceId?: string
+): Promise<string> {
+    const apiKey = process.env.ELEVENLABS_API_KEY
+    if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set")
+    const voice = voiceId ?? process.env.ELEVENLABS_VOICE_ID ?? "EXAVITQu4vr4xnSDxMaL"
+
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`, {
+        method: "POST",
+        headers: { "xi-api-key": apiKey, "Content-Type": "application/json", "Accept": "audio/mpeg" },
+        body: JSON.stringify({ text: voiceoverText, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
+    })
+
+    if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(`ElevenLabs ${res.status}: ${errText}`)
+    }
+
+    const buf = Buffer.from(await res.arrayBuffer())
+    return storeBlob(`production/${contentIdeaId}/AUDIO_MP3/${fileName}`, buf, "audio/mpeg")
+}
+
+// ---------------------------------------------------------------------------
+// VIDEO SCRIPT inline — Gemini script + ElevenLabs audio
+// ---------------------------------------------------------------------------
+
+export async function runVideoScriptInline(input: RepurposeInlineInput): Promise<void> {
+    const { renderJobId, contentIdeaId, calendarEntryId, entryDate, topic, voiceId } = input
+    await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "RUNNING", startedAt: new Date() } })
+
+    try {
+        const raw    = await callGemini(buildVideoPrompt(input))
+        const script = JSON.parse(raw) as VideoScript
+
+        script.title          = cleanText(script.title)
+        script.hook           = cleanText(script.hook)
+        script.ctaOutro       = cleanText(script.ctaOutro)
+        script.captionVersion = cleanText(script.captionVersion)
+        script.segments       = script.segments.map(s => ({ ...s, visual: cleanText(s.visual), voiceover: cleanText(s.voiceover) }))
+
+        const { date, slug } = makeSlug(entryDate, topic)
+
+        const readable = [
+            `VIDEO SCRIPT: ${script.title}`,
+            `Duration: ~${script.durationEstimateSecs}s`,
+            `HOOK (0:00): ${script.hook}`,
+            "",
+            ...script.segments.map(s => `[${s.timecode}]\nVISUAL: ${s.visual}\nSPEAK: ${s.voiceover}`),
+            "",
+            `CTA OUTRO: ${script.ctaOutro}`,
+            "",
+            `CAPTION:\n${script.captionVersion}`,
+        ].join("\n")
+
+        const scriptUrl = await storeBlob(
+            `production/${contentIdeaId}/VIDEO_SCRIPT_JSON/PAM_VIDEO_SCRIPT_${date}_${slug}_v1.txt`,
+            readable,
+            "text/plain"
+        )
+
+        await prisma.contentAsset.updateMany({
+            where: { renderJobId, assetType: "VIDEO_SCRIPT_JSON" },
+            data: { status: "COMPLETE", storageUrl: scriptUrl, metadata: JSON.parse(JSON.stringify({ content: readable, script })) },
+        })
+
+        // ElevenLabs audio (non-fatal if it fails)
+        const voiceoverText = [script.hook, ...script.segments.map(s => s.voiceover), script.ctaOutro].join(" ")
+        try {
+            const audioUrl = await runAudioInline(
+                contentIdeaId,
+                voiceoverText,
+                `PAM_AUDIO_${date}_${slug}_v1.mp3`,
+                voiceId
+            )
+            await prisma.contentAsset.updateMany({
+                where: { renderJobId, assetType: "AUDIO_MP3" },
+                data: {
+                    status: "COMPLETE",
+                    storageUrl: audioUrl,
+                    metadata: { content: `Audio voiceover: ${script.title} (~${script.durationEstimateSecs}s)`, durationEstimateSecs: script.durationEstimateSecs },
+                },
+            })
+        } catch (audioErr) {
+            console.error("[videoScriptInline] ElevenLabs failed (non-fatal):", audioErr)
+            await prisma.contentAsset.updateMany({ where: { renderJobId, assetType: "AUDIO_MP3" }, data: { status: "FAILED" } })
+        }
+
+        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "COMPLETE", completedAt: new Date() } })
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error("[videoScriptInline] failed:", msg)
+        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "FAILED", completedAt: new Date(), errorMessage: msg } })
+        await prisma.contentAsset.updateMany({ where: { renderJobId }, data: { status: "FAILED" } })
+        throw err
+    }
+
+    await checkAllComplete(contentIdeaId, calendarEntryId)
 }

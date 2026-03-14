@@ -21,7 +21,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { AssetType, Platform, RenderJobType } from "@prisma/client"
-import { runRepurposeInline } from "@/lib/production/repurposeInline"
+import { runRepurposeInline, runCarouselInline, runVideoScriptInline } from "@/lib/production/repurposeInline"
 
 // Vercel Pro: allow up to 60 s (inline Gemini call ~10–20 s)
 export const maxDuration = 60
@@ -259,9 +259,27 @@ export async function POST(req: NextRequest) {
         }
 
         if (needsCarousel) {
-            await dispatch("CAROUSEL", "CAROUSEL_RENDERER_URL", [
+            const carouselJobId = await dispatch("CAROUSEL", "CAROUSEL_RENDERER_URL", [
                 { assetType: "CAROUSEL_PNG", platform: entry.platform },
             ])
+            if (!gcpConfigured) {
+                try {
+                    await runCarouselInline({
+                        renderJobId: carouselJobId,
+                        contentIdeaId,
+                        calendarEntryId: entry.id,
+                        masterJson: master,
+                        platform: entry.platform,
+                        postType: entry.postType,
+                        topic: entry.topic,
+                        entryDate: entry.entryDate.toISOString(),
+                    })
+                    const j = jobs.find(j => j.renderJobId === carouselJobId)
+                    if (j) j.taskId = "inline-complete"
+                } catch (e) {
+                    errors.push(`Inline carousel failed: ${(e as Error).message}`)
+                }
+            }
         }
 
         if (needsRepurpose) {
@@ -289,12 +307,31 @@ export async function POST(req: NextRequest) {
         }
 
         if (needsVideo) {
-            await dispatch("VIDEO", "VIDEO_RENDERER_URL", [
-                { assetType: "VIDEO_MP4", platform: entry.platform },
+            const videoJobId = await dispatch("VIDEO", "VIDEO_RENDERER_URL", [
+                { assetType: "VIDEO_SCRIPT_JSON", platform: entry.platform },
                 { assetType: "AUDIO_MP3", platform: entry.platform },
             ], {
                 voiceId: voiceId ?? null,
             })
+            if (!gcpConfigured) {
+                try {
+                    await runVideoScriptInline({
+                        renderJobId: videoJobId,
+                        contentIdeaId,
+                        calendarEntryId: entry.id,
+                        masterJson: master,
+                        platform: entry.platform,
+                        postType: entry.postType,
+                        topic: entry.topic,
+                        entryDate: entry.entryDate.toISOString(),
+                        voiceId: voiceId ?? undefined,
+                    })
+                    const j = jobs.find(j => j.renderJobId === videoJobId)
+                    if (j) j.taskId = "inline-complete"
+                } catch (e) {
+                    errors.push(`Inline video script failed: ${(e as Error).message}`)
+                }
+            }
         }
 
         // Transition entry to GENERATING only if there are still-running async jobs.

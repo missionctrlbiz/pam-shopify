@@ -223,7 +223,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                     </div>
 
                                     {/* Text preview + copy for inline-generated text assets */}
-                                    {asset.assetStatus === "COMPLETE" && (asset.assetType === "TEXT_POST" || asset.assetType === "EMAIL_HTML") && (() => {
+                                    {asset.assetStatus === "COMPLETE" && (asset.assetType === "TEXT_POST" || asset.assetType === "EMAIL_HTML" || asset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
                                         const meta = asset.metadata as Record<string, unknown> | null
                                         const content = (meta?.content as string) ?? ""
                                         const preview = content.slice(0, 90) + (content.length > 90 ? "…" : "")
@@ -241,6 +241,32 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                         ) : null
                                     })()}
 
+                                    {/* Audio player for MP3 */}
+                                    {asset.assetType === "AUDIO_MP3" && asset.assetStatus === "COMPLETE" && asset.storageUrl && !asset.storageUrl.startsWith("data:") && (
+                                        <div style={{ marginTop: 6 }}>
+                                            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                                            <audio controls style={{ width: "100%", height: 28 }} src={asset.storageUrl} />
+                                        </div>
+                                    )}
+
+                                    {/* Carousel: all slide links */}
+                                    {asset.assetType === "CAROUSEL_PNG" && asset.assetStatus === "COMPLETE" && (() => {
+                                        const meta = asset.metadata as Record<string, unknown> | null
+                                        const slideUrls = meta?.slideUrls as string[] | undefined
+                                        if (!slideUrls || slideUrls.length <= 1) return null
+                                        return (
+                                            <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                                {slideUrls.map((url, i) => (
+                                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                                        style={{ fontSize: 10, fontWeight: 600, color: PROD_BRAND.blue, textDecoration: "none" }}
+                                                    >
+                                                        Slide {i + 1}
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        )
+                                    })()}
+
                                     {/* Open/download for binary assets */}
                                     {asset.storageUrl && asset.assetStatus === "COMPLETE" &&
                                         !asset.storageUrl.startsWith("data:") && (
@@ -253,7 +279,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                                 >
                                                     Open <ExternalLink size={10} />
                                                 </a>
-                                                {(asset.assetType === "VIDEO_MP4" || asset.assetType === "AUDIO_MP3" || asset.assetType === "CAROUSEL_PNG") && (
+                                                {(asset.assetType === "VIDEO_MP4" || asset.assetType === "AUDIO_MP3" || asset.assetType === "CAROUSEL_PNG" || asset.assetType === "VIDEO_SCRIPT_JSON") && (
                                                     <a
                                                         href={asset.storageUrl}
                                                         download={asset.fileName ?? undefined}
