@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     "@grpc/proto-loader",
     "google-gax",
     "google-auth-library",
+    "@resvg/resvg-js",
   ],
   async redirects() {
     return [
