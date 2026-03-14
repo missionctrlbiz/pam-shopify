@@ -26,7 +26,7 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await auth()
-    if (!session || (session.user as { role?: string })?.role !== "admin") {
+    if (!session || (session.user as { role?: string })?.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -71,7 +71,7 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await auth()
-    if (!session || (session.user as { role?: string })?.role !== "admin") {
+    if (!session || (session.user as { role?: string })?.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

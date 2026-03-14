@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     // Auth check
     const session = await auth()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!session || (session.user as any)?.role !== "admin") {
+    if (!session || (session.user as any)?.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -60,59 +60,44 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "No data rows found in CSV" }, { status: 400 })
     }
 
-    let imported = 0
-    let skipped = 0
-    const errors: string[] = []
+    const results = await Promise.allSettled(
+        rows.map(async (row, i) => {
+            const rowLabel = `Row ${i + 2}` // +2 for 1-based + header row
 
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i]
-        const rowLabel = `Row ${i + 2}` // +2 for 1-based + header row
+            // Required fields
+            const dayNumber = parseInt(row["day_number"] ?? "", 10)
+            const entryDateRaw = row["entry_date"] ?? ""
+            const platform = (row["platform"] ?? "").toUpperCase() as Platform
+            const postType = (row["post_type"] ?? "").toUpperCase().replace(/ /g, "_") as PostType
+            const topic = row["topic"] ?? ""
+            const contentGoal = row["content_goal"] ?? ""
 
-        // Required fields
-        const dayNumber = parseInt(row["day_number"] ?? "", 10)
-        const entryDateRaw = row["entry_date"] ?? ""
-        const platform = (row["platform"] ?? "").toUpperCase() as Platform
-        const postType = (row["post_type"] ?? "").toUpperCase().replace(/ /g, "_") as PostType
-        const topic = row["topic"] ?? ""
-        const contentGoal = row["content_goal"] ?? ""
+            if (isNaN(dayNumber) || dayNumber < 1) {
+                throw new Error(`${rowLabel}: invalid day_number "${row["day_number"]}"`)
+            }
+            const entryDate = new Date(entryDateRaw)
+            if (isNaN(entryDate.getTime())) {
+                throw new Error(`${rowLabel}: invalid entry_date "${entryDateRaw}" (use YYYY-MM-DD)`)
+            }
+            if (!VALID_PLATFORMS.has(platform)) {
+                throw new Error(`${rowLabel}: invalid platform "${platform}"`)
+            }
+            if (!VALID_POST_TYPES.has(postType)) {
+                throw new Error(`${rowLabel}: invalid post_type "${row["post_type"]}"`)
+            }
+            if (!topic) {
+                throw new Error(`${rowLabel}: topic is empty`)
+            }
 
-        if (isNaN(dayNumber) || dayNumber < 1) {
-            errors.push(`${rowLabel}: invalid day_number "${row["day_number"]}"`)
-            skipped++
-            continue
-        }
-        const entryDate = new Date(entryDateRaw)
-        if (isNaN(entryDate.getTime())) {
-            errors.push(`${rowLabel}: invalid entry_date "${entryDateRaw}" (use YYYY-MM-DD)`)
-            skipped++
-            continue
-        }
-        if (!VALID_PLATFORMS.has(platform)) {
-            errors.push(`${rowLabel}: invalid platform "${platform}"`)
-            skipped++
-            continue
-        }
-        if (!VALID_POST_TYPES.has(postType)) {
-            errors.push(`${rowLabel}: invalid post_type "${row["post_type"]}"`)
-            skipped++
-            continue
-        }
-        if (!topic) {
-            errors.push(`${rowLabel}: topic is empty`)
-            skipped++
-            continue
-        }
+            // Optional fields with defaults
+            const funnelStageRaw = (row["funnel_stage"] ?? "").toUpperCase()
+            const funnelStage: FunnelStage = VALID_FUNNEL_STAGES.has(funnelStageRaw)
+                ? (funnelStageRaw as FunnelStage)
+                : "AWARENESS"
+            const hook = row["hook"] ?? ""
+            const cta = row["cta"] ?? ""
 
-        // Optional fields with defaults
-        const funnelStageRaw = (row["funnel_stage"] ?? "").toUpperCase()
-        const funnelStage: FunnelStage = VALID_FUNNEL_STAGES.has(funnelStageRaw)
-            ? (funnelStageRaw as FunnelStage)
-            : "AWARENESS"
-        const hook = row["hook"] ?? ""
-        const cta = row["cta"] ?? ""
-
-        try {
-            await prisma.productionCalendarEntry.create({
+            return prisma.productionCalendarEntry.create({
                 data: {
                     dayNumber,
                     entryDate,
@@ -126,13 +111,22 @@ export async function POST(req: Request) {
                     publishStatus: "DRAFT",
                 },
             })
+        })
+    )
+
+    let imported = 0
+    let skipped = 0
+    const errors: string[] = []
+
+    results.forEach((res) => {
+        if (res.status === "fulfilled") {
             imported++
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err)
-            errors.push(`${rowLabel}: DB error — ${msg}`)
+        } else {
+            const msg = res.reason instanceof Error ? res.reason.message : String(res.reason)
+            errors.push(msg)
             skipped++
         }
-    }
+    })
 
     return NextResponse.json({
         imported,

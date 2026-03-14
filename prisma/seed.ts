@@ -88,12 +88,12 @@ async function main() {
   const adminPassword = await bcrypt.hash("PamAdmin2026!", 12)
   const admin = await prisma.user.upsert({
     where: { email: "anthoniaojomo22@gmail.com" },
-    update: { password: adminPassword, role: "admin" },
+    update: { password: adminPassword, role: "ADMIN" },
     create: {
       email: "anthoniaojomo22@gmail.com",
       name: "Anthonia Ojomor",
       password: adminPassword,
-      role: "admin",
+      role: "ADMIN",
     },
   })
   console.log(`✅ Admin user upserted:`)
@@ -132,6 +132,7 @@ async function main() {
         update: {
           fieldCategory: category,
           displayName,
+          fieldType: row.fieldType,
           isActive: true,
         },
         create: {
@@ -140,6 +141,7 @@ async function main() {
           displayName,
           description: "",
           exampleValues: [],
+          fieldType: row.fieldType,
           isActive: true,
         },
       })
