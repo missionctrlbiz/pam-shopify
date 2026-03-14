@@ -11,9 +11,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
-import { CloudTasksClient } from "@google-cloud/tasks"
+// ---------------------------------------------------------------------------
+// GCP helpers — dynamic import to avoid module-level crash on serverless
+// ---------------------------------------------------------------------------
 
-function getTasksClient(): CloudTasksClient {
+async function getTasksClient() {
+    const { CloudTasksClient } = await import("@google-cloud/tasks")
     const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64
     if (b64) {
         const credentials = JSON.parse(
@@ -24,10 +27,10 @@ function getTasksClient(): CloudTasksClient {
     return new CloudTasksClient()
 }
 
-const WORKER_URL_MAP: Record<string, string | undefined> = {
+const WORKER_URLS: Record<string, string | undefined> = {
     CAROUSEL: process.env.CAROUSEL_RENDERER_URL,
     VIDEO: process.env.VIDEO_RENDERER_URL,
-    AUDIO: process.env.VIDEO_RENDERER_URL, // same worker
+    AUDIO: process.env.VIDEO_RENDERER_URL,
     REPURPOSE: process.env.REPURPOSE_WORKER_URL,
 }
 
@@ -71,17 +74,27 @@ export async function POST(
 
 
 
-    const workerUrl = WORKER_URL_MAP[original.jobType]
-    if (!workerUrl) {
+    const workerUrl = WORKER_URLS[original.jobType]
+    const gcpConfigured = !!(
+        process.env.GCP_PROJECT_ID &&
+        process.env.WORKER_SA_EMAIL &&
+        process.env.GCP_SERVICE_ACCOUNT_JSON_B64
+    )
+
+    if (!gcpConfigured || !workerUrl) {
+        const reason = !workerUrl ? `URL for ${original.jobType} not set` : "GCP not configured"
         return NextResponse.json(
-            { error: `No worker URL configured for job type ${original.jobType}` },
+            { error: `Retry aborted: ${reason}. Job queued in database only.` },
             { status: 503 }
         )
     }
 
     const storedPayload = original.inputPayload as Record<string, unknown>
-    const callbackUrl = `${process.env.NEXTAUTH_URL ?? process.env.VERCEL_URL}/api/production/render-done`
-    const callbackSecret = process.env.RENDER_CALLBACK_SECRET!
+    const nextAuthUrl = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")
+    const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
+    const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
+    const callbackUrl = `${baseUrl}/api/production/render-done`
+    const callbackSecret = process.env.RENDER_CALLBACK_SECRET ?? ""
 
     // ------------------------------------------------------------------
     // Create new RenderJob
@@ -91,7 +104,7 @@ export async function POST(
             contentIdeaId: original.contentIdeaId,
             jobType: original.jobType,
             status: "QUEUED",
-            inputPayload: storedPayload as object,
+            inputPayload: (storedPayload ?? {}) as any,
         },
     })
 
@@ -113,7 +126,7 @@ export async function POST(
     // Enqueue to Cloud Tasks
     // ------------------------------------------------------------------
     try {
-        const tasks = getTasksClient()
+        const tasks = await getTasksClient()
         const projectId = process.env.GCP_PROJECT_ID!
         const location = process.env.GCP_LOCATION ?? "us-central1"
         const queue = process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue"

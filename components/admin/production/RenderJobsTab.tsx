@@ -148,7 +148,7 @@ export const RenderJobsTab: React.FC = () => {
     useEffect(() => {
         fetchJobs()
         setSelected(new Set())
-         
+
     }, [fetchJobs])
 
     // Auto-poll every 5 s when any active job exists
@@ -164,12 +164,24 @@ export const RenderJobsTab: React.FC = () => {
         setRetrying(prev => new Set(prev).add(jobId))
         try {
             const res = await fetch(`/api/production/render-jobs/${jobId}/retry`, { method: "POST" })
-            const json = await res.json() as { newJobId?: string; error?: string }
-            if (!res.ok) throw new Error(json.error ?? "Retry failed")
-            showToast(`Job retried → ${json.newJobId?.slice(0, 8)}…`)
-            await fetchJobs()
+            let errorMsg = "Retry failed"
+            try {
+                const json = await res.json() as { newJobId?: string; error?: string }
+                if (res.ok) {
+                    showToast(`Job retried → ${json.newJobId?.slice(0, 8)}…`)
+                    await fetchJobs()
+                    setRetrying(prev => { const s = new Set(prev); s.delete(jobId); return s })
+                    return
+                }
+                errorMsg = json.error ?? errorMsg
+            } catch {
+                errorMsg = `Server error (${res.status})`
+            }
+            console.error(`[Retry] Job ${jobId} failed:`, errorMsg)
+            showToast("Retry failed — check console", "err")
         } catch (e) {
-            showToast(String(e), "err")
+            console.error("[Retry] Network error:", e)
+            showToast("Network error during retry", "err")
         }
         setRetrying(prev => { const s = new Set(prev); s.delete(jobId); return s })
     }
@@ -193,13 +205,22 @@ export const RenderJobsTab: React.FC = () => {
         if (!ids.length) { showToast("No failed jobs in selection", "err"); return }
         setBulkActing(true)
         try {
-            await Promise.all(ids.map(id =>
+            const results = await Promise.all(ids.map(id =>
                 fetch(`/api/production/render-jobs/${id}/retry`, { method: "POST" })
             ))
-            showToast(`Retried ${ids.length} job${ids.length !== 1 ? "s" : ""}`)
+            const failed = results.filter(r => !r.ok)
+            if (failed.length > 0) {
+                console.error(`[BulkRetry] ${failed.length} jobs failed to retry. Check network logs.`)
+                showToast(`${failed.length} retries failed — check console`, "err")
+            } else {
+                showToast(`Retried ${ids.length} job${ids.length !== 1 ? "s" : ""}`)
+            }
             clearSelect()
             await fetchJobs()
-        } catch (e) { showToast(String(e), "err") }
+        } catch (e) {
+            console.error("[BulkRetry] Error:", e)
+            showToast("Bulk retry had errors — check console", "err")
+        }
         setBulkActing(false)
     }
 

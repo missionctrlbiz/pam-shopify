@@ -40,8 +40,8 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
     }
 
     // ── Fetch entry detail ────────────────────────────────────────────────────
-    const fetchEntry = useCallback(async (id: string) => {
-        setLoading(true)
+    const fetchEntry = useCallback(async (id: string, quiet = false) => {
+        if (!quiet) setLoading(true)
         try {
             const res = await fetch(`/api/production/calendar/${id}`)
             if (res.ok) {
@@ -49,7 +49,7 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
                 setEntry(data.entry)
             }
         } catch { /* silent */ }
-        setLoading(false)
+        if (!quiet) setLoading(false)
     }, [])
 
     useEffect(() => {
@@ -67,7 +67,7 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
             j => j.status === "QUEUED" || j.status === "RUNNING"
         ) ?? false
         if (!hasActive) return
-        const t = setInterval(() => fetchEntry(entry.id), 5000)
+        const t = setInterval(() => fetchEntry(entry.id, true), 5000)
         return () => clearInterval(t)
     }, [entry, fetchEntry])
 
@@ -81,18 +81,31 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(bypass ? { bypass: true, bypassReason } : {}),
             })
-            const data = await res.json() as ApproveResponse
-            if (!res.ok) throw new Error((data as unknown as { error: string }).error ?? "Approve failed")
-            showToast(
-                data.approved
-                    ? `Approved — QG score ${data.qualityGate.overallScore.toFixed(1)}`
-                    : `Quality gate failed (score ${data.qualityGate.overallScore.toFixed(1)}) — fix content and retry`,
-                data.approved ? "ok" : "err"
-            )
-            onEntryUpdated(entry.id, data.newStatus)
-            await fetchEntry(entry.id)
+            let errorMsg = "Approve failed"
+            try {
+                const data = await res.json() as ApproveResponse & { error?: string }
+                if (res.ok) {
+                    showToast(
+                        data.approved
+                            ? `Approved — QG score ${data.qualityGate.overallScore.toFixed(1)}`
+                            : `Quality gate failed (score ${data.qualityGate.overallScore.toFixed(1)}) — check console`,
+                        data.approved ? "ok" : "err"
+                    )
+                    if (!data.approved) console.warn("[Approve] QG results:", data.qualityGate)
+                    onEntryUpdated(entry.id, data.newStatus)
+                    await fetchEntry(entry.id)
+                    setApproving(false)
+                    return
+                }
+                errorMsg = data.error ?? errorMsg
+            } catch {
+                errorMsg = `Server error (${res.status})`
+            }
+            console.error("[Approve] failed:", errorMsg)
+            showToast("Approve failed — check console", "err")
         } catch (e) {
-            showToast(String(e), "err")
+            console.error("[Approve] network error:", e)
+            showToast("Network error during approve", "err")
         }
         setApproving(false)
     }
@@ -107,14 +120,26 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ contentIdeaId: entry.contentIdea?.id }),
             })
-            const data = await res.json() as GenerateAssetsResponse
-            if (!res.ok) throw new Error((data as unknown as { error: string }).error ?? "Generate failed")
-            showToast(`${data.queued} job(s) queued for rendering`, "ok")
-            onEntryUpdated(entry.id, "GENERATING")
-            await fetchEntry(entry.id)
-            setActiveTab("assets")
+            let errorMsg = "Generate failed"
+            try {
+                const data = await res.json() as GenerateAssetsResponse & { error?: string }
+                if (res.ok) {
+                    showToast(`${data.queued} job(s) queued for rendering`, "ok")
+                    onEntryUpdated(entry.id, "GENERATING")
+                    await fetchEntry(entry.id)
+                    setActiveTab("assets")
+                    setGenerating(false)
+                    return
+                }
+                errorMsg = data.error ?? errorMsg
+            } catch {
+                errorMsg = `Server error (${res.status})`
+            }
+            console.error("[Generate] failed:", errorMsg)
+            showToast("Generation failed — check console", "err")
         } catch (e) {
-            showToast(String(e), "err")
+            console.error("[Generate] network error:", e)
+            showToast("Network error during generation", "err")
         }
         setGenerating(false)
     }
