@@ -59,6 +59,7 @@ export interface ContentAsset {
     storagePath: string | null
     contentType: string | null
     fileSizeBytes: number | null
+    metadata: Record<string, unknown> | null
     createdAt: string
     updatedAt: string
 }
