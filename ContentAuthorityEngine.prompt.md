@@ -859,4 +859,4 @@ Content pool rules for Gemini prompt:
 
 ---
 
-_Last updated: March 2026 — Story Bank spec added (Sections K–L). Model: gemini-2.5-flash (gemini-2.0-flash deprecated for new API keys)._
+_Last updated: March 2026 — Story Bank spec added (Sections K–L). Model: gemini-2.5-flash._
