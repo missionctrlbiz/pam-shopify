@@ -63,7 +63,7 @@ async function enqueueTask(
             httpRequest: {
                 httpMethod: "POST",
                 url: workerUrl,
-                body: Buffer.from(JSON.stringify(payload)).toString("base64"),
+                body: Buffer.from(JSON.stringify(payload)),
                 headers: { "Content-Type": "application/json" },
                 oidcToken: {
                     serviceAccountEmail: saEmail,

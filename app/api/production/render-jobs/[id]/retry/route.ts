@@ -186,7 +186,7 @@ export async function POST(
                         renderJobId: newJob.id,
                         callbackUrl,
                         callbackSecret,
-                    })).toString("base64"),
+                    })),
                     headers: { "Content-Type": "application/json" },
                     oidcToken: { serviceAccountEmail: saEmail, audience: workerUrl },
                 },
