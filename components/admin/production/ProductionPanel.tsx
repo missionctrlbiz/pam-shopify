@@ -721,6 +721,13 @@ export function ProductionPanel() {
                         </motion.div>
                         {refreshing ? "Refreshing…" : "Sync"}
                     </button>
+                    <a
+                        href="/api/production/export/canva"
+                        download
+                        className="flex items-center gap-2 px-4 py-2 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition shadow-sm text-sm font-bold"
+                    >
+                        <Download size={14} /> Export CSV
+                    </a>
                     <button
                         onClick={() => { setGenerateResult(null); setGenerateModalOpen(true) }}
                         className="flex items-center gap-2 px-5 py-2 text-white rounded-xl text-sm font-bold shadow-lg"

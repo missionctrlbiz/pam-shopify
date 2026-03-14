@@ -27,54 +27,50 @@ import { runRepurposeInline, runCarouselInline, runVideoScriptInline } from "@/l
 export const maxDuration = 60
 
 // ---------------------------------------------------------------------------
-// GCP helpers — dynamic import to avoid module-level crash when native
-// gRPC bindings are unavailable (e.g. Vercel serverless cold start).
+// GCP / Cloud Tasks — DISABLED during Railway migration.
+// Restore getTasksClient() + enqueueTask() once WORKER_SERVER_URL is live,
+// then replace gcpConfigured below with a WORKER_SERVER_URL check.
 // ---------------------------------------------------------------------------
+// async function getTasksClient() {
+//     const { CloudTasksClient } = await import("@google-cloud/tasks")
+//     const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
+//     if (b64) {
+//         const credentials = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"))
+//         return new CloudTasksClient({ credentials })
+//     }
+//     return new CloudTasksClient()
+// }
+// async function enqueueTask(workerUrl: string, payload: Record<string, unknown>): Promise<string> {
+//     const client = await getTasksClient()
+//     const projectId = process.env.GCP_PROJECT_ID!.trim()
+//     const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
+//     const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
+//     const saEmail = process.env.WORKER_SA_EMAIL!.trim()
+//     const parent = client.queuePath(projectId, location, queue)
+//     const [task] = await client.createTask({
+//         parent,
+//         task: {
+//             httpRequest: {
+//                 httpMethod: "POST",
+//                 url: workerUrl,
+//                 body: Buffer.from(JSON.stringify(payload)),
+//                 headers: { "Content-Type": "application/json" },
+//                 oidcToken: { serviceAccountEmail: saEmail, audience: workerUrl },
+//             },
+//         },
+//     })
+//     return task.name ?? ""
+// }
 
-async function getTasksClient() {
-    const { CloudTasksClient } = await import("@google-cloud/tasks")
-    // .trim() guards against \r\n contamination from Windows copy-paste in Vercel dashboard
-    const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
-    if (b64) {
-        const credentials = JSON.parse(
-            Buffer.from(b64, "base64").toString("utf-8")
-        )
-        return new CloudTasksClient({ credentials })
-    }
-    // Falls back to Application Default Credentials (local dev with gcloud auth)
-    return new CloudTasksClient()
-}
-
-async function enqueueTask(
-    workerUrl: string,
-    payload: Record<string, unknown>
-): Promise<string> {
-    const client = await getTasksClient()
-    const projectId = process.env.GCP_PROJECT_ID!.trim()
-    const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
-    const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
-    const saEmail = process.env.WORKER_SA_EMAIL!.trim()
-
-    const parent = client.queuePath(projectId, location, queue)
-
-    const [task] = await client.createTask({
-        parent,
-        task: {
-            httpRequest: {
-                httpMethod: "POST",
-                url: workerUrl,
-                body: Buffer.from(JSON.stringify(payload)),
-                headers: { "Content-Type": "application/json" },
-                oidcToken: {
-                    serviceAccountEmail: saEmail,
-                    audience: workerUrl,
-                },
-            },
-        },
-    })
-
-    return task.name ?? ""
-}
+// TODO (Railway): uncomment and use instead of gcpConfigured=false:
+// async function dispatchToWorker(payload: Record<string, unknown>): Promise<void> {
+//     const res = await fetch(process.env.WORKER_SERVER_URL!, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json", "X-Worker-Secret": process.env.WORKER_AUTH_SECRET! },
+//         body: JSON.stringify(payload),
+//     })
+//     if (!res.ok) throw new Error(`Worker rejected job: ${res.status}`)
+// }
 
 // ---------------------------------------------------------------------------
 // Asset type map per worker
@@ -161,13 +157,10 @@ export async function POST(req: NextRequest) {
         const callbackUrl = `${baseUrl}/api/production/render-done`
         const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
-        // All three must be present — GCP_SERVICE_ACCOUNT_JSON_B64 is the actual credential;
-        // without it getTasksClient() falls back to ADC which fails in local dev / Vercel.
-        const gcpConfigured = !!(
-            process.env.GCP_PROJECT_ID?.trim() &&
-            process.env.WORKER_SA_EMAIL?.trim() &&
-            process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
-        )
+        // GCP/Cloud Tasks disabled — Railway migration in progress.
+        // All jobs run inline on Vercel until WORKER_SERVER_URL is live.
+        // TODO (Railway): restore worker dispatch once pam-worker-server is deployed.
+        const gcpConfigured = false
         const jobs: Array<{ jobType: RenderJobType; taskId: string; renderJobId: string }> = []
         const errors: string[] = []
 
