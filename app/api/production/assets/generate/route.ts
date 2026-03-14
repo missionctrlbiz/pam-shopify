@@ -220,34 +220,32 @@ export async function POST(req: NextRequest) {
                 return renderJob.id
             }
 
-            try {
-                const taskName = await enqueueTask(workerUrl, {
-                    renderJobId: renderJob.id,
-                    contentIdeaId,
-                    masterJson: master,
-                    platform: entry.platform,
-                    postType: entry.postType,
-                    topic: entry.topic,
-                    entryDate: entry.entryDate.toISOString(),
-                    callbackUrl,
-                    callbackSecret,
-                    ...extraPayload,
-                })
-
-                // Store the task name on the job
-                await prisma.renderJob.update({
-                    where: { id: renderJob.id },
-                    data: { cloudTasksTaskId: taskName },
-                })
-
-                jobs.push({ jobType, taskId: taskName, renderJobId: renderJob.id })
-            } catch (err) {
-                errors.push(`Failed to enqueue ${jobType}: ${(err as Error).message}`)
-                await prisma.renderJob.update({
-                    where: { id: renderJob.id },
-                    data: { status: "FAILED", errorMessage: (err as Error).message },
-                })
-            }
+            // TODO (Railway): dispatch to worker via fetch + X-Worker-Secret header
+            // try {
+            //     const taskName = await enqueueTask(workerUrl, {
+            //         renderJobId: renderJob.id,
+            //         contentIdeaId,
+            //         masterJson: master,
+            //         platform: entry.platform,
+            //         postType: entry.postType,
+            //         topic: entry.topic,
+            //         entryDate: entry.entryDate.toISOString(),
+            //         callbackUrl,
+            //         callbackSecret,
+            //         ...extraPayload,
+            //     })
+            //     await prisma.renderJob.update({
+            //         where: { id: renderJob.id },
+            //         data: { cloudTasksTaskId: taskName },
+            //     })
+            //     jobs.push({ jobType, taskId: taskName, renderJobId: renderJob.id })
+            // } catch (err) {
+            //     errors.push(`Failed to enqueue ${jobType}: ${(err as Error).message}`)
+            //     await prisma.renderJob.update({
+            //         where: { id: renderJob.id },
+            //         data: { status: "FAILED", errorMessage: (err as Error).message },
+            //     })
+            // }
 
             return renderJob.id
         }

@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
+import type { Prisma } from "@prisma/client"
 import { runRepurposeInline, runCarouselInline, runVideoScriptInline } from "@/lib/production/repurposeInline"
 
 // Inline Gemini call can take up to ~20 s; match the generate route timeout
@@ -81,11 +82,12 @@ export async function POST(
 
     // Payload from original job — available regardless of execution path
     const storedPayload = original.inputPayload as Record<string, unknown>
-    const nextAuthUrl = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")
-    const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
-    const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
-    const callbackUrl = `${baseUrl}/api/production/render-done`
-    const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
+    // callbackUrl / callbackSecret — unused while GCP is disabled; restore for Railway
+    // const nextAuthUrl = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")
+    // const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
+    // const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
+    // const callbackUrl = `${baseUrl}/api/production/render-done`
+    // const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
     // ------------------------------------------------------------------
     // Create new RenderJob + asset placeholders (both paths need this)
@@ -95,7 +97,7 @@ export async function POST(
             contentIdeaId: original.contentIdeaId,
             jobType: original.jobType,
             status: "QUEUED",
-            inputPayload: (storedPayload ?? {}) as any,
+            inputPayload: storedPayload as unknown as Prisma.InputJsonValue,
         },
     })
 
