@@ -39,6 +39,7 @@ yarn-error.log*
 
 # local secrets — never commit
 VERCEL_ENV_SETUP.md
+JULES_PROMPT.md
 
 # handover docs — local only, never push
 HANDOVER.md
