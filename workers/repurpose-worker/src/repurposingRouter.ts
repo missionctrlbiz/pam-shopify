@@ -10,7 +10,7 @@
 
 import { GoogleGenAI } from "@google/genai"
 
-const PRODUCTION_MODEL = "gemini-2.5-flash" // gemini-2.0-flash deprecated for new API keys March 2026
+const PRODUCTION_MODEL = "gemini-2.5-flash"
 
 export interface RepurposeInput {
   hook: string
