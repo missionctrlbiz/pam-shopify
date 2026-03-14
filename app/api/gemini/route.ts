@@ -75,7 +75,7 @@ export async function POST(req: Request) {
 
         // Track usage event
         try {
-            await (prisma as any).usageEvent.create({
+            await prisma.usageEvent.create({
                 data: {
                     action: "soap_generate",
                     metadata: JSON.stringify({ promptLength: prompt.length, responseLength: text.length, ip }),

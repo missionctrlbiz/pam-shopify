@@ -36,7 +36,7 @@ const BRAND = {
     glow: "0 8px 24px rgba(175, 92, 233, 0.25)",
 }
 
-const POLL_INTERVAL = 10000 // 10 seconds
+const POLL_INTERVAL = 30000 // 30 s — frugal: stats don't change fast enough to justify 10 s
 
 function AnimatedIcon({ iconName, color, size = 20, animation = "pulse" }: { iconName: string; color?: string; size?: number; animation?: any }) {
     return (
@@ -229,6 +229,8 @@ export function AdminDashboardClient({ session }: { session: any }) {
             <div className="md:hidden bg-white border-b border-slate-200 p-4 sticky top-0 z-50 flex items-center justify-between">
                 <Image src="/logo.webp" alt="Logo" width={120} height={35} className="h-8 w-auto object-contain" />
                 <button
+                    type="button"
+                    aria-label="Logout"
                     onClick={() => signOut({ callbackUrl: "/" })}
                     className="p-2 text-slate-500 bg-slate-100 rounded-lg"
                 >

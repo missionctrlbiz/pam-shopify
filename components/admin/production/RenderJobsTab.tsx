@@ -151,12 +151,20 @@ export const RenderJobsTab: React.FC = () => {
 
     }, [fetchJobs])
 
-    // Auto-poll every 5 s when any active job exists
+    // Auto-poll every 8 s when active jobs exist — pause while tab is hidden (frugal)
     useEffect(() => {
         if (pollRef.current) clearInterval(pollRef.current)
         if (!data?.hasActive) return
-        pollRef.current = setInterval(() => fetchJobs(true), 5000)
-        return () => { if (pollRef.current) clearInterval(pollRef.current) }
+        pollRef.current = setInterval(() => {
+            if (!document.hidden) fetchJobs(true)
+        }, 8000)
+        // Resume immediately when user switches back to this tab
+        const onVisible = () => { if (!document.hidden && data?.hasActive) fetchJobs(true) }
+        document.addEventListener("visibilitychange", onVisible)
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current)
+            document.removeEventListener("visibilitychange", onVisible)
+        }
     }, [data?.hasActive, fetchJobs])
 
     // ── Retry ─────────────────────────────────────────────────────────────
