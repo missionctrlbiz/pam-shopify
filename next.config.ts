@@ -10,13 +10,6 @@ const nextConfig: NextConfig = {
     "google-gax",
     "google-auth-library",
   ],
-  experimental: {
-    outputFileTracingIncludes: {
-      "api/production/**/*": [
-        "node_modules/@google-cloud/tasks/build/protos/protos.json"
-      ]
-    }
-  },
   async redirects() {
     return [
       // Redirect Shopify download links from custom domain to myshopify.com

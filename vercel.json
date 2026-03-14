@@ -1,0 +1,7 @@
+{
+    "functions": {
+        "app/api/production/**/*.ts": {
+            "includeFiles": "node_modules/@google-cloud/tasks/build/protos/protos.json"
+        }
+    }
+}
