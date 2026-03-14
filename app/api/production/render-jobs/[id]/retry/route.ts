@@ -32,13 +32,6 @@ async function getTasksClient() {
     return new CloudTasksClient()
 }
 
-const WORKER_URLS: Record<string, string | undefined> = {
-    CAROUSEL: process.env.CAROUSEL_RENDERER_URL,
-    VIDEO: process.env.VIDEO_RENDERER_URL,
-    AUDIO: process.env.VIDEO_RENDERER_URL,
-    REPURPOSE: process.env.REPURPOSE_WORKER_URL,
-}
-
 export async function POST(
     _req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -49,6 +42,14 @@ export async function POST(
     }
 
     const { id: jobId } = await params
+
+    // Read worker URLs at request time (not module-load time) to avoid Lambda cold-start env var issues
+    const WORKER_URLS: Record<string, string | undefined> = {
+        CAROUSEL: process.env.CAROUSEL_RENDERER_URL?.trim(),
+        VIDEO: process.env.VIDEO_RENDERER_URL?.trim(),
+        AUDIO: process.env.VIDEO_RENDERER_URL?.trim(),
+        REPURPOSE: process.env.REPURPOSE_WORKER_URL?.trim(),
+    }
 
     // ------------------------------------------------------------------
     // Fetch original job
