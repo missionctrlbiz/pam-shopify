@@ -11,7 +11,7 @@
  * Model: gemini-2.0-flash-thinking-exp-01-21 (thinking model — prompt-based JSON).
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { getAI } from "@/lib/ai"
 import { PRODUCTION_MODEL } from "./contentStrategist"
 
 // ---------------------------------------------------------------------------
@@ -108,22 +108,13 @@ STRICT FORMAT: Return ONLY the JSON object. No markdown fences. No extra text.
 export async function runQualityGate(
     idea: QualityGateInput
 ): Promise<QualityGateOutput> {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is not configured in environment variables.")
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-
-    const model = genAI.getGenerativeModel({ model: PRODUCTION_MODEL })
-
     const prompt = buildQualityPrompt(idea)
-    const result = await model.generateContent(prompt)
-
-    // Strip markdown code fences the thinking model may emit
-    const textResponse = result.response.text().trim()
-    const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-    const text = match ? match[1].trim() : textResponse
+    const response = await getAI().models.generateContent({
+        model: PRODUCTION_MODEL,
+        config: { responseMimeType: "application/json" },
+        contents: prompt,
+    })
+    const text = response.text ?? "{}"
 
     let raw: {
         score1: number; score2: number; score3: number; score4: number; score5: number

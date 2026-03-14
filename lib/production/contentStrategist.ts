@@ -11,7 +11,7 @@
  * JSON mode: prompt-enforced + code-fence stripping.
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { getAI } from "@/lib/ai"
 
 // ---------------------------------------------------------------------------
 // Model config
@@ -185,22 +185,13 @@ export async function generateContentIdea(
     field: ClinicalFieldInput,
     meta: ContentIdeaInput
 ): Promise<{ masterJson: ContentIdeaMasterJson; rawPrompt: string }> {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is not configured in environment variables.")
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-
-    const model = genAI.getGenerativeModel({ model: PRODUCTION_MODEL })
-
     const rawPrompt = buildPrompt(field, meta)
-    const result = await model.generateContent(rawPrompt)
-
-    // Strip markdown code fences the thinking model may emit around JSON output
-    const textResponse = result.response.text().trim()
-    const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-    const text = match ? match[1].trim() : textResponse
+    const response = await getAI().models.generateContent({
+        model: PRODUCTION_MODEL,
+        config: { responseMimeType: "application/json" },
+        contents: rawPrompt,
+    })
+    const text = response.text ?? "{}"
 
     let masterJson: ContentIdeaMasterJson
     try {

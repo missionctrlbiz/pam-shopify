@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getAI } from "@/lib/ai";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
@@ -60,12 +60,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ text: responseCache.get(cacheKey) });
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        const result = await getAI().models.generateContent({
+            model: "gemini-2.5-pro",
+            contents: prompt,
+        });
+        const text = result.text ?? "";
 
         // Save to cache (limit cache size to prevent memory leaks)
         if (responseCache.size > 1000) {

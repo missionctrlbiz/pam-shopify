@@ -20,7 +20,7 @@
  * Model: gemini-2.5-flash via PRODUCTION_MODEL import from contentStrategist
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { getAI } from "@/lib/ai"
 import {
     PRODUCTION_MODEL,
     ContentIdeaMasterJson,
@@ -204,14 +204,6 @@ export async function expandToSceneDirectorScript(
     platform: string,
     postType: string
 ): Promise<SceneDirectorResult> {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is not configured.")
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: PRODUCTION_MODEL })
-
     const rawPrompt = buildScenePrompt(masterJson, platform, postType)
 
     // Attempt once, retry once if ESL markers are missing
@@ -220,16 +212,15 @@ export async function expandToSceneDirectorScript(
 
     for (let attempt = 1; attempt <= 2; attempt++) {
         try {
-            const response = await model.generateContent(
-                attempt === 1
-                    ? rawPrompt
-                    : rawPrompt +
-                    "\n\nPREVIOUS OUTPUT REJECTED: Missing required [pause], [breath], or [emphasize:word] cues in voiceoverText. You MUST include all three types of ESL markers. Retry with corrected output."
-            )
-
-            const textResponse = response.response.text().trim()
-            const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-            const text = match ? match[1].trim() : textResponse
+            const prompt = attempt === 1
+                ? rawPrompt
+                : rawPrompt + "\n\nPREVIOUS OUTPUT REJECTED: Missing required [pause], [breath], or [emphasize:word] cues in voiceoverText. You MUST include all three types of ESL markers. Retry with corrected output."
+            const response = await getAI().models.generateContent({
+                model: PRODUCTION_MODEL,
+                config: { responseMimeType: "application/json" },
+                contents: prompt,
+            })
+            const text = response.text ?? "{}"
 
             const parsed = JSON.parse(text) as SceneDirectorResult
 

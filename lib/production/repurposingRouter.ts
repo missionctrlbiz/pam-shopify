@@ -14,7 +14,7 @@
  * JSON mode: prompt-enforced + code-fence stripping
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { getAI } from "@/lib/ai"
 import { PRODUCTION_MODEL } from "./contentStrategist"
 
 // ---------------------------------------------------------------------------
@@ -124,20 +124,13 @@ STRICT FORMAT: Return ONLY the JSON object. No markdown code fences. No explanat
 export async function generateRepurposedContent(
     input: RepurposeInput
 ): Promise<PlatformCaptions> {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is not configured in environment variables.")
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: PRODUCTION_MODEL })
-
     const prompt = buildRepurposePrompt(input)
-    const result = await model.generateContent(prompt)
-
-    const textResponse = result.response.text().trim()
-    const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-    const text = match ? match[1].trim() : textResponse
+    const response = await getAI().models.generateContent({
+        model: PRODUCTION_MODEL,
+        config: { responseMimeType: "application/json" },
+        contents: prompt,
+    })
+    const text = response.text ?? "{}"
 
     let captions: PlatformCaptions
     try {

@@ -10,7 +10,7 @@
  * All assets are uploaded to Vercel Blob (real public URLs).
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { getAI } from "@/lib/ai"
 import { put } from "@vercel/blob"
 import satori from "satori"
 import { Resvg } from "@resvg/resvg-js"
@@ -191,14 +191,12 @@ Return ONLY a JSON object:
 // ---------------------------------------------------------------------------
 
 async function callGemini(prompt: string): Promise<string> {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) throw new Error("GEMINI_API_KEY not set")
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: PRODUCTION_MODEL })
-    const result = await model.generateContent(prompt)
-    const raw = result.response.text().trim()
-    const match = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-    return match ? match[1].trim() : raw
+    const response = await getAI().models.generateContent({
+        model: PRODUCTION_MODEL,
+        config: { responseMimeType: "application/json" },
+        contents: prompt,
+    })
+    return response.text ?? "{}"
 }
 
 // ---------------------------------------------------------------------------
