@@ -4,7 +4,9 @@
  */
 import { GoogleGenAI } from "@google/genai"
 
-export const GEMINI_MODEL = "gemini-2.5-flash"
+/** Single source of truth for all Gemini callers in the Next.js app.
+ *  gemini-2.0-flash deprecated for new API keys as of March 2026. */
+export const PRODUCTION_MODEL = "gemini-2.5-flash"
 
 let _ai: GoogleGenAI | null = null
 

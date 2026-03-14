@@ -24,6 +24,9 @@ import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { runQualityGate, QualityGateInput } from "@/lib/production/qualityGate"
 
+// Gemini call can take 8–20 s on gemini-2.5-flash
+export const maxDuration = 60
+
 export async function POST(req: NextRequest) {
     // Auth guard
     const session = await auth()

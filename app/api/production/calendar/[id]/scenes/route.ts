@@ -25,6 +25,9 @@ import prisma from "@/lib/prisma"
 import { expandToSceneDirectorScript } from "@/lib/production/sceneDirector"
 import type { ContentIdeaMasterJson } from "@/lib/production/contentStrategist"
 
+// sceneDirector makes up to 2 Gemini calls (retry logic) — can take 15–40 s
+export const maxDuration = 60
+
 export async function POST(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }

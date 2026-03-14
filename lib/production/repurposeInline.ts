@@ -10,13 +10,11 @@
  * All assets are uploaded to Vercel Blob (real public URLs).
  */
 
-import { getAI } from "@/lib/ai"
+import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
 import { put } from "@vercel/blob"
 import satori from "satori"
 import { Resvg } from "@resvg/resvg-js"
 import prisma from "@/lib/prisma"
-
-const PRODUCTION_MODEL = "gemini-2.5-flash"
 
 // ---------------------------------------------------------------------------
 // Markdown stripper
@@ -58,11 +56,11 @@ export interface RepurposeInlineInput {
 }
 
 interface PlatformCaptions {
-    ig:       { caption: string; hashtagBlock: string; charEstimate: number }
-    fb:       { caption: string; hashtagBlock: string; charEstimate: number }
-    tiktok:   { script: string;  hashtagBlock: string; durationEstimateSecs: number }
-    linkedin: { post: string;    charEstimate: number }
-    email:    { subjectLine: string; previewText: string; body: string }
+    ig: { caption: string; hashtagBlock: string; charEstimate: number }
+    fb: { caption: string; hashtagBlock: string; charEstimate: number }
+    tiktok: { script: string; hashtagBlock: string; durationEstimateSecs: number }
+    linkedin: { post: string; charEstimate: number }
+    email: { subjectLine: string; previewText: string; body: string }
 }
 
 export interface CarouselSlide {
@@ -234,34 +232,34 @@ const PLATFORM_MAP: Array<{
     platform: "IG" | "FB" | "TIKTOK" | "LINKEDIN" | "EMAIL"
     assetType: "TEXT_POST" | "EMAIL_HTML"
     extractContent: (c: PlatformCaptions) => string
-    extractMeta:    (c: PlatformCaptions) => Record<string, unknown>
+    extractMeta: (c: PlatformCaptions) => Record<string, unknown>
 }> = [
-    {
-        key: "ig", platform: "IG", assetType: "TEXT_POST",
-        extractContent: c => `${cleanText(c.ig.caption)}\n\n${c.ig.hashtagBlock}`,
-        extractMeta:    c => cleanObj({ caption: c.ig.caption, hashtagBlock: c.ig.hashtagBlock, charEstimate: c.ig.charEstimate }),
-    },
-    {
-        key: "fb", platform: "FB", assetType: "TEXT_POST",
-        extractContent: c => `${cleanText(c.fb.caption)}\n\n${c.fb.hashtagBlock}`,
-        extractMeta:    c => cleanObj({ caption: c.fb.caption, hashtagBlock: c.fb.hashtagBlock, charEstimate: c.fb.charEstimate }),
-    },
-    {
-        key: "tiktok", platform: "TIKTOK", assetType: "TEXT_POST",
-        extractContent: c => `${cleanText(c.tiktok.script)}\n\n${c.tiktok.hashtagBlock}`,
-        extractMeta:    c => cleanObj({ script: c.tiktok.script, hashtagBlock: c.tiktok.hashtagBlock, durationEstimateSecs: c.tiktok.durationEstimateSecs }),
-    },
-    {
-        key: "linkedin", platform: "LINKEDIN", assetType: "TEXT_POST",
-        extractContent: c => cleanText(c.linkedin.post),
-        extractMeta:    c => cleanObj({ post: c.linkedin.post, charEstimate: c.linkedin.charEstimate }),
-    },
-    {
-        key: "email", platform: "EMAIL", assetType: "EMAIL_HTML",
-        extractContent: c => cleanText(c.email.body),
-        extractMeta:    c => cleanObj({ subjectLine: c.email.subjectLine, previewText: c.email.previewText, body: c.email.body }),
-    },
-]
+        {
+            key: "ig", platform: "IG", assetType: "TEXT_POST",
+            extractContent: c => `${cleanText(c.ig.caption)}\n\n${c.ig.hashtagBlock}`,
+            extractMeta: c => cleanObj({ caption: c.ig.caption, hashtagBlock: c.ig.hashtagBlock, charEstimate: c.ig.charEstimate }),
+        },
+        {
+            key: "fb", platform: "FB", assetType: "TEXT_POST",
+            extractContent: c => `${cleanText(c.fb.caption)}\n\n${c.fb.hashtagBlock}`,
+            extractMeta: c => cleanObj({ caption: c.fb.caption, hashtagBlock: c.fb.hashtagBlock, charEstimate: c.fb.charEstimate }),
+        },
+        {
+            key: "tiktok", platform: "TIKTOK", assetType: "TEXT_POST",
+            extractContent: c => `${cleanText(c.tiktok.script)}\n\n${c.tiktok.hashtagBlock}`,
+            extractMeta: c => cleanObj({ script: c.tiktok.script, hashtagBlock: c.tiktok.hashtagBlock, durationEstimateSecs: c.tiktok.durationEstimateSecs }),
+        },
+        {
+            key: "linkedin", platform: "LINKEDIN", assetType: "TEXT_POST",
+            extractContent: c => cleanText(c.linkedin.post),
+            extractMeta: c => cleanObj({ post: c.linkedin.post, charEstimate: c.linkedin.charEstimate }),
+        },
+        {
+            key: "email", platform: "EMAIL", assetType: "EMAIL_HTML",
+            extractContent: c => cleanText(c.email.body),
+            extractMeta: c => cleanObj({ subjectLine: c.email.subjectLine, previewText: c.email.previewText, body: c.email.body }),
+        },
+    ]
 
 // ---------------------------------------------------------------------------
 // Shared: post-job completion check
@@ -274,8 +272,10 @@ async function checkAllComplete(contentIdeaId: string, calendarEntryId: string) 
         for (const job of allJobs) {
             if (!latestStatus.has(job.jobType)) latestStatus.set(job.jobType, job.status)
         }
-        const relevantStatuses = Array.from(latestStatus.values()).filter(s => s !== "QUEUED")
-        const allDone = relevantStatuses.length > 0 && relevantStatuses.every(s => s === "COMPLETE")
+        // All latest jobs must be COMPLETE — if any are QUEUED/RUNNING/FAILED, we are not done.
+        // Mirrors the same check in render-done/route.ts for the Cloud Run path.
+        const allStatuses = Array.from(latestStatus.values())
+        const allDone = allStatuses.length > 0 && allStatuses.every(s => s === "COMPLETE")
         if (allDone && calendarEntryId) {
             await prisma.productionCalendarEntry.update({ where: { id: calendarEntryId }, data: { publishStatus: "APPROVED" } })
             console.log(`[inline] All jobs done -> entry ${calendarEntryId} -> APPROVED`)
@@ -300,8 +300,8 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
 
         for (const mapping of PLATFORM_MAP) {
             const content = mapping.extractContent(captions)
-            const meta    = mapping.extractMeta(captions)
-            const ext     = mapping.assetType === "EMAIL_HTML" ? "html" : "txt"
+            const meta = mapping.extractMeta(captions)
+            const ext = mapping.assetType === "EMAIL_HTML" ? "html" : "txt"
             const fileName = `PAM_${mapping.platform}_${date}_${slug}_v1.${ext}`
             const contentType = mapping.assetType === "EMAIL_HTML" ? "text/html" : "text/plain"
             const storageUrl = await storeBlob(`production/${contentIdeaId}/${mapping.assetType}/${fileName}`, content, contentType)
@@ -339,11 +339,11 @@ async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuff
 
 function makeSlideElement(slide: CarouselSlide, totalSlides: number): object {
     const isCover = slide.slideNumber === 1
-    const isCTA   = slide.slideNumber === totalSlides
-    const isDark  = isCover || isCTA
-    const bgColor    = isDark ? "#1F2A44" : "#FFFFFF"
-    const textColor  = isDark ? "#FFFFFF" : "#1F2A44"
-    const bodyColor  = isDark ? "#CBD5E1" : "#374151"
+    const isCTA = slide.slideNumber === totalSlides
+    const isDark = isCover || isCTA
+    const bgColor = isDark ? "#1F2A44" : "#FFFFFF"
+    const textColor = isDark ? "#FFFFFF" : "#1F2A44"
+    const bodyColor = isDark ? "#CBD5E1" : "#374151"
     const mutedColor = isDark ? "rgba(255,255,255,0.35)" : "rgba(31,42,68,0.25)"
 
     const children: object[] = []
@@ -423,7 +423,7 @@ async function renderSlideToPng(
         width: 1080,
         height: 1080,
         fonts: [
-            { name: "Montserrat", data: boldFont,    weight: 700, style: "normal" },
+            { name: "Montserrat", data: boldFont, weight: 700, style: "normal" },
             { name: "Montserrat", data: regularFont, weight: 400, style: "normal" },
         ],
     })
@@ -436,16 +436,16 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
     await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "RUNNING", startedAt: new Date() } })
 
     try {
-        const raw    = await callGemini(buildCarouselPrompt(input))
+        const raw = await callGemini(buildCarouselPrompt(input))
         const script = JSON.parse(raw) as CarouselScript
 
-        script.title     = cleanText(script.title)
+        script.title = cleanText(script.title)
         script.coverText = cleanText(script.coverText)
-        script.ctaSlide  = cleanText(script.ctaSlide)
-        script.slides    = script.slides.map(s => ({
+        script.ctaSlide = cleanText(script.ctaSlide)
+        script.slides = script.slides.map(s => ({
             ...s,
-            headline:    cleanText(s.headline),
-            bodyText:    cleanText(s.bodyText),
+            headline: cleanText(s.headline),
+            bodyText: cleanText(s.bodyText),
             speakerNote: s.speakerNote ? cleanText(s.speakerNote) : undefined,
         }))
 
@@ -530,14 +530,14 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
     await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "RUNNING", startedAt: new Date() } })
 
     try {
-        const raw    = await callGemini(buildVideoPrompt(input))
+        const raw = await callGemini(buildVideoPrompt(input))
         const script = JSON.parse(raw) as VideoScript
 
-        script.title          = cleanText(script.title)
-        script.hook           = cleanText(script.hook)
-        script.ctaOutro       = cleanText(script.ctaOutro)
+        script.title = cleanText(script.title)
+        script.hook = cleanText(script.hook)
+        script.ctaOutro = cleanText(script.ctaOutro)
         script.captionVersion = cleanText(script.captionVersion)
-        script.segments       = script.segments.map(s => ({ ...s, visual: cleanText(s.visual), voiceover: cleanText(s.voiceover) }))
+        script.segments = script.segments.map(s => ({ ...s, visual: cleanText(s.visual), voiceover: cleanText(s.voiceover) }))
 
         const { date, slug } = makeSlug(entryDate, topic)
 

@@ -1,9 +1,14 @@
 /**
  * Repurposing Router — self-contained copy for the Cloud Run worker.
  * (Cannot import from the Next.js app — workers are separate Node.js projects.)
+ *
+ * SDK: @google/genai (new, GA March 2025)
+ * — response.text is a PROPERTY not a method
+ * — responseMimeType: "application/json" eliminates markdown-fenced responses
+ * — GoogleGenAI({ apiKey }) replaces GoogleGenerativeAI + getGenerativeModel() chain
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { GoogleGenAI } from "@google/genai"
 
 const PRODUCTION_MODEL = "gemini-2.5-flash" // gemini-2.0-flash deprecated for new API keys March 2026
 
@@ -60,16 +65,22 @@ export async function generateRepurposedContent(input: RepurposeInput): Promise<
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error("GEMINI_API_KEY not set")
 
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: PRODUCTION_MODEL })
+  const ai = new GoogleGenAI({ apiKey })
+  const response = await ai.models.generateContent({
+    model: PRODUCTION_MODEL,
+    config: { responseMimeType: "application/json" },
+    contents: buildPrompt(input),
+  })
 
-  const result = await model.generateContent(buildPrompt(input))
+  // response.text is a property (not a method) in @google/genai
+  const text = response.text ?? "{}"
 
-  const textResponse = result.response.text().trim()
-  const match = textResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-  const text = match ? match[1].trim() : textResponse
-
-  const captions = JSON.parse(text) as PlatformCaptions
+  let captions: PlatformCaptions
+  try {
+    captions = JSON.parse(text) as PlatformCaptions
+  } catch {
+    throw new Error(`Repurposing router returned non-parseable JSON: ${text.slice(0, 200)}`)
+  }
 
   // Fill in missing char estimates
   captions.ig = captions.ig ?? { caption: "", hashtagBlock: "", charEstimate: 0 }

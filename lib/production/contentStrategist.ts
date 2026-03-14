@@ -11,14 +11,11 @@
  * JSON mode: prompt-enforced + code-fence stripping.
  */
 
-import { getAI } from "@/lib/ai"
+import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
 
-// ---------------------------------------------------------------------------
-// Model config
-// ---------------------------------------------------------------------------
-
-// Primary model — gemini-2.5-flash (gemini-2.0-flash deprecated for new API keys March 2026).
-export const PRODUCTION_MODEL = "gemini-2.5-flash"
+// PRODUCTION_MODEL re-exported so qualityGate / repurposingRouter / sceneDirector
+// can import it from this module without touching lib/ai directly.
+export { PRODUCTION_MODEL }
 
 // ---------------------------------------------------------------------------
 // Types

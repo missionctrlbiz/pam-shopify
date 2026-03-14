@@ -11,6 +11,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
+import { runRepurposeInline, runCarouselInline, runVideoScriptInline } from "@/lib/production/repurposeInline"
+
+// Inline Gemini call can take up to ~20 s; match the generate route timeout
+export const maxDuration = 60
 // ---------------------------------------------------------------------------
 // GCP helpers — dynamic import to avoid module-level crash on serverless
 // ---------------------------------------------------------------------------
@@ -81,14 +85,7 @@ export async function POST(
         process.env.GCP_SERVICE_ACCOUNT_JSON_B64
     )
 
-    if (!gcpConfigured || !workerUrl) {
-        const reason = !workerUrl ? `URL for ${original.jobType} not set` : "GCP not configured"
-        return NextResponse.json(
-            { error: `Retry aborted: ${reason}. Job queued in database only.` },
-            { status: 503 }
-        )
-    }
-
+    // Payload from original job — available regardless of execution path
     const storedPayload = original.inputPayload as Record<string, unknown>
     const nextAuthUrl = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")
     const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
@@ -97,7 +94,7 @@ export async function POST(
     const callbackSecret = process.env.RENDER_CALLBACK_SECRET ?? ""
 
     // ------------------------------------------------------------------
-    // Create new RenderJob
+    // Create new RenderJob + asset placeholders (both paths need this)
     // ------------------------------------------------------------------
     const newJob = await prisma.renderJob.create({
         data: {
@@ -119,6 +116,50 @@ export async function POST(
                 fileName: a.fileName ?? `retry_${newJob.id}`,
                 status: "PENDING" as const,
             })),
+        })
+    }
+
+    // ------------------------------------------------------------------
+    // Inline path — GCP not configured, run synchronously like generate route
+    // ------------------------------------------------------------------
+    if (!gcpConfigured || !workerUrl) {
+        const inlineInput = {
+            renderJobId: newJob.id,
+            contentIdeaId: original.contentIdeaId,
+            calendarEntryId: original.contentIdea.calendarEntry.id,
+            masterJson: (storedPayload.masterJson ?? {}) as Record<string, unknown>,
+            platform: (storedPayload.platform as string) ?? "",
+            postType: (storedPayload.postType as string) ?? "",
+            topic: (storedPayload.topic as string) ?? "",
+            entryDate: (storedPayload.entryDate as string) ?? new Date().toISOString(),
+            voiceId: storedPayload.voiceId as string | undefined,
+        }
+
+        try {
+            if (original.jobType === "REPURPOSE") {
+                await runRepurposeInline(inlineInput)
+            } else if (original.jobType === "CAROUSEL") {
+                await runCarouselInline(inlineInput)
+            } else if (original.jobType === "VIDEO" || original.jobType === "AUDIO") {
+                await runVideoScriptInline(inlineInput)
+            } else {
+                return NextResponse.json(
+                    { error: `Inline retry not supported for job type: ${original.jobType}` },
+                    { status: 422 }
+                )
+            }
+        } catch (err) {
+            return NextResponse.json(
+                { error: `Inline retry failed: ${(err as Error).message}` },
+                { status: 500 }
+            )
+        }
+
+        return NextResponse.json({
+            retried: true,
+            originalJobId: jobId,
+            newJobId: newJob.id,
+            mode: "inline",
         })
     }
 
