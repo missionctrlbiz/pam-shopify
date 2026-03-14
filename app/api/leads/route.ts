@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         await (prisma as any).usageEvent.create({
             data: {
                 action: "lead_signup",
-                metadata: JSON.stringify({ email: normalizedEmail, source }),
+                metadata: { email: normalizedEmail, source },
             },
         });
 

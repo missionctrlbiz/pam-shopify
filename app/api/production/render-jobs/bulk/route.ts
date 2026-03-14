@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth"
 // Body: { ids: string[] }
 export async function DELETE(req: NextRequest) {
     const session = await auth()
-    if (!session?.user || (session.user as { role?: string }).role !== "admin") {
+    if (!session?.user || (session.user as { role?: string }).role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

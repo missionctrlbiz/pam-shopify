@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma"
 // Add a buyer
 export async function POST(req: NextRequest) {
     const session = await auth()
-    if (!session || (session.user as any)?.role !== "admin") {
+    if (!session || (session.user as any)?.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 // List all buyers
 export async function GET() {
     const session = await auth()
-    if (!session || (session.user as any)?.role !== "admin") {
+    if (!session || (session.user as any)?.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -49,7 +49,7 @@ export async function GET() {
 // Delete a buyer
 export async function DELETE(req: NextRequest) {
     const session = await auth()
-    if (!session || (session.user as any)?.role !== "admin") {
+    if (!session || (session.user as any)?.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

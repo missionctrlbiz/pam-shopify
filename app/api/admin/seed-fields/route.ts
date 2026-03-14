@@ -173,16 +173,13 @@ const CLINICAL_FIELDS: Array<{
 
 export async function POST() {
     const session = await auth()
-    if (!session || (session.user as { role?: string })?.role !== "admin") {
+    if (!session || (session.user as { role?: string })?.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    let upserted = 0
-    const errors: string[] = []
-
-    for (const field of CLINICAL_FIELDS) {
-        try {
-            await prisma.clinicalField.upsert({
+    const results = await Promise.allSettled(
+        CLINICAL_FIELDS.map((field) =>
+            prisma.clinicalField.upsert({
                 where: { fieldKey: field.fieldKey },
                 update: {
                     displayName: field.displayName,
@@ -201,11 +198,20 @@ export async function POST() {
                     isActive: true,
                 },
             })
+        )
+    )
+
+    let upserted = 0
+    const errors: string[] = []
+
+    results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
             upserted++
-        } catch (e) {
-            errors.push(`${field.fieldKey}: ${(e as Error).message}`)
+        } else {
+            const error = result.reason instanceof Error ? result.reason.message : String(result.reason)
+            errors.push(`${CLINICAL_FIELDS[index].fieldKey}: ${error}`)
         }
-    }
+    })
 
     const count = await prisma.clinicalField.count()
 
@@ -218,7 +224,7 @@ export async function POST() {
 
 export async function GET() {
     const session = await auth()
-    if (!session || (session.user as { role?: string })?.role !== "admin") {
+    if (!session || (session.user as { role?: string })?.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
     const count = await prisma.clinicalField.count({ where: { isActive: true } })

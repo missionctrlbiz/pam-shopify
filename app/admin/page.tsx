@@ -5,7 +5,7 @@ import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient"
 export default async function AdminDashboardPage() {
     const session = await auth()
 
-    if (!session || (session.user as any)?.role !== "admin") {
+    if (!session || (session.user as any)?.role !== "ADMIN") {
         redirect("/admin/login")
     }
 
