@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Prevent Turbopack from bundling GCP packages that use dynamic require()
+  // Prevent Turbopack/webpack from bundling GCP packages that use dynamic require()
   // for native gRPC/protobuf bindings — let Node.js resolve them at runtime.
   serverExternalPackages: [
     "@google-cloud/tasks",
@@ -11,6 +11,20 @@ const nextConfig: NextConfig = {
     "google-auth-library",
     "@resvg/resvg-js",
   ],
+
+  // Vercel's file tracer misses protos.json because it's required dynamically
+  // inside @google-cloud/tasks at runtime. Force-include the whole protos dir
+  // so /var/task/node_modules/@google-cloud/tasks/build/protos/ exists on Lambda.
+  outputFileTracingIncludes: {
+    "/api/production/assets/generate": [
+      "./node_modules/@google-cloud/tasks/build/protos/**",
+      "./node_modules/google-gax/build/protos/**",
+    ],
+    "/api/production/render-jobs/[id]/retry": [
+      "./node_modules/@google-cloud/tasks/build/protos/**",
+      "./node_modules/google-gax/build/protos/**",
+    ],
+  },
   async redirects() {
     return [
       // Redirect Shopify download links from custom domain to myshopify.com
