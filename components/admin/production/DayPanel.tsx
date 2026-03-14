@@ -124,7 +124,13 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
             try {
                 const data = await res.json() as GenerateAssetsResponse & { error?: string }
                 if (res.ok) {
-                    showToast(`${data.queued} job(s) queued for rendering`, "ok")
+                    const allInline = data.jobs?.every((j: { taskId: string }) => j.taskId === "inline-complete")
+                    showToast(
+                        allInline
+                            ? `✓ Generated ${data.queued} asset set(s) — ready to copy`
+                            : `${data.queued} job(s) queued for rendering`,
+                        "ok"
+                    )
                     onEntryUpdated(entry.id, "GENERATING")
                     await fetchEntry(entry.id)
                     setActiveTab("assets")

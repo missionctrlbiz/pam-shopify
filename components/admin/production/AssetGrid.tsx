@@ -3,7 +3,7 @@
 import React, { useEffect, useCallback } from "react"
 import {
     Image, FileText, Video, Music, ExternalLink,
-    RefreshCw, AlertCircle, Clock, Zap, CheckCircle2,
+    RefreshCw, AlertCircle, Clock, Zap, CheckCircle2, Copy, Check,
 } from "lucide-react"
 import type { ContentAsset, RenderJob, AssetStatus, AssetType } from "./types"
 import { PROD_BRAND } from "./CalendarTable"
@@ -31,6 +31,25 @@ interface AssetGridProps {
     /** Called after a successful generate-assets dispatch to start polling */
     onGenerateAssets: () => Promise<void>
     generating: boolean
+}
+
+function CopyButton({ text }: { text: string }) {
+    const [copied, setCopied] = React.useState(false)
+    return (
+        <button
+            onClick={() => { navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) }) }}
+            style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                fontSize: 11, fontWeight: 600, background: "none",
+                border: "none", cursor: "pointer",
+                color: copied ? PROD_BRAND.green : PROD_BRAND.blue, padding: 0,
+            }}
+            title="Copy to clipboard"
+        >
+            {copied ? <Check size={10} /> : <Copy size={10} />}
+            {copied ? "Copied" : "Copy"}
+        </button>
+    )
 }
 
 export const AssetGrid: React.FC<AssetGridProps> = ({
@@ -203,8 +222,28 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                         {asset.fileName ?? asset.platform}
                                     </div>
 
-                                    {/* Open link */}
-                                    {asset.storageUrl && asset.assetStatus === "COMPLETE" && (
+                                    {/* Text preview + copy for inline-generated text assets */}
+                                    {asset.assetStatus === "COMPLETE" && (asset.assetType === "TEXT_POST" || asset.assetType === "EMAIL_HTML") && (() => {
+                                        const meta = asset.metadata as Record<string, unknown> | null
+                                        const content = (meta?.content as string) ?? ""
+                                        const preview = content.slice(0, 90) + (content.length > 90 ? "…" : "")
+                                        return content ? (
+                                            <div style={{ marginTop: 6 }}>
+                                                <div style={{
+                                                    fontSize: 10, color: PROD_BRAND.gray,
+                                                    background: PROD_BRAND.grayFaint,
+                                                    padding: "4px 6px", borderRadius: 4,
+                                                    marginBottom: 4, lineHeight: 1.4,
+                                                    whiteSpace: "pre-wrap", wordBreak: "break-word",
+                                                }}>{preview}</div>
+                                                <CopyButton text={content} />
+                                            </div>
+                                        ) : null
+                                    })()}
+
+                                    {/* Open/download for binary assets */}
+                                    {asset.storageUrl && asset.assetStatus === "COMPLETE" &&
+                                     !asset.storageUrl.startsWith("data:") && (
                                         <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
                                             <a
                                                 href={asset.storageUrl}

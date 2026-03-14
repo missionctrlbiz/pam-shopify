@@ -2,10 +2,8 @@
  * POST /api/production/assets/generate
  *
  * Triggers asset generation for an APPROVED ProductionCalendarEntry.
- * Creates ContentAsset + RenderJob rows, then enqueues tasks to GCP Cloud Tasks
- * for each required worker (carousel-renderer, repurpose-worker, video-renderer).
- *
- * Returns 202 Accepted immediately — rendering is async via Cloud Run workers.
+ * When GCP_SERVICE_ACCOUNT_JSON_B64 is set, enqueues to Cloud Tasks → Cloud Run workers.
+ * Otherwise runs Gemini repurposing inline (no GCP needed — Vercel Pro 60 s timeout).
  *
  * Body params:
  *   contentIdeaId — required. The ContentIdea of the approved entry.
@@ -23,6 +21,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { AssetType, Platform, RenderJobType } from "@prisma/client"
+import { runRepurposeInline } from "@/lib/production/repurposeInline"
+
+// Vercel Pro: allow up to 60 s (inline Gemini call ~10–20 s)
+export const maxDuration = 60
 
 // ---------------------------------------------------------------------------
 // GCP helpers — dynamic import to avoid module-level crash when native
@@ -174,14 +176,15 @@ export async function POST(req: NextRequest) {
         const needsRepurpose = true // always
 
         // ------------------------------------------------------------------
-        // Helper: create RenderJob row + enqueue task
+        // Helper: create RenderJob row + (optionally) enqueue task
+        // Returns the created renderJobId.
         // ------------------------------------------------------------------
         const dispatch = async (
             jobType: RenderJobType,
             workerUrlEnvKey: string,
             assetTypes: Array<{ assetType: AssetType; platform: Platform }>,
             extraPayload: Record<string, unknown> = {}
-        ) => {
+        ): Promise<string> => {
             const workerUrl = WORKER_URLS[workerUrlEnvKey]
 
             // Create ContentAsset placeholders
@@ -217,12 +220,10 @@ export async function POST(req: NextRequest) {
                 skipDuplicates: true,
             })
 
-            // Enqueue to Cloud Tasks (skipped if GCP not configured or worker URL missing — dev mode)
+            // Enqueue to Cloud Tasks — skip if GCP credentials are absent (inline path)
             if (!gcpConfigured || !workerUrl) {
-                const reason = !workerUrl ? `${workerUrlEnvKey} not set` : "GCP not configured"
-                errors.push(`[dev] ${reason} — ${jobType} job queued in DB only`)
-                jobs.push({ jobType, taskId: "dev-no-gcp", renderJobId: renderJob.id })
-                return
+                jobs.push({ jobType, taskId: "inline", renderJobId: renderJob.id })
+                return renderJob.id
             }
 
             try {
@@ -253,6 +254,8 @@ export async function POST(req: NextRequest) {
                     data: { status: "FAILED", errorMessage: (err as Error).message },
                 })
             }
+
+            return renderJob.id
         }
 
         if (needsCarousel) {
@@ -262,7 +265,27 @@ export async function POST(req: NextRequest) {
         }
 
         if (needsRepurpose) {
-            await dispatch("REPURPOSE", "REPURPOSE_WORKER_URL", REPURPOSE_ASSET_TYPES)
+            const repurposeJobId = await dispatch("REPURPOSE", "REPURPOSE_WORKER_URL", REPURPOSE_ASSET_TYPES)
+            // If Cloud Tasks not configured, run Gemini inline right now
+            if (!gcpConfigured) {
+                try {
+                    await runRepurposeInline({
+                        renderJobId: repurposeJobId,
+                        contentIdeaId,
+                        calendarEntryId: entry.id,
+                        masterJson: master,
+                        platform: entry.platform,
+                        postType: entry.postType,
+                        topic: entry.topic,
+                        entryDate: entry.entryDate.toISOString(),
+                    })
+                    // Update the job record in our local list to reflect completion
+                    const j = jobs.find(j => j.renderJobId === repurposeJobId)
+                    if (j) j.taskId = "inline-complete"
+                } catch (e) {
+                    errors.push(`Inline repurpose failed: ${(e as Error).message}`)
+                }
+            }
         }
 
         if (needsVideo) {
@@ -274,8 +297,11 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        // Transition entry to GENERATING while workers are running
-        if (jobs.length > 0) {
+        // Transition entry to GENERATING only if there are still-running async jobs.
+        // Inline jobs (taskId="inline-complete") already completed and set entry to APPROVED
+        // via runRepurposeInline — don't overwrite that.
+        const hasAsyncJobs = jobs.some(j => j.taskId !== "inline-complete")
+        if (jobs.length > 0 && hasAsyncJobs) {
             await prisma.productionCalendarEntry.update({
                 where: { id: entry.id },
                 data: { publishStatus: "GENERATING" },
