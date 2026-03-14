@@ -33,7 +33,8 @@ export const maxDuration = 60
 
 async function getTasksClient() {
     const { CloudTasksClient } = await import("@google-cloud/tasks")
-    const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64
+    // .trim() guards against \r\n contamination from Windows copy-paste in Vercel dashboard
+    const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
     if (b64) {
         const credentials = JSON.parse(
             Buffer.from(b64, "base64").toString("utf-8")
@@ -49,10 +50,10 @@ async function enqueueTask(
     payload: Record<string, unknown>
 ): Promise<string> {
     const client = await getTasksClient()
-    const projectId = process.env.GCP_PROJECT_ID!
-    const location = process.env.GCP_LOCATION ?? "us-central1"
-    const queue = process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue"
-    const saEmail = process.env.WORKER_SA_EMAIL!
+    const projectId = process.env.GCP_PROJECT_ID!.trim()
+    const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
+    const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
+    const saEmail = process.env.WORKER_SA_EMAIL!.trim()
 
     const parent = client.queuePath(projectId, location, queue)
 
@@ -158,14 +159,14 @@ export async function POST(req: NextRequest) {
         const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
         const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
         const callbackUrl = `${baseUrl}/api/production/render-done`
-        const callbackSecret = process.env.RENDER_CALLBACK_SECRET ?? ""
+        const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
         // All three must be present — GCP_SERVICE_ACCOUNT_JSON_B64 is the actual credential;
         // without it getTasksClient() falls back to ADC which fails in local dev / Vercel.
         const gcpConfigured = !!(
-            process.env.GCP_PROJECT_ID &&
-            process.env.WORKER_SA_EMAIL &&
-            process.env.GCP_SERVICE_ACCOUNT_JSON_B64
+            process.env.GCP_PROJECT_ID?.trim() &&
+            process.env.WORKER_SA_EMAIL?.trim() &&
+            process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
         )
         const jobs: Array<{ jobType: RenderJobType; taskId: string; renderJobId: string }> = []
         const errors: string[] = []

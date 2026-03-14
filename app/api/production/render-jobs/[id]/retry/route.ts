@@ -21,7 +21,8 @@ export const maxDuration = 60
 
 async function getTasksClient() {
     const { CloudTasksClient } = await import("@google-cloud/tasks")
-    const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64
+    // .trim() guards against \r\n contamination from Windows copy-paste in Vercel dashboard
+    const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
     if (b64) {
         const credentials = JSON.parse(
             Buffer.from(b64, "base64").toString("utf-8")
@@ -80,9 +81,9 @@ export async function POST(
 
     const workerUrl = WORKER_URLS[original.jobType]
     const gcpConfigured = !!(
-        process.env.GCP_PROJECT_ID &&
-        process.env.WORKER_SA_EMAIL &&
-        process.env.GCP_SERVICE_ACCOUNT_JSON_B64
+        process.env.GCP_PROJECT_ID?.trim() &&
+        process.env.WORKER_SA_EMAIL?.trim() &&
+        process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
     )
 
     // Payload from original job — available regardless of execution path
@@ -91,7 +92,7 @@ export async function POST(
     const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
     const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
     const callbackUrl = `${baseUrl}/api/production/render-done`
-    const callbackSecret = process.env.RENDER_CALLBACK_SECRET ?? ""
+    const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
     // ------------------------------------------------------------------
     // Create new RenderJob + asset placeholders (both paths need this)
@@ -168,10 +169,10 @@ export async function POST(
     // ------------------------------------------------------------------
     try {
         const tasks = await getTasksClient()
-        const projectId = process.env.GCP_PROJECT_ID!
-        const location = process.env.GCP_LOCATION ?? "us-central1"
-        const queue = process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue"
-        const saEmail = process.env.WORKER_SA_EMAIL!
+        const projectId = process.env.GCP_PROJECT_ID!.trim()
+        const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
+        const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
+        const saEmail = process.env.WORKER_SA_EMAIL!.trim()
 
         const parent = tasks.queuePath(projectId, location, queue)
         const [task] = await tasks.createTask({

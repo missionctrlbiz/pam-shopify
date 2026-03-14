@@ -42,10 +42,10 @@ function AnimatedIcon({ iconName, color, size = 20, animation = "pulse" }: { ico
     return (
         <span style={color ? { color } : {}} className="inline-flex">
             <MotionIcon
-                 
+
                 name={iconName as any}
                 size={size}
-                 
+
                 animation={animation as any}
             />
         </span>

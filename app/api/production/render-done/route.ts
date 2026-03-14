@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     // ------------------------------------------------------------------
     // Verify shared secret (constant-time to prevent timing attacks)
     // ------------------------------------------------------------------
-    const expected = process.env.RENDER_CALLBACK_SECRET
+    const expected = process.env.RENDER_CALLBACK_SECRET?.trim()
     if (!expected) {
         console.error("[render-done] RENDER_CALLBACK_SECRET is not set")
         return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })

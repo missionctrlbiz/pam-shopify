@@ -56,3 +56,5 @@ next-env.d.ts
 
 # Office temp lock files
 DOCS/~$*
+
+.env*.local
