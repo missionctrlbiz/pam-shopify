@@ -31,7 +31,7 @@ export async function storeTextAssets(
         const contentType = file.ext === "html" ? "text/html" : "text/plain"
 
         const blob = await put(pathname, file.text, {
-            access: "public",
+            access: "private",
             token,
             contentType,
         })

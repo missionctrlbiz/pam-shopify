@@ -53,13 +53,13 @@ export async function GET(req: NextRequest) {
     const statusFilter: PublishStatus[] = statusParam
         ? (statusParam.split(",").map(s => s.trim().toUpperCase()) as PublishStatus[])
         : [
-              PublishStatus.DRAFT,
-              PublishStatus.PENDING_APPROVAL,
-              PublishStatus.APPROVED,
-              PublishStatus.GENERATING,
-              PublishStatus.SCHEDULED,
-              PublishStatus.PUBLISHED,
-          ]
+            PublishStatus.DRAFT,
+            PublishStatus.PENDING_APPROVAL,
+            PublishStatus.APPROVED,
+            PublishStatus.GENERATING,
+            PublishStatus.SCHEDULED,
+            PublishStatus.PUBLISHED,
+        ]
 
     // ── Fetch entries ────────────────────────────────────────────────────────
     const entries = await prisma.productionCalendarEntry.findMany({

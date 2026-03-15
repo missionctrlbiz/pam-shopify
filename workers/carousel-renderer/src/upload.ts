@@ -25,7 +25,7 @@ export async function uploadSlides(
         const pathname = `${blobFolder}/${filename}`
 
         const blob = await put(pathname, buffer, {
-            access: "public",
+            access: "private",
             token,
             contentType: "image/png",
         })
