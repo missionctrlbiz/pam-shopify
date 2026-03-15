@@ -1,0 +1,59 @@
+name: Deploy Video Renderer
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'workers/video-renderer/**'
+      - '.github/workflows/deploy-video.yml'
+
+permissions:
+  contents: 'read'
+  id-token: 'write'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  LOCATION: us-central1
+  REPO: pam-workers
+  SERVICE_NAME: video-renderer
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: pam-worker-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCP
+        run: |
+          gcloud auth configure-docker ${{ env.LOCATION }}-docker.pkg.dev --quiet
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./workers/video-renderer
+          push: true
+          tags: ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest \
+            --region=${{ env.LOCATION }} \
+            --service-account=pam-worker-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --no-allow-unauthenticated \
+            --memory=4Gi \
+            --cpu=4 \
+            --concurrency=1 \
+            --min-instances=0 \
+            --max-instances=3 \
+            --set-secrets=GEMINI_API_KEY=pam-gemini-api-key:latest,BLOB_READ_WRITE_TOKEN=pam-vercel-blob-token:latest,RENDER_CALLBACK_SECRET=pam-render-callback-secret:latest,ELEVENLABS_API_KEY=pam-elevenlabs-api-key:latest

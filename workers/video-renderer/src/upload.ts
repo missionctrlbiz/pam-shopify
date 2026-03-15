@@ -14,7 +14,7 @@ export async function uploadAsset(
     if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is not set")
 
     const blob = await put(pathname, buffer, {
-        access: "public",
+        access: "private",
         token,
         contentType,
     })
