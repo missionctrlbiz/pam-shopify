@@ -154,9 +154,19 @@ Return ONLY a JSON object:
 }
 
 function buildVideoPrompt(input: RepurposeInlineInput): string {
-    const m = input.masterJson as { hook?: string; teachingPoints?: string[]; cta?: string }
+    const m = input.masterJson as {
+        hook?: string;
+        teachingPoints?: string[];
+        cta?: string;
+        estimatedDurationSecs?: number;
+        estimatedReadTimeSecs?: number;
+    }
+
+    // Fallback to 45s if undefined
+    const duration = m.estimatedDurationSecs ?? m.estimatedReadTimeSecs ?? 45
+
     return `You are the Video Production Specialist for Psychiatric Assessment Mastery(tm) (PAM).
-Write a 60-90 second Instagram Reel / TikTok video script.
+Write a short, targeted ${duration}-second Instagram Reel / TikTok video script based on the content below.
 
 TOPIC: ${input.topic}
 HOOK: ${m.hook ?? ""}
@@ -164,20 +174,17 @@ TEACHING POINTS: ${(m.teachingPoints ?? []).join(" | ")}
 CTA: ${m.cta ?? ""}
 
 RULES:
-- Hook in first 3 seconds. 4-5 segments.  CTA at end: PAM Mastery Bundle.
+- Hook in first 3 seconds. 4-5 segments. CTA at end: PAM Mastery Bundle.
+- STRICTLY limit the total voiceover spoken word count to approximately ${Math.round(duration * 2.3)} words total so it comfortably fits a ${duration}-second playback.
 - PLAIN TEXT ONLY. No asterisks, no markdown.
 
 Return ONLY a JSON object:
 {
   "title": "...",
-  "durationEstimateSecs": 75,
+  "durationEstimateSecs": ${duration},
   "hook": "...",
   "segments": [
-    { "timecode": "0:00-0:03", "visual": "...", "voiceover": "..." },
-    { "timecode": "0:03-0:20", "visual": "...", "voiceover": "..." },
-    { "timecode": "0:20-0:45", "visual": "...", "voiceover": "..." },
-    { "timecode": "0:45-1:05", "visual": "...", "voiceover": "..." },
-    { "timecode": "1:05-1:20", "visual": "...", "voiceover": "..." }
+    { "timecode": "0:00-0:03", "visual": "...", "voiceover": "..." }
   ],
   "ctaOutro": "...",
   "captionVersion": "..."

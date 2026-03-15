@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const url = searchParams.get("url")
+    const filename = searchParams.get("filename") || searchParams.get("fileName")
     const token = process.env.BLOB_READ_WRITE_TOKEN
 
     if (!url) return NextResponse.json({ error: "url required" }, { status: 400 })
@@ -22,12 +23,16 @@ export async function GET(req: NextRequest) {
 
         if (!res.ok) return NextResponse.json({ error: "failed to fetch or authenticate blob" }, { status: res.status })
 
-        return new Response(res.body, {
-            headers: {
-                "Content-Type": res.headers.get("Content-Type") || "application/octet-stream",
-                "Cache-Control": "public, max-age=3600"
-            }
-        })
+        const headers: Record<string, string> = {
+            "Content-Type": res.headers.get("Content-Type") || "application/octet-stream",
+            "Cache-Control": "public, max-age=3600",
+        }
+
+        if (filename) {
+            headers["Content-Disposition"] = `attachment; filename="${encodeURIComponent(filename)}"`
+        }
+
+        return new Response(res.body, { headers })
     } catch (err) {
         return NextResponse.json({ error: String(err) }, { status: 500 })
     }

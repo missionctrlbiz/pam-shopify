@@ -122,6 +122,7 @@ export const RenderJobsTab: React.FC = () => {
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const [bulkActing, setBulkActing] = useState(false)
     const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null)
+    const [previewAsset, setPreviewAsset] = useState<JobAsset | null>(null)
     const pollRef = useRef<NodeJS.Timeout | null>(null)
 
     const showToast = (msg: string, type: "ok" | "err" = "ok") => {
@@ -417,7 +418,92 @@ export const RenderJobsTab: React.FC = () => {
                         isRetrying={retrying.has(job.id)}
                         isSelected={selected.has(job.id)}
                         onSelect={() => toggleSelect(job.id)}
+                        onPreviewAsset={setPreviewAsset}
                     />)}
+                </div>
+            )}
+
+            {/* Asset Preview Modal Pop-up */}
+            {previewAsset && (
+                <div
+                    onClick={() => setPreviewAsset(null)}
+                    style={{
+                        position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+                        background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        zIndex: 9999, padding: 20,
+                    }}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            background: "#fff", borderRadius: 12, padding: 24,
+                            width: "100%", maxWidth: 640, maxHeight: "85vh",
+                            overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+                            position: "relative", display: "flex", flexDirection: "column", gap: 16
+                        }}
+                    >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${PROD_BRAND.border}`, paddingBottom: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ color: PURPLE }}>{ASSET_TYPE_ICON[previewAsset.assetType] ?? <FileText size={16} />}</span>
+                                <span style={{ fontWeight: 700, color: PROD_BRAND.navy, fontSize: 14 }}>{previewAsset.assetType.replace(/_/g, " ")}</span>
+                            </div>
+                            <button
+                                onClick={() => setPreviewAsset(null)}
+                                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: PROD_BRAND.gray }}
+                            >✕</button>
+                        </div>
+
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120 }}>
+                            {previewAsset.assetType === "AUDIO_MP3" && previewAsset.storageUrl && (
+                                <audio controls autoPlay style={{ width: "100%" }} src={`/api/production/assets/proxy?url=${encodeURIComponent(previewAsset.storageUrl)}`} />
+                            )}
+
+                            {previewAsset.assetType === "CAROUSEL_PNG" && (() => {
+                                const meta = (previewAsset as any).metadata as Record<string, unknown> | null
+                                const slideUrls = (meta?.slideUrls as string[]) ?? []
+                                return (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+                                        {slideUrls.length > 0 ? (
+                                            slideUrls.map((u, i) => (
+                                                <div key={i} style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${PROD_BRAND.border}` }}>
+                                                    <img src={`/api/production/assets/proxy?url=${encodeURIComponent(u)}`} alt={`Slide ${i + 1}`} style={{ width: "100%", height: "auto", display: "block" }} />
+                                                    <div style={{ padding: "6px 12px", background: PROD_BRAND.grayFaint, fontSize: 11, color: PROD_BRAND.gray, textAlign: "right" }}>Slide {i + 1}</div>
+                                                </div>
+                                            ))
+                                        ) : previewAsset.storageUrl ? (
+                                            <img src={`/api/production/assets/proxy?url=${encodeURIComponent(previewAsset.storageUrl)}`} alt="Slide" style={{ width: "100%", height: "auto", borderRadius: 8 }} />
+                                        ) : null}
+                                    </div>
+                                )
+                            })()}
+
+                            {(previewAsset.assetType === "TEXT_POST" || previewAsset.assetType === "EMAIL_HTML" || previewAsset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
+                                const meta = (previewAsset as any).metadata as Record<string, unknown> | null
+                                const content = (meta?.content as string) ?? ""
+                                return (
+                                    <div style={{ width: "100%" }}>
+                                        <div style={{
+                                            whiteSpace: "pre-wrap", background: PROD_BRAND.grayFaint,
+                                            padding: 16, borderRadius: 8, fontSize: 12, lineHeight: 1.6,
+                                            color: PROD_BRAND.navy, maxHeight: 400, overflowY: "auto",
+                                            border: `1px solid ${PROD_BRAND.border}`
+                                        }}>{content}</div>
+                                        <button
+                                            onClick={() => { navigator.clipboard.writeText(content); alert("Copied full text!"); }}
+                                            style={{
+                                                marginTop: 12, width: "100%", padding: "10px",
+                                                background: PURPLE, color: "#fff", border: "none",
+                                                borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: "pointer"
+                                            }}
+                                        >
+                                            Copy Full Content
+                                        </button>
+                                    </div>
+                                )
+                            })()}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
@@ -436,9 +522,10 @@ interface JobCardProps {
     isRetrying: boolean
     isSelected: boolean
     onSelect: () => void
+    onPreviewAsset: (asset: JobAsset) => void
 }
 
-const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, isRetrying, isSelected, onSelect }) => {
+const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, isRetrying, isSelected, onSelect, onPreviewAsset }) => {
     const entry = job.contentIdea.calendarEntry
     const cfg = STATUS_CFG[job.status]
     const isActive = job.status === "QUEUED" || job.status === "RUNNING"
@@ -634,20 +721,31 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                     {asset.assetType.replace(/_/g, " ")}
                                                 </span>
                                                 {isDone && asset.storageUrl && (
-                                                    <a
-                                                        href={asset.storageUrl}
-                                                        download={asset.fileName ?? undefined}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={e => e.stopPropagation()}
-                                                        style={{
-                                                            display: "inline-flex", alignItems: "center", gap: 3,
-                                                            color: PROD_BRAND.green, textDecoration: "none",
-                                                            fontWeight: 700, fontSize: 10,
-                                                        }}
-                                                    >
-                                                        <Download size={10} /> DL
-                                                    </a>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                        <a
+                                                            href={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}&filename=${encodeURIComponent(asset.fileName || "asset")}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={e => e.stopPropagation()}
+                                                            style={{
+                                                                display: "inline-flex", alignItems: "center", gap: 3,
+                                                                color: PROD_BRAND.green, textDecoration: "none",
+                                                                fontWeight: 700, fontSize: 10,
+                                                            }}
+                                                        >
+                                                            <Download size={10} /> DL
+                                                        </a>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); onPreviewAsset(asset); }}
+                                                            style={{
+                                                                display: "inline-flex", alignItems: "center", gap: 3,
+                                                                color: PURPLE_CONST, background: "none", border: "none",
+                                                                fontWeight: 700, fontSize: 10, cursor: "pointer", padding: 0
+                                                            }}
+                                                        >
+                                                            View
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
 
@@ -657,13 +755,28 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                     {asset.assetType === "AUDIO_MP3" && (
                                                         <audio controls style={{ width: "100%", height: 26 }} src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}`} />
                                                     )}
-                                                    {asset.assetType === "CAROUSEL_PNG" && (
-                                                        <img
-                                                            src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}`}
-                                                            alt={asset.assetType}
-                                                            style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 4, display: "block" }}
-                                                        />
-                                                    )}
+                                                    {asset.assetType === "CAROUSEL_PNG" && (() => {
+                                                        const meta = (asset as any).metadata as Record<string, unknown> | null
+                                                        const slideUrls = (meta?.slideUrls as string[]) ?? []
+                                                        return slideUrls.length > 0 ? (
+                                                            <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 4, width: "100%" }}>
+                                                                {slideUrls.map((u, i) => (
+                                                                    <img
+                                                                        key={i}
+                                                                        src={`/api/production/assets/proxy?url=${encodeURIComponent(u)}`}
+                                                                        alt={`Slide ${i + 1}`}
+                                                                        style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4, flexShrink: 0 }}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <img
+                                                                src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl!)}`}
+                                                                alt={asset.assetType}
+                                                                style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 4, display: "block" }}
+                                                            />
+                                                        )
+                                                    })()}
                                                     {(asset.assetType === "TEXT_POST" || asset.assetType === "EMAIL_HTML" || asset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
                                                         // asset.metadata now exists on JobAsset with the updated API
                                                         const meta = (asset as any).metadata as Record<string, unknown> | null
