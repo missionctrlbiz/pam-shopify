@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
 
     let secretValid = false
     try {
-        const expectedBuf = Buffer.from(expected, "utf-8")
-        const receivedBuf = Buffer.from(secret, "utf-8")
+        const expectedBuf = Buffer.from(expected.trim(), "utf-8")
+        const receivedBuf = Buffer.from(secret.trim(), "utf-8")
         if (expectedBuf.length === receivedBuf.length) {
             secretValid = timingSafeEqual(expectedBuf, receivedBuf)
         }
