@@ -619,42 +619,58 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                         <div
                                             key={asset.id}
                                             style={{
-                                                display: "flex", alignItems: "center", gap: 7,
-                                                padding: "6px 12px", borderRadius: 6,
+                                                display: "flex", flexDirection: "column", gap: 5,
+                                                padding: "8px 12px", borderRadius: 8,
                                                 background: isDone ? PROD_BRAND.greenFaint : PROD_BRAND.white,
-                                                border: `1px solid ${isDone ? PROD_BRAND.green + "55" : PROD_BRAND.border}`,
-                                                fontSize: 11,
+                                                border: `1px solid ${isDone ? PROD_BRAND.green + "44" : PROD_BRAND.border}`,
+                                                fontSize: 11, width: "240px",
                                             }}
                                         >
-                                            <span style={{ color: isDone ? PROD_BRAND.green : PROD_BRAND.gray }}>
-                                                {ASSET_TYPE_ICON[asset.assetType] ?? <FileText size={12} />}
-                                            </span>
-                                            <span style={{ color: PROD_BRAND.navy, fontWeight: 600 }}>
-                                                {asset.assetType.replace(/_/g, " ")}
-                                            </span>
-                                            <span style={{ color: PROD_BRAND.gray, fontSize: 10 }}>
-                                                {asset.platform}
-                                            </span>
-                                            {isDone && asset.storageUrl && (
-                                                <a
-                                                    href={asset.storageUrl}
-                                                    download={asset.fileName ?? undefined}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    onClick={e => e.stopPropagation()}
-                                                    style={{
-                                                        display: "inline-flex", alignItems: "center", gap: 3,
-                                                        color: PROD_BRAND.green, textDecoration: "none",
-                                                        fontWeight: 700, fontSize: 10,
-                                                    }}
-                                                >
-                                                    <Download size={10} /> DL
-                                                </a>
-                                            )}
-                                            {!isDone && (
-                                                <span style={{ fontSize: 10, color: PROD_BRAND.gray }}>
-                                                    {asset.status.toLowerCase()}
+                                            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                                <span style={{ color: isDone ? PROD_BRAND.green : PROD_BRAND.gray }}>
+                                                    {ASSET_TYPE_ICON[asset.assetType] ?? <FileText size={12} />}
                                                 </span>
+                                                <span style={{ color: PROD_BRAND.navy, fontWeight: 600, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                    {asset.assetType.replace(/_/g, " ")}
+                                                </span>
+                                                {isDone && asset.storageUrl && (
+                                                    <a
+                                                        href={asset.storageUrl}
+                                                        download={asset.fileName ?? undefined}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={e => e.stopPropagation()}
+                                                        style={{
+                                                            display: "inline-flex", alignItems: "center", gap: 3,
+                                                            color: PROD_BRAND.green, textDecoration: "none",
+                                                            fontWeight: 700, fontSize: 10,
+                                                        }}
+                                                    >
+                                                        <Download size={10} /> DL
+                                                    </a>
+                                                )}
+                                            </div>
+
+                                            {/* Previews for completed media */}
+                                            {isDone && asset.storageUrl && (
+                                                <div style={{ marginTop: 2 }}>
+                                                    {asset.assetType === "AUDIO_MP3" && (
+                                                        <audio controls style={{ width: "100%", height: 26 }} src={asset.storageUrl} />
+                                                    )}
+                                                    {asset.assetType === "CAROUSEL_PNG" && (
+                                                        <img
+                                                            src={asset.storageUrl}
+                                                            alt={asset.assetType}
+                                                            style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 4, display: "block" }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {!isDone && (
+                                                <div style={{ fontSize: 10, color: PROD_BRAND.gray, fontStyle: "italic" }}>
+                                                    {asset.status.toLowerCase()}…
+                                                </div>
                                             )}
                                         </div>
                                     )
