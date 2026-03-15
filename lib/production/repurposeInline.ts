@@ -330,11 +330,11 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
 
 async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuffer> {
     const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}&display=swap`
-    const css = await (await fetch(cssUrl, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" } })).text()
-    // Google Fonts CSS uses both bare and quoted URLs: url(...) or url('...')
-    const matches = [...css.matchAll(/src:\s*url\(['"]?([^'")\s]+\.woff2)['"]?\)/g)]
+    const css = await (await fetch(cssUrl)).text()
+    // Match .ttf fonts delivered by Google Fonts without header override
+    const matches = [...css.matchAll(/src:\s*url\(['"]?([^'")\s]+\.ttf)['"]?\)/g)]
     const fontUrl = matches[matches.length - 1]?.[1]
-    if (!fontUrl) throw new Error(`No woff2 URL in Google Fonts CSS for ${family} ${weight}`)
+    if (!fontUrl) throw new Error(`No ttf URL in Google Fonts CSS for ${family} ${weight}`)
     return (await fetch(fontUrl)).arrayBuffer()
 }
 
