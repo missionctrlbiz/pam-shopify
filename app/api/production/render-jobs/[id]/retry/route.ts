@@ -18,15 +18,15 @@ import { runRepurposeInline, runCarouselInline, runVideoScriptInline } from "@/l
 export const maxDuration = 60
 // GCP / Cloud Tasks — DISABLED during Railway migration.
 // ---------------------------------------------------------------------------
-// async function getTasksClient() {
-//     const { CloudTasksClient } = await import("@google-cloud/tasks")
-//     const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
-//     if (b64) {
-//         const credentials = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"))
-//         return new CloudTasksClient({ credentials })
-//     }
-//     return new CloudTasksClient()
-// }
+async function getTasksClient() {
+    const { CloudTasksClient } = await import("@google-cloud/tasks")
+    const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
+    if (b64) {
+        const credentials = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"))
+        return new CloudTasksClient({ credentials })
+    }
+    return new CloudTasksClient()
+}
 
 export async function POST(
     _req: NextRequest,
@@ -40,12 +40,12 @@ export async function POST(
     const { id: jobId } = await params
 
     // Worker URL map — kept for Railway restoration; unused while gcpConfigured=false
-    // const WORKER_URLS: Record<string, string | undefined> = {
-    //     CAROUSEL: process.env.CAROUSEL_RENDERER_URL?.trim(),
-    //     VIDEO: process.env.VIDEO_RENDERER_URL?.trim(),
-    //     AUDIO: process.env.VIDEO_RENDERER_URL?.trim(),
-    //     REPURPOSE: process.env.REPURPOSE_WORKER_URL?.trim(),
-    // }
+    const WORKER_URLS: Record<string, string | undefined> = {
+        CAROUSEL: process.env.CAROUSEL_RENDERER_URL?.trim(),
+        VIDEO: process.env.VIDEO_RENDERER_URL?.trim(),
+        AUDIO: process.env.VIDEO_RENDERER_URL?.trim(),
+        REPURPOSE: process.env.REPURPOSE_WORKER_URL?.trim(),
+    }
 
     // ------------------------------------------------------------------
     // Fetch original job
@@ -77,17 +77,15 @@ export async function POST(
 
 
     // GCP/Cloud Tasks disabled — Railway migration in progress. All retries run inline.
-    const gcpConfigured = false
-    // const workerUrl = WORKER_URLS[original.jobType] // TODO (Railway): restore
-
-    // Payload from original job — available regardless of execution path
     const storedPayload = original.inputPayload as Record<string, unknown>
-    // callbackUrl / callbackSecret — unused while GCP is disabled; restore for Railway
-    // const nextAuthUrl = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")
-    // const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
-    // const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
-    // const callbackUrl = `${baseUrl}/api/production/render-done`
-    // const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
+    const gcpConfigured = process.env.ENABLE_GCP_TASKS === "true" && !!process.env.WORKER_SA_EMAIL
+    const workerUrl = WORKER_URLS[original.jobType]
+
+    const host = _req.headers.get("x-forwarded-host") || _req.headers.get("host") || "localhost:3000"
+    const protocol = host.includes("localhost") ? "http" : "https"
+    const baseUrl = `${protocol}://${host}`
+    const callbackUrl = `${baseUrl}/api/production/render-done`
+    const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
     // ------------------------------------------------------------------
     // Create new RenderJob + asset placeholders (both paths need this)
@@ -163,44 +161,45 @@ export async function POST(
     // Cloud Tasks enqueue — DISABLED (gcpConfigured is always false during Railway migration)
     // TODO (Railway): restore this block, replacing getTasksClient() with dispatchToWorker()
     // ------------------------------------------------------------------
-    // try {
-    //     const tasks = await getTasksClient()
-    //     const projectId = process.env.GCP_PROJECT_ID!.trim()
-    //     const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
-    //     const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
-    //     const saEmail = process.env.WORKER_SA_EMAIL!.trim()
-    //     const parent = tasks.queuePath(projectId, location, queue)
-    //     const [task] = await tasks.createTask({
-    //         parent,
-    //         task: {
-    //             httpRequest: {
-    //                 httpMethod: "POST",
-    //                 url: workerUrl,
-    //                 body: Buffer.from(JSON.stringify({
-    //                     ...storedPayload,
-    //                     renderJobId: newJob.id,
-    //                     callbackUrl,
-    //                     callbackSecret,
-    //                 })),
-    //                 headers: { "Content-Type": "application/json" },
-    //                 oidcToken: { serviceAccountEmail: saEmail, audience: workerUrl },
-    //             },
-    //         },
-    //     })
-    //     await prisma.renderJob.update({
-    //         where: { id: newJob.id },
-    //         data: { cloudTasksTaskId: task.name ?? "" },
-    //     })
-    // } catch (err) {
-    //     await prisma.renderJob.update({
-    //         where: { id: newJob.id },
-    //         data: { status: "FAILED", errorMessage: (err as Error).message },
-    //     })
-    //     return NextResponse.json(
-    //         { error: `Failed to enqueue task: ${(err as Error).message}` },
-    //         { status: 502 }
-    //     )
-    // }
+    try {
+        const tasks = await getTasksClient()
+        const projectId = process.env.GCP_PROJECT_ID!.trim()
+        const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
+        const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
+        const saEmail = process.env.WORKER_SA_EMAIL!.trim()
+        const parent = tasks.queuePath(projectId, location, queue)
+
+        const [task] = await tasks.createTask({
+            parent,
+            task: {
+                httpRequest: {
+                    httpMethod: "POST",
+                    url: workerUrl,
+                    body: Buffer.from(JSON.stringify({
+                        ...storedPayload,
+                        renderJobId: newJob.id,
+                        callbackUrl,
+                        callbackSecret,
+                    })),
+                    headers: { "Content-Type": "application/json" },
+                    oidcToken: { serviceAccountEmail: saEmail, audience: workerUrl },
+                },
+            },
+        })
+        await prisma.renderJob.update({
+            where: { id: newJob.id },
+            data: { cloudTasksTaskId: task.name ?? "" },
+        })
+    } catch (err) {
+        await prisma.renderJob.update({
+            where: { id: newJob.id },
+            data: { status: "FAILED", errorMessage: (err as Error).message },
+        })
+        return NextResponse.json(
+            { error: `Failed to enqueue task: ${(err as Error).message}` },
+            { status: 502 }
+        )
+    }
 
     // Bump calendar entry back to GENERATING
     await prisma.productionCalendarEntry.update({
