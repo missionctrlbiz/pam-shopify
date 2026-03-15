@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
                         status: true,
                         storageUrl: true,
                         fileName: true,
+                        metadata: true,
                     },
                 },
             },

@@ -655,15 +655,37 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                             {isDone && asset.storageUrl && (
                                                 <div style={{ marginTop: 2 }}>
                                                     {asset.assetType === "AUDIO_MP3" && (
-                                                        <audio controls style={{ width: "100%", height: 26 }} src={asset.storageUrl} />
+                                                        <audio controls style={{ width: "100%", height: 26 }} src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}`} />
                                                     )}
                                                     {asset.assetType === "CAROUSEL_PNG" && (
                                                         <img
-                                                            src={asset.storageUrl}
+                                                            src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}`}
                                                             alt={asset.assetType}
                                                             style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 4, display: "block" }}
                                                         />
                                                     )}
+                                                    {(asset.assetType === "TEXT_POST" || asset.assetType === "EMAIL_HTML" || asset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
+                                                        // asset.metadata now exists on JobAsset with the updated API
+                                                        const meta = (asset as any).metadata as Record<string, unknown> | null
+                                                        const content = (meta?.content as string) ?? ""
+                                                        const preview = content.slice(0, 90) + (content.length > 90 ? "…" : "")
+                                                        return content ? (
+                                                            <div style={{ marginTop: 4 }}>
+                                                                <div style={{
+                                                                    fontSize: 10, color: PROD_BRAND.gray,
+                                                                    background: PROD_BRAND.grayFaint,
+                                                                    padding: "4px 6px", borderRadius: 4,
+                                                                    marginBottom: 4, lineHeight: 1.4,
+                                                                    whiteSpace: "pre-wrap", wordBreak: "break-word",
+                                                                }}>{preview}</div>
+                                                                {/* Simple Copy button just inline or using navigator */}
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(content); alert("Copied!") }}
+                                                                    style={{ background: "none", border: "none", fontSize: 10, cursor: "pointer", color: PROD_BRAND.blue, padding: 0 }}
+                                                                >Copy</button>
+                                                            </div>
+                                                        ) : null
+                                                    })()}
                                                 </div>
                                             )}
 

@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+
+export async function GET(req: NextRequest) {
+    // 1. Authenticate with admin only for security
+    const session = await auth()
+    if (!session || (session.user as { role?: string })?.role !== "ADMIN") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const url = searchParams.get("url")
+    const token = process.env.BLOB_READ_WRITE_TOKEN
+
+    if (!url) return NextResponse.json({ error: "url required" }, { status: 400 })
+    if (!token) return NextResponse.json({ error: "missing token" }, { status: 500 })
+
+    try {
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (!res.ok) return NextResponse.json({ error: "failed to fetch or authenticate blob" }, { status: res.status })
+
+        return new Response(res.body, {
+            headers: {
+                "Content-Type": res.headers.get("Content-Type") || "application/octet-stream",
+                "Cache-Control": "public, max-age=3600"
+            }
+        })
+    } catch (err) {
+        return NextResponse.json({ error: String(err) }, { status: 500 })
+    }
+}
