@@ -7,6 +7,10 @@ on:
       - 'workers/carousel-renderer/**'
       - '.github/workflows/deploy-carousel.yml'
 
+permissions:
+  contents: 'read'
+  id-token: 'write'
+
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   LOCATION: us-central1
