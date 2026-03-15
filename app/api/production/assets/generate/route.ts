@@ -151,10 +151,9 @@ export async function POST(req: NextRequest) {
 
         const master = idea.masterJson as Record<string, unknown>
 
-        // Build callback URL — NEXTAUTH_URL must include https:// (no trailing slash)
-        const nextAuthUrl = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "")
-        const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""
-        const baseUrl = nextAuthUrl || vercelUrl || "http://localhost:3000"
+        const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "localhost:3000"
+        const protocol = host.includes("localhost") ? "http" : "https"
+        const baseUrl = `${protocol}://${host}`
         const callbackUrl = `${baseUrl}/api/production/render-done`
         const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
