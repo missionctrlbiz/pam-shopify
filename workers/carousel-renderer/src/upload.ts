@@ -28,6 +28,7 @@ export async function uploadSlides(
             access: "private",
             token,
             contentType: "image/png",
+            addRandomSuffix: true,
         })
 
         results.push({

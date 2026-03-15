@@ -17,6 +17,7 @@ export async function uploadAsset(
         access: "private",
         token,
         contentType,
+        addRandomSuffix: true,
     })
 
     console.log(`[upload] ${pathname} → ${blob.url}`)

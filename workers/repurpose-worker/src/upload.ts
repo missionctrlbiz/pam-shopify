@@ -34,6 +34,7 @@ export async function storeTextAssets(
             access: "private",
             token,
             contentType,
+            addRandomSuffix: true,
         })
 
         results.push({ url: blob.url, pathname: blob.pathname, filename, platform: file.platform })

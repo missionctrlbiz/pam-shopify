@@ -211,7 +211,7 @@ async function callGemini(prompt: string): Promise<string> {
 async function storeBlob(pathname: string, content: string | Buffer, contentType: string): Promise<string> {
     const token = process.env.BLOB_READ_WRITE_TOKEN
     if (!token) throw new Error("BLOB_READ_WRITE_TOKEN not set")
-    const blob = await put(pathname, content, { access: "private", contentType, token })
+    const blob = await put(pathname, content, { access: "private", contentType, token, addRandomSuffix: true })
     return blob.url
 }
 
