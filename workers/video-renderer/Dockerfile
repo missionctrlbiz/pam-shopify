@@ -29,7 +29,7 @@ RUN npm run build
 # 2. Bundle Remotion composition → dist/bundle/
 #    This runs Remotion's Webpack bundler and produces a static site
 #    that @remotion/renderer's Chrome instance can serve locally.
-RUN ./node_modules/.bin/remotion bundle remotion-src/index.tsx --out dist/bundle
+RUN ./node_modules/.bin/remotion bundle remotion-src/index.tsx dist/bundle
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Stage 2 — Runtime
