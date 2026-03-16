@@ -21,7 +21,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { expandToSceneDirectorScript } from "@/lib/production/sceneDirector"
 import type { ContentIdeaMasterJson } from "@/lib/production/contentStrategist"
 
@@ -54,16 +54,16 @@ export async function POST(
     }
 
     // ── Fetch entry ─────────────────────────────────────────────────────────
-    const entry = await prisma.productionCalendarEntry.findUnique({
-        where: { id },
-        include: {
-            contentIdea: {
-                include: {
-                    videoScript: true,
-                },
-            },
-        },
-    })
+    const { data: entry, error } = await supabaseAdmin
+        .from("production_calendar_entries")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle()
+
+    if (error) {
+        console.error("[scenes] Entry fetch error:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
 
     if (!entry) {
         return NextResponse.json(
@@ -72,17 +72,33 @@ export async function POST(
         )
     }
 
-    if (!entry.contentIdea) {
+    const { data: contentIdea, error: ideaError } = await supabaseAdmin
+        .from("content_ideas")
+        .select("id, masterJson")
+        .eq("calendarEntryId", id)
+        .maybeSingle()
+
+    if (ideaError) {
+        console.error("[scenes] Content idea fetch error:", ideaError)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+
+    if (!contentIdea) {
         return NextResponse.json(
             { error: "Entry has no content idea — run generate first" },
             { status: 422 }
         )
     }
 
-    const masterJson = entry.contentIdea.masterJson as unknown as ContentIdeaMasterJson
+    const masterJson = contentIdea.masterJson as unknown as ContentIdeaMasterJson
 
     // ── Cache hit ────────────────────────────────────────────────────────────
-    const existingScript = entry.contentIdea.videoScript
+    const { data: existingScript } = await supabaseAdmin
+        .from("video_scripts")
+        .select("scriptJson")
+        .eq("contentIdeaId", contentIdea.id)
+        .maybeSingle()
+
     const existingScriptJson = existingScript?.scriptJson as Record<string, unknown> | null
 
     if (
@@ -112,18 +128,18 @@ export async function POST(
         totalDurationSecs: result.totalDurationSecs,
     }
 
-    await prisma.videoScript.upsert({
-        where: { contentIdeaId: entry.contentIdea.id },
-        create: {
-            contentIdeaId: entry.contentIdea.id,
+    const { error: scriptError } = await supabaseAdmin
+        .from("video_scripts")
+        .upsert({
+            contentIdeaId: contentIdea.id,
             scriptJson: scriptJsonPayload as unknown as object,
             totalDurationSecs: result.totalDurationSecs,
-        },
-        update: {
-            scriptJson: scriptJsonPayload as unknown as object,
-            totalDurationSecs: result.totalDurationSecs,
-        },
-    })
+        }, { onConflict: "contentIdeaId" })
+
+    if (scriptError) {
+        console.error("[scenes] Video script upsert error:", scriptError)
+        return NextResponse.json({ error: "Failed to save video script" }, { status: 500 })
+    }
 
     // ── Also merge back into ContentIdea.masterJson ──────────────────────────
     // (convenience — so the idea card can read scenes without joining VideoScript)
@@ -135,10 +151,15 @@ export async function POST(
         totalDurationSecs: result.totalDurationSecs,
     }
 
-    await prisma.contentIdea.update({
-        where: { id: entry.contentIdea.id },
-        data: { masterJson: updatedMasterJson as unknown as object },
-    })
+    const { error: ideaUpdateError } = await supabaseAdmin
+        .from("content_ideas")
+        .update({ masterJson: updatedMasterJson as unknown as object })
+        .eq("id", contentIdea.id)
+
+    if (ideaUpdateError) {
+        console.error("[scenes] Content idea update error:", ideaUpdateError)
+        return NextResponse.json({ error: "Failed to update content idea" }, { status: 500 })
+    }
 
     return NextResponse.json({
         cached: false,

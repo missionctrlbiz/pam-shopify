@@ -1,6 +1,6 @@
 import { getAI } from "@/lib/ai";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { supabaseAdmin } from "@/lib/supabase";
 
 // Simple in-memory cache to prevent identical prompts from consuming the API key
 const responseCache = new Map<string, string>();
@@ -75,12 +75,12 @@ export async function POST(req: Request) {
 
         // Track usage event
         try {
-            await prisma.usageEvent.create({
-                data: {
+            await supabaseAdmin
+                .from("usage_events")
+                .insert({
                     action: "soap_generate",
-                    metadata: JSON.stringify({ promptLength: prompt.length, responseLength: text.length, ip }),
-                },
-            });
+                    metadata: { promptLength: prompt.length, responseLength: text.length, ip },
+                })
         } catch (trackError) {
             console.error("[Usage Tracking] Error:", trackError);
         }

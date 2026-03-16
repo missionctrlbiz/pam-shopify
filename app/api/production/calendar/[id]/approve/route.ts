@@ -20,7 +20,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { runQualityGate, QualityGateInput } from "@/lib/production/qualityGate"
 
 // Quality gate makes a Gemini call — can take 8–20 s on gemini-2.5-flash
@@ -39,18 +39,16 @@ export async function PUT(
     const body = await req.json() as { bypass?: boolean; bypassReason?: string }
 
     // Fetch entry with idea
-    const entry = await prisma.productionCalendarEntry.findUnique({
-        where: { id },
-        include: {
-            contentIdea: {
-                select: {
-                    id: true,
-                    masterJson: true,
-                    qualityGateStatus: true,
-                },
-            },
-        },
-    })
+    const { data: entry, error } = await supabaseAdmin
+        .from("production_calendar_entries")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle()
+
+    if (error) {
+        console.error("[approve] Fetch error:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
 
     if (!entry) {
         return NextResponse.json(
@@ -59,7 +57,18 @@ export async function PUT(
         )
     }
 
-    if (!entry.contentIdea) {
+    const { data: contentIdea, error: ideaError } = await supabaseAdmin
+        .from("content_ideas")
+        .select("id, masterJson, qualityGateStatus")
+        .eq("calendarEntryId", id)
+        .maybeSingle()
+
+    if (ideaError) {
+        console.error("[approve] Content idea fetch error:", ideaError)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+
+    if (!contentIdea) {
         return NextResponse.json(
             { error: "This entry has no ContentIdea yet. Generate content first." },
             { status: 409 }
@@ -81,20 +90,25 @@ export async function PUT(
     // BYPASS path — skip quality gate, force-approve
     // ------------------------------------------------------------------
     if (body.bypass === true) {
-        await prisma.$transaction([
-            prisma.productionCalendarEntry.update({
-                where: { id },
-                data: {
+        const [entryUpdate, ideaUpdate] = await Promise.all([
+            supabaseAdmin
+                .from("production_calendar_entries")
+                .update({
                     publishStatus: "APPROVED",
-                    approvedAt: new Date(),
+                    approvedAt: new Date().toISOString(),
                     approvedById: adminId ?? null,
-                },
-            }),
-            prisma.contentIdea.update({
-                where: { id: entry.contentIdea.id },
-                data: { qualityGateStatus: "BYPASSED" },
-            }),
+                })
+                .eq("id", id),
+            supabaseAdmin
+                .from("content_ideas")
+                .update({ qualityGateStatus: "BYPASSED" })
+                .eq("id", contentIdea.id),
         ])
+
+        if (entryUpdate.error || ideaUpdate.error) {
+            console.error("[approve] Bypass update error:", entryUpdate.error || ideaUpdate.error)
+            return NextResponse.json({ error: "Failed to approve entry" }, { status: 500 })
+        }
 
         return NextResponse.json({
             approved: true,
@@ -108,7 +122,7 @@ export async function PUT(
     // ------------------------------------------------------------------
     // QUALITY GATE path
     // ------------------------------------------------------------------
-    const master = entry.contentIdea.masterJson as {
+    const master = contentIdea.masterJson as {
         hook: string
         teachingPoints: string[]
         cta: string
@@ -138,12 +152,11 @@ export async function PUT(
     const newEntryStatus = gateOutput.passed ? "APPROVED" : "DRAFT"
     const newIdeaStatus = gateOutput.passed ? "PASSED" : "FAILED"
 
-    await prisma.$transaction([
-        // Upsert the QualityGateResult
-        prisma.qualityGateResult.upsert({
-            where: { contentIdeaId: entry.contentIdea.id },
-            create: {
-                contentIdeaId: entry.contentIdea.id,
+    const [qgUpsert, ideaUpdate, entryUpdate] = await Promise.all([
+        supabaseAdmin
+            .from("quality_gate_results")
+            .upsert({
+                contentIdeaId: contentIdea.id,
                 question1: gateOutput.question1,
                 question2: gateOutput.question2,
                 question3: gateOutput.question3,
@@ -157,35 +170,27 @@ export async function PUT(
                 overallScore: gateOutput.overallScore,
                 passed: gateOutput.passed,
                 geminiRawResponse: gateOutput as object,
-            },
-            update: {
-                score1: gateOutput.score1,
-                score2: gateOutput.score2,
-                score3: gateOutput.score3,
-                score4: gateOutput.score4,
-                score5: gateOutput.score5,
-                overallScore: gateOutput.overallScore,
-                passed: gateOutput.passed,
-                geminiRawResponse: gateOutput as object,
-                evaluatedAt: new Date(),
-            },
-        }),
-        // Update ContentIdea status
-        prisma.contentIdea.update({
-            where: { id: entry.contentIdea.id },
-            data: { qualityGateStatus: newIdeaStatus },
-        }),
-        // Update Calendar Entry status
-        prisma.productionCalendarEntry.update({
-            where: { id },
-            data: {
+                evaluatedAt: new Date().toISOString(),
+            }, { onConflict: "contentIdeaId" }),
+        supabaseAdmin
+            .from("content_ideas")
+            .update({ qualityGateStatus: newIdeaStatus })
+            .eq("id", contentIdea.id),
+        supabaseAdmin
+            .from("production_calendar_entries")
+            .update({
                 publishStatus: newEntryStatus,
                 ...(gateOutput.passed
-                    ? { approvedAt: new Date(), approvedById: adminId ?? null }
+                    ? { approvedAt: new Date().toISOString(), approvedById: adminId ?? null }
                     : {}),
-            },
-        }),
+            })
+            .eq("id", id),
     ])
+
+    if (qgUpsert.error || ideaUpdate.error || entryUpdate.error) {
+        console.error("[approve] Supabase update error:", qgUpsert.error || ideaUpdate.error || entryUpdate.error)
+        return NextResponse.json({ error: "Failed to update approval state" }, { status: 500 })
+    }
 
     return NextResponse.json({
         approved: gateOutput.passed,

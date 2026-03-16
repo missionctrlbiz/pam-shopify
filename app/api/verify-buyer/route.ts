@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
     try {
@@ -12,18 +12,20 @@ export async function POST(req: NextRequest) {
         const normalizedEmail = email.trim().toLowerCase();
 
         // Check if the email exists in the Postgres database
-        const buyer = await (prisma as any).buyer.findUnique({
-            where: { email: normalizedEmail }
-        });
+        const { data: buyer } = await supabaseAdmin
+            .from("buyers")
+            .select("id")
+            .eq("email", normalizedEmail)
+            .maybeSingle()
 
         // Track the verification attempt
         try {
-            await (prisma as any).usageEvent.create({
-                data: {
+            await supabaseAdmin
+                .from("usage_events")
+                .insert({
                     action: buyer ? "buyer_verified" : "buyer_not_found",
-                    metadata: JSON.stringify({ email: normalizedEmail }),
-                },
-            });
+                    metadata: { email: normalizedEmail },
+                })
         } catch { /* don't fail if tracking fails */ }
 
         return NextResponse.json({ verified: !!buyer });

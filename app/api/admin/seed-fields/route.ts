@@ -8,8 +8,8 @@
 
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import type { FieldCategory } from "@prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
+import { FieldCategory } from "@/lib/enums"
 
 const CLINICAL_FIELDS: Array<{
     fieldKey: string
@@ -177,48 +177,37 @@ export async function POST() {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const results = await Promise.allSettled(
-        CLINICAL_FIELDS.map((field) =>
-            prisma.clinicalField.upsert({
-                where: { fieldKey: field.fieldKey },
-                update: {
-                    displayName: field.displayName,
-                    description: field.description,
-                    clinicalContext: field.clinicalContext,
-                    exampleValues: field.exampleValues,
-                    isActive: true,
-                },
-                create: {
-                    fieldKey: field.fieldKey,
-                    fieldCategory: field.fieldCategory,
-                    displayName: field.displayName,
-                    description: field.description,
-                    clinicalContext: field.clinicalContext,
-                    exampleValues: field.exampleValues,
-                    isActive: true,
-                },
-            })
+    const { error: upsertError } = await supabaseAdmin
+        .from("clinical_fields")
+        .upsert(
+            CLINICAL_FIELDS.map((field) => ({
+                fieldKey: field.fieldKey,
+                fieldCategory: field.fieldCategory,
+                displayName: field.displayName,
+                description: field.description,
+                clinicalContext: field.clinicalContext,
+                exampleValues: field.exampleValues,
+                isActive: true,
+            })),
+            { onConflict: "fieldKey" }
         )
-    )
 
-    let upserted = 0
-    const errors: string[] = []
+    if (upsertError) {
+        console.error("[seed-fields] Supabase upsert error:", upsertError)
+        return NextResponse.json({ error: "Failed to seed clinical fields" }, { status: 500 })
+    }
 
-    results.forEach((result, index) => {
-        if (result.status === "fulfilled") {
-            upserted++
-        } else {
-            const error = result.reason instanceof Error ? result.reason.message : String(result.reason)
-            errors.push(`${CLINICAL_FIELDS[index].fieldKey}: ${error}`)
-        }
-    })
+    const { count, error: countError } = await supabaseAdmin
+        .from("clinical_fields")
+        .select("id", { count: "exact", head: true })
 
-    const count = await prisma.clinicalField.count()
+    if (countError) {
+        console.error("[seed-fields] Count error:", countError)
+    }
 
     return NextResponse.json({
-        upserted,
-        total: count,
-        errors: errors.length > 0 ? errors : undefined,
+        upserted: CLINICAL_FIELDS.length,
+        total: count ?? CLINICAL_FIELDS.length,
     })
 }
 
@@ -227,6 +216,15 @@ export async function GET() {
     if (!session || (session.user as { role?: string })?.role !== "ADMIN") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-    const count = await prisma.clinicalField.count({ where: { isActive: true } })
-    return NextResponse.json({ count })
+    const { count, error } = await supabaseAdmin
+        .from("clinical_fields")
+        .select("id", { count: "exact", head: true })
+        .eq("isActive", true)
+
+    if (error) {
+        console.error("[seed-fields] Count fetch error:", error)
+        return NextResponse.json({ error: "Server error" }, { status: 500 })
+    }
+
+    return NextResponse.json({ count: count ?? 0 })
 }

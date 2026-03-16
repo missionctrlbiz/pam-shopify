@@ -15,8 +15,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import { PublishStatus, Platform } from "@prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
+import { PublishStatus, Platform } from "@/lib/enums"
 
 export async function GET(req: NextRequest) {
     // Auth guard
@@ -41,42 +41,43 @@ export async function GET(req: NextRequest) {
         const statusFilter = statusParam && validStatuses.includes(statusParam) ? statusParam : undefined
         const platformFilter = platformParam && validPlatforms.includes(platformParam) ? platformParam : undefined
 
-        const [entries, total] = await Promise.all([
-            prisma.productionCalendarEntry.findMany({
-                where: {
-                    ...(statusFilter && { publishStatus: statusFilter }),
-                    ...(platformFilter && { platform: platformFilter }),
-                },
-                include: {
-                    contentIdea: {
-                        include: {
-                            qualityGateResult: true,
-                            clinicalField: {
-                                select: { fieldKey: true, displayName: true, fieldCategory: true },
-                            },
-                        },
-                    },
-                },
-                orderBy: { entryDate: "asc" },
-                skip,
-                take: limit,
-            }),
+        const selectClause = `*,
+            contentIdea:content_ideas(
+                *,
+                qualityGateResult:quality_gate_results(*),
+                clinicalField:clinical_fields(fieldKey, displayName, fieldCategory)
+            )`
 
-            prisma.productionCalendarEntry.count({
-                where: {
-                    ...(statusFilter && { publishStatus: statusFilter }),
-                    ...(platformFilter && { platform: platformFilter }),
-                },
-            }),
-        ])
+        let query = supabaseAdmin
+            .from("production_calendar_entries")
+            .select(selectClause, { count: "exact" })
+
+        if (statusFilter) {
+            query = query.eq("publishStatus", statusFilter)
+        }
+
+        if (platformFilter) {
+            query = query.eq("platform", platformFilter)
+        }
+
+        query = query
+            .order("entryDate", { ascending: true })
+            .range(skip, skip + limit - 1)
+
+        const { data: entries, error, count } = await query
+
+        if (error) {
+            console.error("[calendar] Supabase fetch error:", error)
+            return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+        }
 
         return NextResponse.json({
-            entries,
+            entries: entries ?? [],
             pagination: {
-                total,
+                total: count ?? 0,
                 page,
                 limit,
-                totalPages: Math.ceil(total / limit),
+                totalPages: count ? Math.ceil(count / limit) : 0,
             },
         })
     } catch (err) {

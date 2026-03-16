@@ -21,7 +21,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { runQualityGate, QualityGateInput } from "@/lib/production/qualityGate"
 
 // Gemini call can take 8–20 s on gemini-2.5-flash
@@ -44,20 +44,16 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // Fetch the ContentIdea with its parent calendar entry
-        const idea = await prisma.contentIdea.findUnique({
-            where: { id: contentIdeaId },
-            include: {
-                calendarEntry: {
-                    select: {
-                        id: true,
-                        platform: true,
-                        postType: true,
-                        publishStatus: true,
-                    },
-                },
-            },
-        })
+        const { data: idea, error: ideaError } = await supabaseAdmin
+            .from("content_ideas")
+            .select("*, calendarEntry:production_calendar_entries(id, platform, postType, publishStatus)")
+            .eq("id", contentIdeaId)
+            .maybeSingle()
+
+        if (ideaError) {
+            console.error("[quality-gate] Failed to fetch content idea:", ideaError)
+            return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+        }
 
         if (!idea) {
             return NextResponse.json(
@@ -86,49 +82,55 @@ export async function POST(req: NextRequest) {
         // Run the quality gate via Gemini
         const result = await runQualityGate(gateInput)
 
-        // Persist result + update statuses in a single transaction
-        const [qgResult] = await prisma.$transaction([
-            // Upsert the QualityGateResult (safe to re-run)
-            prisma.qualityGateResult.upsert({
-                where: { contentIdeaId },
-                update: {
-                    question1: result.question1, question2: result.question2,
-                    question3: result.question3, question4: result.question4,
-                    question5: result.question5,
-                    score1: result.score1, score2: result.score2,
-                    score3: result.score3, score4: result.score4,
-                    score5: result.score5,
-                    overallScore: result.overallScore,
-                    passed: result.passed,
-                    geminiRawResponse: result as object,
-                    evaluatedAt: new Date(),
-                },
-                create: {
-                    contentIdeaId,
-                    question1: result.question1, question2: result.question2,
-                    question3: result.question3, question4: result.question4,
-                    question5: result.question5,
-                    score1: result.score1, score2: result.score2,
-                    score3: result.score3, score4: result.score4,
-                    score5: result.score5,
-                    overallScore: result.overallScore,
-                    passed: result.passed,
-                    geminiRawResponse: result as object,
-                },
-            }),
+        const evaluatedAt = new Date().toISOString()
+        const upsertPayload = {
+            contentIdeaId,
+            question1: result.question1,
+            question2: result.question2,
+            question3: result.question3,
+            question4: result.question4,
+            question5: result.question5,
+            score1: result.score1,
+            score2: result.score2,
+            score3: result.score3,
+            score4: result.score4,
+            score5: result.score5,
+            overallScore: result.overallScore,
+            passed: result.passed,
+            geminiRawResponse: result as object,
+            evaluatedAt,
+        }
 
-            // Update ContentIdea qualityGateStatus
-            prisma.contentIdea.update({
-                where: { id: contentIdeaId },
-                data: { qualityGateStatus: result.passed ? "PASSED" : "FAILED" },
-            }),
+        const { data: qgRows, error: upsertError } = await supabaseAdmin
+            .from("quality_gate_results")
+            .upsert(upsertPayload, { onConflict: "contentIdeaId" })
+            .select("id")
+            .single()
 
-            // Update parent calendar entry publishStatus
-            prisma.productionCalendarEntry.update({
-                where: { id: idea.calendarEntry.id },
-                data: { publishStatus: result.passed ? "PENDING_APPROVAL" : "DRAFT" },
-            }),
-        ])
+        if (upsertError) {
+            console.error("[quality-gate] Upsert error:", upsertError)
+            return NextResponse.json({ error: "Failed to save quality gate result" }, { status: 500 })
+        }
+
+        const { error: ideaUpdateError } = await supabaseAdmin
+            .from("content_ideas")
+            .update({ qualityGateStatus: result.passed ? "PASSED" : "FAILED" })
+            .eq("id", contentIdeaId)
+
+        if (ideaUpdateError) {
+            console.error("[quality-gate] Content idea update error:", ideaUpdateError)
+            return NextResponse.json({ error: "Failed to update content idea" }, { status: 500 })
+        }
+
+        const { error: entryUpdateError } = await supabaseAdmin
+            .from("production_calendar_entries")
+            .update({ publishStatus: result.passed ? "PENDING_APPROVAL" : "DRAFT" })
+            .eq("id", idea.calendarEntry.id)
+
+        if (entryUpdateError) {
+            console.error("[quality-gate] Calendar entry update error:", entryUpdateError)
+            return NextResponse.json({ error: "Failed to update calendar entry" }, { status: 500 })
+        }
 
         return NextResponse.json({
             passed: result.passed,
@@ -141,7 +143,7 @@ export async function POST(req: NextRequest) {
                 q1: result.reasoning1, q2: result.reasoning2, q3: result.reasoning3,
                 q4: result.reasoning4, q5: result.reasoning5,
             },
-            qualityGateResultId: qgResult.id,
+            qualityGateResultId: qgRows?.id,
             newCalendarStatus: result.passed ? "PENDING_APPROVAL" : "DRAFT",
         })
     } catch (err) {

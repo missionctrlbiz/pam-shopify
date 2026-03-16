@@ -23,10 +23,18 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import { PublishStatus, AssetStatus } from "@prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
+import { PublishStatus, AssetStatus, AssetType, Platform } from "@/lib/enums"
 
 export const maxDuration = 30
+
+type IdeaAssetRow = {
+    status: AssetStatus
+    assetType: AssetType
+    platform?: Platform | null
+    storageUrl?: string | null
+    fileName?: string | null
+}
 
 function csvEscape(val: unknown): string {
     if (val === null || val === undefined) return ""
@@ -61,26 +69,26 @@ export async function GET(req: NextRequest) {
             PublishStatus.PUBLISHED,
         ]
 
-    // ── Fetch entries ────────────────────────────────────────────────────────
-    const entries = await prisma.productionCalendarEntry.findMany({
-        where: {
-            publishStatus: { in: statusFilter },
-            contentIdea: { isNot: null },
-        },
-        include: {
-            contentIdea: {
-                include: {
-                    assets: {
-                        where: { status: AssetStatus.COMPLETE },
-                        select: { assetType: true, platform: true, storageUrl: true, fileName: true },
-                    },
-                },
-            },
-        },
-        orderBy: [{ dayNumber: "asc" }, { entryDate: "asc" }],
-    })
+    let query = supabaseAdmin
+        .from("production_calendar_entries")
+        .select(`*, contentIdea:content_ideas(*, assets:content_assets(status, assetType, platform, storageUrl, fileName))`)
+        .order("dayNumber", { ascending: true })
+        .order("entryDate", { ascending: true })
 
-    if (entries.length === 0) {
+    if (statusFilter.length > 0) {
+        query = query.in("publishStatus", statusFilter)
+    }
+
+    const { data: entries, error } = await query
+
+    if (error) {
+        console.error("[export/canva] Supabase fetch error:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+
+    const entriesWithIdeas = (entries ?? []).filter((entry) => entry.contentIdea)
+
+    if (entriesWithIdeas.length === 0) {
         return NextResponse.json(
             { error: "No entries with content ideas found. Generate content ideas first." },
             { status: 404 }
@@ -141,8 +149,8 @@ export async function GET(req: NextRequest) {
 
     const csvRows: string[] = [headers.join(",")]
 
-    for (const entry of entries) {
-        const idea = entry.contentIdea!
+    for (const entry of entriesWithIdeas) {
+        const idea = entry.contentIdea
         const m = idea.masterJson as Record<string, unknown>
 
         const tp = (m.teachingPoints as string[] | undefined) ?? []
@@ -157,14 +165,16 @@ export async function GET(req: NextRequest) {
         const dateISO = dateObj.toISOString().slice(0, 10)
 
         // Map completed assets to known types
-        const assets = idea.assets
-        const assetUrl = (type: string, platform?: string) =>
+        const assets = ((idea.assets ?? []) as IdeaAssetRow[]).filter(
+            (asset) => asset.status === AssetStatus.COMPLETE
+        )
+        const assetUrl = (type: AssetType, platform?: Platform) =>
             assets.find(a =>
                 a.assetType === type && (!platform || a.platform === platform)
             )?.storageUrl ?? ""
 
         const carouselSlides = assets
-            .filter(a => a.assetType === "CAROUSEL_PNG")
+            .filter(a => a.assetType === AssetType.CAROUSEL_PNG)
             .sort((a, b) => (a.fileName ?? "").localeCompare(b.fileName ?? ""))
 
         csvRows.push(row([
@@ -202,19 +212,19 @@ export async function GET(req: NextRequest) {
             voiceover,
 
             // Asset URLs
-            assetUrl("TEXT_POST", "IG"),
-            assetUrl("TEXT_POST", "FB"),
-            assetUrl("TEXT_POST", "TIKTOK"),
-            assetUrl("TEXT_POST", "LINKEDIN"),
-            assetUrl("EMAIL_HTML", "EMAIL"),
+            assetUrl(AssetType.TEXT_POST, Platform.IG),
+            assetUrl(AssetType.TEXT_POST, Platform.FB),
+            assetUrl(AssetType.TEXT_POST, Platform.TIKTOK),
+            assetUrl(AssetType.TEXT_POST, Platform.LINKEDIN),
+            assetUrl(AssetType.EMAIL_HTML, Platform.EMAIL),
             carouselSlides[0]?.storageUrl ?? "",
             carouselSlides[1]?.storageUrl ?? "",
             carouselSlides[2]?.storageUrl ?? "",
             carouselSlides[3]?.storageUrl ?? "",
             carouselSlides[4]?.storageUrl ?? "",
             carouselSlides[5]?.storageUrl ?? "",
-            assetUrl("AUDIO_MP3"),
-            assetUrl("VIDEO_MP4"),
+            assetUrl(AssetType.AUDIO_MP3),
+            assetUrl(AssetType.VIDEO_MP4),
         ]))
     }
 

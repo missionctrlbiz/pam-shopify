@@ -14,7 +14,6 @@ import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
 import { supabaseAdmin } from "@/lib/supabase"
 import satori from "satori"
 import { Resvg } from "@resvg/resvg-js"
-import prisma from "@/lib/prisma"
 
 // ---------------------------------------------------------------------------
 // Markdown stripper
@@ -289,23 +288,46 @@ const PLATFORM_MAP: Array<{
 // Shared: post-job completion check
 // ---------------------------------------------------------------------------
 
-async function checkAllComplete(contentIdeaId: string, calendarEntryId: string) {
+export async function checkAllRenderJobsComplete(contentIdeaId: string, calendarEntryId: string): Promise<boolean> {
     try {
-        const allJobs = await prisma.renderJob.findMany({ where: { contentIdeaId }, orderBy: { queuedAt: "desc" } })
+        const { data: allJobs, error } = await supabaseAdmin
+            .from("render_jobs")
+            .select("jobType, status")
+            .eq("contentIdeaId", contentIdeaId)
+            .order("queuedAt", { ascending: false })
+
+        if (error) {
+            console.error("[inline] Failed to fetch render jobs for completion check:", error)
+            return false
+        }
+
         const latestStatus = new Map<string, string>()
-        for (const job of allJobs) {
-            if (!latestStatus.has(job.jobType)) latestStatus.set(job.jobType, job.status)
+        for (const job of allJobs ?? []) {
+            if (!latestStatus.has(job.jobType)) {
+                latestStatus.set(job.jobType, job.status)
+            }
         }
-        // All latest jobs must be COMPLETE — if any are QUEUED/RUNNING/FAILED, we are not done.
-        // Mirrors the same check in render-done/route.ts for the Cloud Run path.
-        const allStatuses = Array.from(latestStatus.values())
-        const allDone = allStatuses.length > 0 && allStatuses.every(s => s === "COMPLETE")
+
+        const statuses = Array.from(latestStatus.values())
+        const allDone = statuses.length > 0 && statuses.every((status) => status === "COMPLETE")
+
         if (allDone && calendarEntryId) {
-            await prisma.productionCalendarEntry.update({ where: { id: calendarEntryId }, data: { publishStatus: "APPROVED" } })
-            console.log(`[inline] All jobs done -> entry ${calendarEntryId} -> APPROVED`)
+            const { error: entryError } = await supabaseAdmin
+                .from("production_calendar_entries")
+                .update({ publishStatus: "APPROVED" })
+                .eq("id", calendarEntryId)
+
+            if (entryError) {
+                console.error("[inline] Failed to mark entry APPROVED after completion:", entryError)
+            } else {
+                console.log(`[inline] All jobs done -> entry ${calendarEntryId} -> APPROVED`)
+            }
         }
+
+        return allDone
     } catch (e) {
         console.error("[inline] Post-completion check failed:", e)
+        return false
     }
 }
 
@@ -315,7 +337,16 @@ async function checkAllComplete(contentIdeaId: string, calendarEntryId: string) 
 
 export async function runRepurposeInline(input: RepurposeInlineInput): Promise<void> {
     const { renderJobId, contentIdeaId, calendarEntryId, entryDate, topic } = input
-    await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "RUNNING", startedAt: new Date() } })
+    const startTime = new Date().toISOString()
+    const { error: startError } = await supabaseAdmin
+        .from("render_jobs")
+        .update({ status: "RUNNING", startedAt: startTime })
+        .eq("id", renderJobId)
+
+    if (startError) {
+        console.error("[repurposeInline] Unable to mark job RUNNING:", startError)
+        throw new Error(`Unable to start render job ${renderJobId}`)
+    }
 
     try {
         const raw = await callGemini(buildRepurposePrompt(input))
@@ -330,22 +361,51 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
             const contentType = mapping.assetType === "EMAIL_HTML" ? "text/html" : "text/plain"
             const storageUrl = await storeBlob(`production/${contentIdeaId}/${mapping.assetType}/${fileName}`, content, contentType)
 
-            await prisma.contentAsset.updateMany({
-                where: { renderJobId, platform: mapping.platform, assetType: mapping.assetType },
-                data: { status: "COMPLETE", storageUrl, metadata: { content, ...meta } },
-            })
+            const { error: assetError } = await supabaseAdmin
+                .from("content_assets")
+                .update({ status: "COMPLETE", storageUrl, metadata: { content, ...meta } })
+                .eq("renderJobId", renderJobId)
+                .eq("platform", mapping.platform)
+                .eq("assetType", mapping.assetType)
+
+            if (assetError) {
+                throw new Error(`Failed to update ${mapping.platform} asset: ${assetError.message}`)
+            }
         }
 
-        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "COMPLETE", completedAt: new Date() } })
+        const { error: completeError } = await supabaseAdmin
+            .from("render_jobs")
+            .update({ status: "COMPLETE", completedAt: new Date().toISOString() })
+            .eq("id", renderJobId)
+
+        if (completeError) {
+            console.error("[repurposeInline] Failed to mark job COMPLETE:", completeError)
+        }
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error("[repurposeInline] failed:", msg)
-        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "FAILED", completedAt: new Date(), errorMessage: msg } })
-        await prisma.contentAsset.updateMany({ where: { renderJobId }, data: { status: "FAILED" } })
+        const failureTime = new Date().toISOString()
+        const { error: failJobError } = await supabaseAdmin
+            .from("render_jobs")
+            .update({ status: "FAILED", completedAt: failureTime, errorMessage: msg })
+            .eq("id", renderJobId)
+
+        if (failJobError) {
+            console.error("[repurposeInline] Failed to mark job FAILED:", failJobError)
+        }
+
+        const { error: failAssetsError } = await supabaseAdmin
+            .from("content_assets")
+            .update({ status: "FAILED" })
+            .eq("renderJobId", renderJobId)
+
+        if (failAssetsError) {
+            console.error("[repurposeInline] Failed to mark assets FAILED:", failAssetsError)
+        }
         throw err
     }
 
-    await checkAllComplete(contentIdeaId, calendarEntryId)
+    await checkAllRenderJobsComplete(contentIdeaId, calendarEntryId)
 }
 
 // ---------------------------------------------------------------------------
@@ -458,7 +518,15 @@ async function renderSlideToPng(
 
 export async function runCarouselInline(input: RepurposeInlineInput): Promise<void> {
     const { renderJobId, contentIdeaId, calendarEntryId, entryDate, topic } = input
-    await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "RUNNING", startedAt: new Date() } })
+    const { error: startError } = await supabaseAdmin
+        .from("render_jobs")
+        .update({ status: "RUNNING", startedAt: new Date().toISOString() })
+        .eq("id", renderJobId)
+
+    if (startError) {
+        console.error("[carouselInline] Unable to mark job RUNNING:", startError)
+        throw new Error(`Unable to start render job ${renderJobId}`)
+    }
 
     try {
         const raw = await callGemini(buildCarouselPrompt(input))
@@ -500,21 +568,53 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
             `CTA: ${script.ctaSlide}`,
         ].join("\n")
 
-        await prisma.contentAsset.updateMany({
-            where: { renderJobId, assetType: "CAROUSEL_PNG" },
-            data: { status: "COMPLETE", storageUrl: slideUrls[0], metadata: JSON.parse(JSON.stringify({ content: readable, slideUrls, script })) },
-        })
+        const { error: assetError } = await supabaseAdmin
+            .from("content_assets")
+            .update({
+                status: "COMPLETE",
+                storageUrl: slideUrls[0],
+                metadata: JSON.parse(JSON.stringify({ content: readable, slideUrls, script })),
+            })
+            .eq("renderJobId", renderJobId)
+            .eq("assetType", "CAROUSEL_PNG")
 
-        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "COMPLETE", completedAt: new Date() } })
+        if (assetError) {
+            throw new Error(`Failed to update carousel metadata: ${assetError.message}`)
+        }
+
+        const { error: completeError } = await supabaseAdmin
+            .from("render_jobs")
+            .update({ status: "COMPLETE", completedAt: new Date().toISOString() })
+            .eq("id", renderJobId)
+
+        if (completeError) {
+            console.error("[carouselInline] Failed to mark job COMPLETE:", completeError)
+        }
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error("[carouselInline] failed:", msg)
-        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "FAILED", completedAt: new Date(), errorMessage: msg } })
-        await prisma.contentAsset.updateMany({ where: { renderJobId }, data: { status: "FAILED" } })
+        const failureTime = new Date().toISOString()
+        const { error: failJobError } = await supabaseAdmin
+            .from("render_jobs")
+            .update({ status: "FAILED", completedAt: failureTime, errorMessage: msg })
+            .eq("id", renderJobId)
+
+        if (failJobError) {
+            console.error("[carouselInline] Failed to mark job FAILED:", failJobError)
+        }
+
+        const { error: failAssetsError } = await supabaseAdmin
+            .from("content_assets")
+            .update({ status: "FAILED" })
+            .eq("renderJobId", renderJobId)
+
+        if (failAssetsError) {
+            console.error("[carouselInline] Failed to mark assets FAILED:", failAssetsError)
+        }
         throw err
     }
 
-    await checkAllComplete(contentIdeaId, calendarEntryId)
+    await checkAllRenderJobsComplete(contentIdeaId, calendarEntryId)
 }
 
 // ---------------------------------------------------------------------------
@@ -552,7 +652,15 @@ async function runAudioInline(
 
 export async function runVideoScriptInline(input: RepurposeInlineInput): Promise<void> {
     const { renderJobId, contentIdeaId, calendarEntryId, entryDate, topic, voiceId } = input
-    await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "RUNNING", startedAt: new Date() } })
+    const { error: startError } = await supabaseAdmin
+        .from("render_jobs")
+        .update({ status: "RUNNING", startedAt: new Date().toISOString() })
+        .eq("id", renderJobId)
+
+    if (startError) {
+        console.error("[videoScriptInline] Unable to mark job RUNNING:", startError)
+        throw new Error(`Unable to start render job ${renderJobId}`)
+    }
 
     try {
         const raw = await callGemini(buildVideoPrompt(input))
@@ -584,10 +692,16 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
             "text/plain"
         )
 
-        await prisma.contentAsset.updateMany({
-            where: { renderJobId, assetType: "VIDEO_SCRIPT_JSON" },
-            data: { status: "COMPLETE", storageUrl: scriptUrl, metadata: JSON.parse(JSON.stringify({ content: readable, script })) },
-        })
+        const scriptMeta = JSON.parse(JSON.stringify({ content: readable, script }))
+        const { error: scriptAssetError } = await supabaseAdmin
+            .from("content_assets")
+            .update({ status: "COMPLETE", storageUrl: scriptUrl, metadata: scriptMeta })
+            .eq("renderJobId", renderJobId)
+            .eq("assetType", "VIDEO_SCRIPT_JSON")
+
+        if (scriptAssetError) {
+            throw new Error(`Failed to update video script asset: ${scriptAssetError.message}`)
+        }
 
         // ElevenLabs audio (non-fatal if it fails)
         const voiceoverText = [script.hook, ...script.segments.map(s => s.voiceover), script.ctaOutro].join(" ")
@@ -598,27 +712,66 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
                 `PAM_AUDIO_${date}_${slug}_v1.mp3`,
                 voiceId
             )
-            await prisma.contentAsset.updateMany({
-                where: { renderJobId, assetType: "AUDIO_MP3" },
-                data: {
+            const { error: audioAssetError } = await supabaseAdmin
+                .from("content_assets")
+                .update({
                     status: "COMPLETE",
                     storageUrl: audioUrl,
-                    metadata: { content: `Audio voiceover: ${script.title} (~${script.durationEstimateSecs}s)`, durationEstimateSecs: script.durationEstimateSecs },
-                },
-            })
+                    metadata: {
+                        content: `Audio voiceover: ${script.title} (~${script.durationEstimateSecs}s)`,
+                        durationEstimateSecs: script.durationEstimateSecs,
+                    },
+                })
+                .eq("renderJobId", renderJobId)
+                .eq("assetType", "AUDIO_MP3")
+
+            if (audioAssetError) {
+                console.error("[videoScriptInline] Failed to update audio asset:", audioAssetError)
+            }
         } catch (audioErr) {
             console.error("[videoScriptInline] ElevenLabs failed (non-fatal):", audioErr)
-            await prisma.contentAsset.updateMany({ where: { renderJobId, assetType: "AUDIO_MP3" }, data: { status: "FAILED" } })
+            const { error: audioFailError } = await supabaseAdmin
+                .from("content_assets")
+                .update({ status: "FAILED" })
+                .eq("renderJobId", renderJobId)
+                .eq("assetType", "AUDIO_MP3")
+
+            if (audioFailError) {
+                console.error("[videoScriptInline] Failed to mark audio asset FAILED:", audioFailError)
+            }
         }
 
-        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "COMPLETE", completedAt: new Date() } })
+        const { error: completeError } = await supabaseAdmin
+            .from("render_jobs")
+            .update({ status: "COMPLETE", completedAt: new Date().toISOString() })
+            .eq("id", renderJobId)
+
+        if (completeError) {
+            console.error("[videoScriptInline] Failed to mark job COMPLETE:", completeError)
+        }
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error("[videoScriptInline] failed:", msg)
-        await prisma.renderJob.update({ where: { id: renderJobId }, data: { status: "FAILED", completedAt: new Date(), errorMessage: msg } })
-        await prisma.contentAsset.updateMany({ where: { renderJobId }, data: { status: "FAILED" } })
+        const failureTime = new Date().toISOString()
+        const { error: failJobError } = await supabaseAdmin
+            .from("render_jobs")
+            .update({ status: "FAILED", completedAt: failureTime, errorMessage: msg })
+            .eq("id", renderJobId)
+
+        if (failJobError) {
+            console.error("[videoScriptInline] Failed to mark job FAILED:", failJobError)
+        }
+
+        const { error: failAssetsError } = await supabaseAdmin
+            .from("content_assets")
+            .update({ status: "FAILED" })
+            .eq("renderJobId", renderJobId)
+
+        if (failAssetsError) {
+            console.error("[videoScriptInline] Failed to mark assets FAILED:", failAssetsError)
+        }
         throw err
     }
 
-    await checkAllComplete(contentIdeaId, calendarEntryId)
+    await checkAllRenderJobsComplete(contentIdeaId, calendarEntryId)
 }

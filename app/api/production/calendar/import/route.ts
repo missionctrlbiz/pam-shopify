@@ -14,9 +14,9 @@
  */
 
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { auth } from "@/lib/auth"
-import type { Platform, PostType, FunnelStage } from "@prisma/client"
+import type { Platform, PostType, FunnelStage } from "@/lib/enums"
 
 const VALID_PLATFORMS = new Set(["IG", "FB", "TIKTOK", "LINKEDIN", "EMAIL", "VIDEO"])
 const VALID_POST_TYPES = new Set(["CAROUSEL", "VIDEO", "TEXT_POST", "REEL", "STORY", "EMAIL_LESSON"])
@@ -97,10 +97,11 @@ export async function POST(req: Request) {
             const hook = row["hook"] ?? ""
             const cta = row["cta"] ?? ""
 
-            return prisma.productionCalendarEntry.create({
-                data: {
+            const { error } = await supabaseAdmin
+                .from("production_calendar_entries")
+                .insert({
                     dayNumber,
-                    entryDate,
+                    entryDate: entryDate.toISOString(),
                     platform,
                     postType,
                     topic,
@@ -109,8 +110,11 @@ export async function POST(req: Request) {
                     hook,
                     cta,
                     publishStatus: "DRAFT",
-                },
-            })
+                })
+
+            if (error) {
+                throw new Error(`${rowLabel}: ${error.message}`)
+            }
         })
     )
 

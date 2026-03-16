@@ -10,9 +10,16 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import type { Prisma } from "@prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
 import { runRepurposeInline, runCarouselInline, runVideoScriptInline } from "@/lib/production/repurposeInline"
+import { AssetType, Platform } from "@/lib/enums"
+
+type ExistingAsset = {
+    id: string
+    assetType: AssetType
+    platform: Platform
+    fileName: string | null
+}
 
 // Inline Gemini call can take up to ~20 s; match the generate route timeout
 export const maxDuration = 60
@@ -50,18 +57,22 @@ export async function POST(
     // ------------------------------------------------------------------
     // Fetch original job
     // ------------------------------------------------------------------
-    const original = await prisma.renderJob.findUnique({
-        where: { id: jobId },
-        include: {
-            contentIdea: {
-                select: {
-                    id: true,
-                    calendarEntry: { select: { id: true, publishStatus: true } },
-                },
-            },
-            assets: { select: { id: true, assetType: true, platform: true, fileName: true } },
-        },
-    })
+    const { data: original, error: originalError } = await supabaseAdmin
+        .from("render_jobs")
+        .select(`*,
+            contentIdea:content_ideas(
+                id,
+                calendarEntry:production_calendar_entries(id, publishStatus)
+            ),
+            assets:content_assets(id, assetType, platform, fileName)
+        `)
+        .eq("id", jobId)
+        .maybeSingle()
+
+    if (originalError) {
+        console.error("[render-jobs:retry] Failed to fetch original job:", originalError)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
 
     if (!original) {
         return NextResponse.json({ error: "RenderJob not found" }, { status: 404 })
@@ -74,10 +85,18 @@ export async function POST(
         )
     }
 
+    const calendarEntryId = original.contentIdea?.calendarEntry?.id
+    if (!calendarEntryId) {
+        return NextResponse.json(
+            { error: "Render job is missing a linked calendar entry" },
+            { status: 422 }
+        )
+    }
+
 
 
     // GCP/Cloud Tasks disabled — Railway migration in progress. All retries run inline.
-    const storedPayload = original.inputPayload as Record<string, unknown>
+    const storedPayload = (original.inputPayload ?? {}) as Record<string, unknown>
     const gcpConfigured = process.env.ENABLE_GCP_TASKS === "true" && !!process.env.WORKER_SA_EMAIL
     const workerUrl = WORKER_URLS[original.jobType]
 
@@ -90,27 +109,44 @@ export async function POST(
     // ------------------------------------------------------------------
     // Create new RenderJob + asset placeholders (both paths need this)
     // ------------------------------------------------------------------
-    const newJob = await prisma.renderJob.create({
-        data: {
+    const { data: newJob, error: newJobError } = await supabaseAdmin
+        .from("render_jobs")
+        .insert({
             contentIdeaId: original.contentIdeaId,
             jobType: original.jobType,
             status: "QUEUED",
-            inputPayload: storedPayload as unknown as Prisma.InputJsonValue,
-        },
-    })
+            inputPayload: storedPayload as object,
+        })
+        .select("id")
+        .single()
+
+    if (newJobError || !newJob) {
+        console.error("[render-jobs:retry] Failed to create new job:", newJobError)
+        return NextResponse.json({ error: "Failed to create retry job" }, { status: 500 })
+    }
 
     // Re-create asset placeholders linked to new job
-    if (original.assets.length > 0) {
-        await prisma.contentAsset.createMany({
-            data: original.assets.map((a) => ({
-                contentIdeaId: original.contentIdeaId,
-                renderJobId: newJob.id,
-                assetType: a.assetType,
-                platform: a.platform,
-                fileName: a.fileName ?? `retry_${newJob.id}`,
-                status: "PENDING" as const,
-            })),
-        })
+    const originalAssets = (original.assets ?? []) as ExistingAsset[]
+
+    if (originalAssets.length > 0) {
+        const placeholders = originalAssets.map((a) => ({
+            contentIdeaId: original.contentIdeaId,
+            renderJobId: newJob.id,
+            assetType: a.assetType,
+            platform: a.platform,
+            fileName: a.fileName ?? `retry_${newJob.id}`,
+            status: "PENDING" as const,
+        }))
+
+        const { error: assetInsertError } = await supabaseAdmin
+            .from("content_assets")
+            .insert(placeholders)
+
+        if (assetInsertError) {
+            console.error("[render-jobs:retry] Failed to recreate assets:", assetInsertError)
+            await supabaseAdmin.from("render_jobs").delete().eq("id", newJob.id)
+            return NextResponse.json({ error: "Failed to recreate job assets" }, { status: 500 })
+        }
     }
 
     // ------------------------------------------------------------------
@@ -120,7 +156,7 @@ export async function POST(
         const inlineInput = {
             renderJobId: newJob.id,
             contentIdeaId: original.contentIdeaId,
-            calendarEntryId: original.contentIdea.calendarEntry.id,
+            calendarEntryId,
             masterJson: (storedPayload.masterJson ?? {}) as Record<string, unknown>,
             platform: (storedPayload.platform as string) ?? "",
             postType: (storedPayload.postType as string) ?? "",
@@ -186,15 +222,19 @@ export async function POST(
                 },
             },
         })
-        await prisma.renderJob.update({
-            where: { id: newJob.id },
-            data: { cloudTasksTaskId: task.name ?? "" },
-        })
+        const { error: taskUpdateError } = await supabaseAdmin
+            .from("render_jobs")
+            .update({ cloudTasksTaskId: task.name ?? "" })
+            .eq("id", newJob.id)
+
+        if (taskUpdateError) {
+            console.error("[render-jobs:retry] Failed to save Cloud Task id:", taskUpdateError)
+        }
     } catch (err) {
-        await prisma.renderJob.update({
-            where: { id: newJob.id },
-            data: { status: "FAILED", errorMessage: (err as Error).message },
-        })
+        await supabaseAdmin
+            .from("render_jobs")
+            .update({ status: "FAILED", errorMessage: (err as Error).message })
+            .eq("id", newJob.id)
         return NextResponse.json(
             { error: `Failed to enqueue task: ${(err as Error).message}` },
             { status: 502 }
@@ -202,10 +242,14 @@ export async function POST(
     }
 
     // Bump calendar entry back to GENERATING
-    await prisma.productionCalendarEntry.update({
-        where: { id: original.contentIdea.calendarEntry.id },
-        data: { publishStatus: "GENERATING" },
-    })
+    const { error: statusError } = await supabaseAdmin
+        .from("production_calendar_entries")
+        .update({ publishStatus: "GENERATING" })
+        .eq("id", calendarEntryId)
+
+    if (statusError) {
+        console.error("[render-jobs:retry] Failed to mark entry GENERATING:", statusError)
+    }
 
     return NextResponse.json({
         retried: true,

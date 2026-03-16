@@ -38,8 +38,9 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
-import prisma from "@/lib/prisma"
-import { AssetType, Platform } from "@prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
+import { AssetType, Platform } from "@/lib/enums"
+import { checkAllRenderJobsComplete } from "@/lib/production/repurposeInline"
 
 interface IncomingAsset {
     assetType: AssetType
@@ -108,18 +109,16 @@ export async function POST(req: NextRequest) {
     // ------------------------------------------------------------------
     // Fetch the RenderJob
     // ------------------------------------------------------------------
-    const renderJob = await prisma.renderJob.findUnique({
-        where: { id: renderJobId },
-        include: {
-            contentIdea: {
-                select: {
-                    id: true,
-                    calendarEntryId: true,
-                },
-            },
-            assets: { select: { id: true } },
-        },
-    })
+    const { data: renderJob, error: renderJobError } = await supabaseAdmin
+        .from("render_jobs")
+        .select(`*, contentIdea:content_ideas(id, calendarEntryId)`)
+        .eq("id", renderJobId)
+        .maybeSingle()
+
+    if (renderJobError) {
+        console.error("[render-done] Failed to fetch render job:", renderJobError)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
 
     if (!renderJob) {
         console.error("[render-done] RenderJob not found:", renderJobId)
@@ -130,7 +129,7 @@ export async function POST(req: NextRequest) {
     }
 
     const contentIdeaId = renderJob.contentIdeaId
-    const calendarEntryId = renderJob.contentIdea.calendarEntryId
+    const calendarEntryId = renderJob.contentIdea?.calendarEntryId ?? null
 
     // ------------------------------------------------------------------
     // Handle FAILED job
@@ -138,20 +137,24 @@ export async function POST(req: NextRequest) {
     if (jobError) {
         console.error(`[render-done] Job ${renderJobId} failed:`, jobError)
 
-        await prisma.$transaction([
-            prisma.renderJob.update({
-                where: { id: renderJobId },
-                data: {
-                    status: "FAILED",
-                    completedAt: new Date(),
-                    errorMessage: jobError,
-                },
-            }),
-            prisma.contentAsset.updateMany({
-                where: { renderJobId },
-                data: { status: "FAILED" },
-            }),
+        const failedAt = new Date().toISOString()
+        const [jobUpdate, assetUpdate] = await Promise.all([
+            supabaseAdmin
+                .from("render_jobs")
+                .update({ status: "FAILED", completedAt: failedAt, errorMessage: jobError })
+                .eq("id", renderJobId),
+            supabaseAdmin
+                .from("content_assets")
+                .update({ status: "FAILED" })
+                .eq("renderJobId", renderJobId),
         ])
+
+        if (jobUpdate.error) {
+            console.error("[render-done] Failed to update job status to FAILED:", jobUpdate.error)
+        }
+        if (assetUpdate.error) {
+            console.error("[render-done] Failed to mark assets FAILED:", assetUpdate.error)
+        }
 
         return NextResponse.json({
             received: true,
@@ -165,57 +168,38 @@ export async function POST(req: NextRequest) {
     // ------------------------------------------------------------------
     const now = new Date()
 
-    await prisma.renderJob.update({
-        where: { id: renderJobId },
-        data: {
-            status: "COMPLETE",
-            completedAt: now,
-        },
-    })
+    const { error: jobCompleteError } = await supabaseAdmin
+        .from("render_jobs")
+        .update({ status: "COMPLETE", completedAt: now.toISOString() })
+        .eq("id", renderJobId)
+
+    if (jobCompleteError) {
+        console.error("[render-done] Failed to mark job COMPLETE:", jobCompleteError)
+    }
 
     // Update each ContentAsset row based on the incoming asset data
     for (const asset of assets ?? []) {
-        await prisma.contentAsset.updateMany({
-            where: {
-                renderJobId,
-                assetType: asset.assetType,
-                platform: asset.platform,
-            },
-            data: {
+        const update = supabaseAdmin
+            .from("content_assets")
+            .update({
                 status: "COMPLETE",
                 storageUrl: asset.storageUrl,
                 storagePath: asset.storagePath ?? null,
                 fileName: asset.fileName,
                 ...(asset.metadata ? { metadata: asset.metadata as object } : {}),
-            },
-        })
-    }
+            })
+            .eq("renderJobId", renderJobId)
+            .eq("assetType", asset.assetType)
+            .eq("platform", asset.platform)
 
-    // ------------------------------------------------------------------
-    // Check if ALL render jobs for this idea are complete → APPROVED
-    // ------------------------------------------------------------------
-    const allJobs = await prisma.renderJob.findMany({
-        where: { contentIdeaId },
-        orderBy: { queuedAt: "desc" },
-    })
-
-    const latestJobs = new Map<string, string>()
-    for (const job of allJobs) {
-        if (!latestJobs.has(job.jobType)) {
-            latestJobs.set(job.jobType, job.status)
+        const { error: assetError } = await update
+        if (assetError) {
+            console.error("[render-done] Failed to update asset status:", assetError)
         }
     }
-
-    const allDone = Array.from(latestJobs.values()).every((status) => status === "COMPLETE")
-
-    if (allDone) {
-        await prisma.productionCalendarEntry.update({
-            where: { id: calendarEntryId },
-            data: { publishStatus: "APPROVED" },
-        })
-        console.log(
-            `[render-done] All jobs complete for idea ${contentIdeaId} — entry ${calendarEntryId} → APPROVED`
-        )
+    let allDone = false
+    if (calendarEntryId) {
+        allDone = await checkAllRenderJobsComplete(contentIdeaId, calendarEntryId)
     }
 
     return NextResponse.json({

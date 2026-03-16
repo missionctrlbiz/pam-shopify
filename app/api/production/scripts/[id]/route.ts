@@ -12,8 +12,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import { AssetStatus } from "@prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
+import { AssetStatus } from "@/lib/enums"
 
 const VALID_AUDIO_STATUSES: AssetStatus[] = ["PENDING", "GENERATING", "COMPLETE", "FAILED"]
 
@@ -32,25 +32,16 @@ export async function GET(
 
     const { id } = await params
 
-    const script = await prisma.videoScript.findUnique({
-        where: { id },
-        include: {
-            contentIdea: {
-                select: {
-                    id: true,
-                    calendarEntry: {
-                        select: {
-                            id: true,
-                            dayNumber: true,
-                            entryDate: true,
-                            topic: true,
-                            platform: true,
-                        },
-                    },
-                },
-            },
-        },
-    })
+    const { data: script, error } = await supabaseAdmin
+        .from("video_scripts")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle()
+
+    if (error) {
+        console.error("[scripts/:id] Fetch error:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
 
     if (!script) {
         return NextResponse.json(
@@ -59,7 +50,22 @@ export async function GET(
         )
     }
 
-    return NextResponse.json({ script })
+    let contentIdeaWithEntry: Record<string, unknown> | null = null
+    if (script.contentIdeaId) {
+        const { data: idea, error: ideaError } = await supabaseAdmin
+            .from("content_ideas")
+            .select("id, calendarEntry:production_calendar_entries(id, dayNumber, entryDate, topic, platform)")
+            .eq("id", script.contentIdeaId)
+            .maybeSingle()
+
+        if (ideaError) {
+            console.error("[scripts/:id] Content idea fetch error:", ideaError)
+        } else if (idea) {
+            contentIdeaWithEntry = idea
+        }
+    }
+
+    return NextResponse.json({ script: { ...script, contentIdea: contentIdeaWithEntry } })
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +101,17 @@ export async function PUT(
         )
     }
 
-    const existing = await prisma.videoScript.findUnique({ where: { id } })
+    const { data: existing, error: existingError } = await supabaseAdmin
+        .from("video_scripts")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle()
+
+    if (existingError) {
+        console.error("[scripts/:id] Fetch error:", existingError)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+
     if (!existing) {
         return NextResponse.json(
             { error: `VideoScript not found: ${id}` },
@@ -110,7 +126,21 @@ export async function PUT(
     if (body.audioStorageUrl !== undefined) update.audioStorageUrl = body.audioStorageUrl
     if (body.audioStatus !== undefined) update.audioStatus = body.audioStatus as AssetStatus
 
-    const updated = await prisma.videoScript.update({ where: { id }, data: update })
+    if (Object.keys(update).length === 0) {
+        return NextResponse.json({ script: existing })
+    }
+
+    const { data: updated, error: updateError } = await supabaseAdmin
+        .from("video_scripts")
+        .update(update)
+        .eq("id", id)
+        .select("*")
+        .single()
+
+    if (updateError || !updated) {
+        console.error("[scripts/:id] Update error:", updateError)
+        return NextResponse.json({ error: "Failed to update video script" }, { status: 500 })
+    }
 
     return NextResponse.json({ script: updated })
 }

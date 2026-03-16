@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import prisma from "@/lib/prisma"; // Using the singleton prisma client
+import { supabaseAdmin } from "@/lib/supabase"; // Supabase service client
 
 export async function POST(req: NextRequest) {
     try {
@@ -37,11 +37,14 @@ export async function POST(req: NextRequest) {
         // 1. Store in Prisma 'Buyer' table (Upsert avoids errors if buying twice)
         console.log(`[Shopify Webhook] Logging buyer email to Postgres: ${normalizedEmail}`);
 
-        await prisma.buyer.upsert({
-            where: { email: normalizedEmail },
-            update: {}, // No updates needed if already exists
-            create: { email: normalizedEmail }
-        });
+        const { error } = await supabaseAdmin
+            .from("buyers")
+            .upsert({ email: normalizedEmail }, { onConflict: "email" })
+
+        if (error) {
+            console.error("[Shopify Webhook] Supabase upsert error:", error)
+            return NextResponse.json({ error: "Server error" }, { status: 500 })
+        }
 
         return NextResponse.json({ success: true, email: normalizedEmail });
     } catch (error) {

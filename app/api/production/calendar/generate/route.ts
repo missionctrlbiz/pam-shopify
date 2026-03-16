@@ -16,13 +16,13 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { generateContentIdea } from "@/lib/production/contentStrategist"
 import {
     Platform,
     FunnelStage,
     PostType,
-} from "@prisma/client"
+} from "@/lib/enums"
 
 // Allow up to 5 minutes for batch generation (Vercel Pro / Fluid compute)
 export const maxDuration = 300
@@ -102,16 +102,28 @@ export async function POST(req: NextRequest) {
 
         // Optionally clear existing DRAFT entries
         if (overwrite) {
-            await prisma.productionCalendarEntry.deleteMany({
-                where: { publishStatus: "DRAFT" },
-            })
+            const { error: deleteError } = await supabaseAdmin
+                .from("production_calendar_entries")
+                .delete()
+                .eq("publishStatus", "DRAFT")
+
+            if (deleteError) {
+                console.error("[calendar/generate] Delete error:", deleteError)
+                return NextResponse.json({ error: "Failed to clear drafts" }, { status: 500 })
+            }
         }
 
-        // Fetch a spread of active clinical fields (all categories represented)
-        const clinicalFields = await prisma.clinicalField.findMany({
-            where: { isActive: true },
-            orderBy: { fieldCategory: "asc" },
-        })
+        // Fetch active clinical fields
+        const { data: clinicalFields, error: clinicalError } = await supabaseAdmin
+            .from("clinical_fields")
+            .select("*")
+            .eq("isActive", true)
+            .order("fieldCategory", { ascending: true })
+
+        if (clinicalError) {
+            console.error("[calendar/generate] Clinical field fetch error:", clinicalError)
+            return NextResponse.json({ error: "Failed to read clinical fields" }, { status: 500 })
+        }
 
         if (clinicalFields.length === 0) {
             return NextResponse.json(
@@ -149,37 +161,43 @@ export async function POST(req: NextRequest) {
                 )
 
                 // Create entry + idea in a transaction
-                const entry = await prisma.$transaction(async (tx) => {
-                    const calEntry = await tx.productionCalendarEntry.create({
-                        data: {
-                            dayNumber: absoluteDay + 1,
-                            entryDate,
-                            platform: template.platform,
-                            topic: masterJson.title || masterJson.hook || field.displayName,
-                            contentGoal: template.contentGoal,
-                            funnelStage: template.funnelStage,
-                            postType: template.postType,
-                            hook: masterJson.hook,
-                            cta: masterJson.cta,
-                            publishStatus: "DRAFT",
-                        },
+                const { data: calEntry, error: entryError } = await supabaseAdmin
+                    .from("production_calendar_entries")
+                    .insert({
+                        dayNumber: absoluteDay + 1,
+                        entryDate: entryDate.toISOString(),
+                        platform: template.platform,
+                        topic: masterJson.title || masterJson.hook || field.displayName,
+                        contentGoal: template.contentGoal,
+                        funnelStage: template.funnelStage,
+                        postType: template.postType,
+                        hook: masterJson.hook,
+                        cta: masterJson.cta,
+                        publishStatus: "DRAFT",
+                    })
+                    .select("*")
+                    .single()
+
+                if (entryError || !calEntry) {
+                    throw new Error(entryError?.message ?? "Failed to create calendar entry")
+                }
+
+                const { error: ideaError } = await supabaseAdmin
+                    .from("content_ideas")
+                    .insert({
+                        calendarEntryId: calEntry.id,
+                        clinicalFieldId: field.id,
+                        masterJson: masterJson as object,
+                        rawGeminiPrompt: rawPrompt,
+                        qualityGateStatus: "PENDING",
+                        generatedById,
                     })
 
-                    await tx.contentIdea.create({
-                        data: {
-                            calendarEntryId: calEntry.id,
-                            clinicalFieldId: field.id,
-                            masterJson: masterJson as object,
-                            rawGeminiPrompt: rawPrompt,
-                            qualityGateStatus: "PENDING",
-                            generatedById,
-                        },
-                    })
+                if (ideaError) {
+                    throw new Error(ideaError.message)
+                }
 
-                    return calEntry
-                })
-
-                results.push({ dayNumber: absoluteDay + 1, entryId: entry.id, topic: masterJson.title || masterJson.hook || field.displayName })
+                results.push({ dayNumber: absoluteDay + 1, entryId: calEntry.id, topic: masterJson.title || masterJson.hook || field.displayName })
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err)
                 errors.push(`Day ${absoluteDay + 1} (${field.fieldKey}): ${msg}`)

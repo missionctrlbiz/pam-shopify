@@ -19,8 +19,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import { AssetType, Platform, RenderJobType } from "@prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
+import { AssetType, Platform, RenderJobType } from "@/lib/enums"
 import { runRepurposeInline, runCarouselInline, runVideoScriptInline } from "@/lib/production/repurposeInline"
 
 // Vercel Pro: allow up to 60 s (inline Gemini call ~10–20 s)
@@ -115,14 +115,16 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // Fetch idea + entry + existing render jobs
-        const idea = await prisma.contentIdea.findUnique({
-            where: { id: contentIdeaId },
-            include: {
-                calendarEntry: true,
-                renderJobs: { select: { id: true, status: true } },
-            },
-        })
+        const { data: idea, error: ideaError } = await supabaseAdmin
+            .from("content_ideas")
+            .select(`*, calendarEntry:production_calendar_entries(*)`)
+            .eq("id", contentIdeaId)
+            .maybeSingle()
+
+        if (ideaError) {
+            console.error("[assets/generate] Failed to fetch content idea:", ideaError)
+            return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+        }
 
         if (!idea) {
             return NextResponse.json(
@@ -131,7 +133,14 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const entry = idea.calendarEntry
+        const entry = idea.calendarEntry as {
+            id: string
+            entryDate: string
+            publishStatus: string
+            platform: Platform
+            postType: string
+            topic: string
+        } | null
 
         if (!entry) {
             return NextResponse.json(
@@ -150,6 +159,7 @@ export async function POST(req: NextRequest) {
         }
 
         const master = idea.masterJson as Record<string, unknown>
+        const entryDateIso = new Date(entry.entryDate).toISOString()
 
         const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "localhost:3000"
         const protocol = host.includes("localhost") ? "http" : "https"
@@ -179,38 +189,50 @@ export async function POST(req: NextRequest) {
         ): Promise<string> => {
             const workerUrl = WORKER_URLS[workerUrlEnvKey]
 
-            // Create ContentAsset placeholders
-            const assetCreates = assetTypes.map(({ assetType, platform }) => ({
+            const payload = {
                 contentIdeaId,
-                platform,
-                assetType,
-                fileName: buildFileName(platform, entry.entryDate, entry.topic, assetType, 1),
-                status: "PENDING" as const,
-            }))
+                masterJson: master,
+                platform: entry.platform,
+                postType: entry.postType,
+                topic: entry.topic,
+                entryDate: entryDateIso,
+                ...extraPayload,
+            }
 
-            // Create the RenderJob row first so we have its ID for the payload
-            const renderJob = await prisma.renderJob.create({
-                data: {
+            const { data: renderJob, error: renderJobError } = await supabaseAdmin
+                .from("render_jobs")
+                .insert({
                     contentIdeaId,
                     jobType,
                     status: "QUEUED",
-                    inputPayload: {
-                        contentIdeaId,
-                        masterJson: master,
-                        platform: entry.platform,
-                        postType: entry.postType,
-                        topic: entry.topic,
-                        entryDate: entry.entryDate.toISOString(),
-                        ...extraPayload,
-                    } as object,
-                },
-            })
+                    inputPayload: payload as object,
+                })
+                .select("id")
+                .single()
 
-            // Create assets linked to the job
-            await prisma.contentAsset.createMany({
-                data: assetCreates.map((a) => ({ ...a, renderJobId: renderJob.id })),
-                skipDuplicates: true,
-            })
+            if (renderJobError || !renderJob) {
+                throw new Error(`Failed to create ${jobType} job: ${renderJobError?.message ?? "unknown error"}`)
+            }
+
+            const placeholders = assetTypes.map(({ assetType, platform }) => ({
+                contentIdeaId,
+                platform,
+                assetType,
+                renderJobId: renderJob.id,
+                fileName: buildFileName(platform, entryDateIso, entry.topic, assetType, 1),
+                status: "PENDING" as const,
+            }))
+
+            if (placeholders.length > 0) {
+                const { error: assetInsertError } = await supabaseAdmin
+                    .from("content_assets")
+                    .insert(placeholders)
+
+                if (assetInsertError) {
+                    await supabaseAdmin.from("render_jobs").delete().eq("id", renderJob.id)
+                    throw new Error(`Failed to create asset placeholders for ${jobType}: ${assetInsertError.message}`)
+                }
+            }
 
             // Enqueue to Cloud Tasks — skip if GCP credentials are absent (inline path)
             if (!gcpConfigured || !workerUrl) {
@@ -227,22 +249,27 @@ export async function POST(req: NextRequest) {
                     platform: entry.platform,
                     postType: entry.postType,
                     topic: entry.topic,
-                    entryDate: entry.entryDate.toISOString(),
+                    entryDate: entryDateIso,
                     callbackUrl,
                     callbackSecret,
                     ...extraPayload,
                 })
-                await prisma.renderJob.update({
-                    where: { id: renderJob.id },
-                    data: { cloudTasksTaskId: taskName },
-                })
+
+                const { error: updateTaskError } = await supabaseAdmin
+                    .from("render_jobs")
+                    .update({ cloudTasksTaskId: taskName })
+                    .eq("id", renderJob.id)
+
+                if (updateTaskError) {
+                    console.error("[assets/generate] Failed to save Cloud Task id:", updateTaskError)
+                }
                 jobs.push({ jobType, taskId: taskName, renderJobId: renderJob.id })
             } catch (err) {
                 errors.push(`Failed to enqueue ${jobType}: ${(err as Error).message}`)
-                await prisma.renderJob.update({
-                    where: { id: renderJob.id },
-                    data: { status: "FAILED", errorMessage: (err as Error).message },
-                })
+                await supabaseAdmin
+                    .from("render_jobs")
+                    .update({ status: "FAILED", errorMessage: (err as Error).message })
+                    .eq("id", renderJob.id)
             }
 
             return renderJob.id
@@ -262,7 +289,7 @@ export async function POST(req: NextRequest) {
                         platform: entry.platform,
                         postType: entry.postType,
                         topic: entry.topic,
-                        entryDate: entry.entryDate.toISOString(),
+                        entryDate: entryDateIso,
                     })
                     const j = jobs.find(j => j.renderJobId === carouselJobId)
                     if (j) j.taskId = "inline-complete"
@@ -285,7 +312,7 @@ export async function POST(req: NextRequest) {
                         platform: entry.platform,
                         postType: entry.postType,
                         topic: entry.topic,
-                        entryDate: entry.entryDate.toISOString(),
+                        entryDate: entryDateIso,
                     })
                     // Update the job record in our local list to reflect completion
                     const j = jobs.find(j => j.renderJobId === repurposeJobId)
@@ -313,7 +340,7 @@ export async function POST(req: NextRequest) {
                         platform: entry.platform,
                         postType: entry.postType,
                         topic: entry.topic,
-                        entryDate: entry.entryDate.toISOString(),
+                        entryDate: entryDateIso,
                         voiceId: voiceId ?? undefined,
                     })
                     const j = jobs.find(j => j.renderJobId === videoJobId)
@@ -329,10 +356,14 @@ export async function POST(req: NextRequest) {
         // via runRepurposeInline — don't overwrite that.
         const hasAsyncJobs = jobs.some(j => j.taskId !== "inline-complete")
         if (jobs.length > 0 && hasAsyncJobs) {
-            await prisma.productionCalendarEntry.update({
-                where: { id: entry.id },
-                data: { publishStatus: "GENERATING" },
-            })
+            const { error: statusError } = await supabaseAdmin
+                .from("production_calendar_entries")
+                .update({ publishStatus: "GENERATING" })
+                .eq("id", entry.id)
+
+            if (statusError) {
+                console.error("[assets/generate] Failed to move entry to GENERATING:", statusError)
+            }
         }
 
         return NextResponse.json(
@@ -356,12 +387,12 @@ export async function POST(req: NextRequest) {
 
 function buildFileName(
     platform: string,
-    entryDate: Date,
+    entryDateIso: string,
     topic: string,
     assetType: AssetType,
     version: number
 ): string {
-    const date = entryDate.toISOString().slice(0, 10).replace(/-/g, "")
+    const date = new Date(entryDateIso).toISOString().slice(0, 10).replace(/-/g, "")
     const topicSlug = topic
         .replace(/[^a-zA-Z0-9 ]/g, "")
         .split(" ")

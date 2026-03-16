@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 
 export async function GET(
     _req: NextRequest,
@@ -22,39 +22,38 @@ export async function GET(
 
     const { id } = await params
 
-    const asset = await prisma.contentAsset.findUnique({
-        where: { id },
-        include: {
-            contentIdea: {
-                select: {
-                    id: true,
-                    qualityGateStatus: true,
-                    calendarEntry: {
-                        select: {
-                            id: true,
-                            dayNumber: true,
-                            entryDate: true,
-                            platform: true,
-                            topic: true,
-                            publishStatus: true,
-                        },
-                    },
-                },
-            },
-            renderJob: {
-                select: {
-                    id: true,
-                    jobType: true,
-                    status: true,
-                    queuedAt: true,
-                    startedAt: true,
-                    completedAt: true,
-                    errorMessage: true,
-                    retryCount: true,
-                },
-            },
-        },
-    })
+    const { data: asset, error } = await supabaseAdmin
+        .from("content_assets")
+        .select(`*,
+            contentIdea:content_ideas(
+                id,
+                qualityGateStatus,
+                calendarEntry:production_calendar_entries(
+                    id,
+                    dayNumber,
+                    entryDate,
+                    platform,
+                    topic,
+                    publishStatus
+                )
+            ),
+            renderJob:render_jobs(
+                id,
+                jobType,
+                status,
+                queuedAt,
+                startedAt,
+                completedAt,
+                errorMessage,
+                retryCount
+            )`)
+        .eq("id", id)
+        .maybeSingle()
+
+    if (error) {
+        console.error("[assets/:id] Fetch error:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
 
     if (!asset) {
         return NextResponse.json(

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 
 // Add a buyer
 export async function POST(req: NextRequest) {
@@ -17,11 +17,17 @@ export async function POST(req: NextRequest) {
 
         const normalizedEmail = email.trim().toLowerCase()
 
-        const buyer = await prisma.buyer.upsert({
-            where: { email: normalizedEmail },
-            update: {},
-            create: { email: normalizedEmail },
-        })
+
+        const { data: buyer, error } = await supabaseAdmin
+            .from("buyers")
+            .upsert({ email: normalizedEmail }, { onConflict: "email" })
+            .select("id, email")
+            .single()
+
+        if (error || !buyer) {
+            console.error("[Admin Buyers] Supabase upsert error:", error)
+            return NextResponse.json({ error: "Failed to whitelist buyer" }, { status: 500 })
+        }
 
         return NextResponse.json({ id: buyer.id, email: buyer.email })
     } catch (error) {
@@ -38,8 +44,17 @@ export async function GET() {
     }
 
     try {
-        const buyers = await prisma.buyer.findMany({ orderBy: { createdAt: "desc" } })
-        return NextResponse.json({ buyers })
+        const { data: buyers, error } = await supabaseAdmin
+            .from("buyers")
+            .select("id, email, createdAt")
+            .order("createdAt", { ascending: false })
+
+        if (error) {
+            console.error("[Admin Buyers] Fetch error:", error)
+            return NextResponse.json({ error: "Server error" }, { status: 500 })
+        }
+
+        return NextResponse.json({ buyers: buyers ?? [] })
     } catch (error) {
         console.error("[Admin Buyers] Error:", error)
         return NextResponse.json({ error: "Server error" }, { status: 500 })
@@ -60,7 +75,16 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: "Buyer ID is required" }, { status: 400 })
         }
 
-        await prisma.buyer.delete({ where: { id } })
+        const { error } = await supabaseAdmin
+            .from("buyers")
+            .delete()
+            .eq("id", id)
+
+        if (error) {
+            console.error("[Admin Buyers] Delete error:", error)
+            return NextResponse.json({ error: "Server error" }, { status: 500 })
+        }
+
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error("[Admin Buyers] Error:", error)

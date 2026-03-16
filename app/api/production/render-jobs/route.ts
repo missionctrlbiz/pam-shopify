@@ -17,8 +17,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import type { RenderJobStatus } from "@prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
+import type { RenderJobStatus } from "@/lib/enums"
 
 export async function GET(req: NextRequest) {
     const session = await auth()
@@ -37,52 +37,45 @@ export async function GET(req: NextRequest) {
         ? (statusParam.split(",").filter((s) => VALID.includes(s as RenderJobStatus)) as RenderJobStatus[])
         : undefined
 
-    const where = statusFilter?.length ? { status: { in: statusFilter } } : {}
+    const selectClause = `*,
+        contentIdea:content_ideas(
+            id,
+            calendarEntry:production_calendar_entries(id, dayNumber, platform, postType, topic, entryDate)
+        ),
+        assets:content_assets(id, assetType, platform, status, storageUrl, fileName, metadata)
+    `
 
-    const [jobs, total] = await Promise.all([
-        prisma.renderJob.findMany({
-            where,
-            orderBy: { queuedAt: "desc" },
-            take: limitParam,
-            skip,
-            include: {
-                contentIdea: {
-                    select: {
-                        id: true,
-                        calendarEntry: {
-                            select: {
-                                id: true,
-                                dayNumber: true,
-                                platform: true,
-                                postType: true,
-                                topic: true,
-                                entryDate: true,
-                            },
-                        },
-                    },
-                },
-                assets: {
-                    select: {
-                        id: true,
-                        assetType: true,
-                        platform: true,
-                        status: true,
-                        storageUrl: true,
-                        fileName: true,
-                        metadata: true,
-                    },
-                },
-            },
-        }),
-        prisma.renderJob.count({ where }),
-    ])
+    let jobsQuery = supabaseAdmin
+        .from("render_jobs")
+        .select(selectClause, { count: "exact" })
 
-    const hasActive = await prisma.renderJob.count({
-        where: { status: { in: ["QUEUED", "RUNNING"] } },
-    }).then((n) => n > 0)
+    if (statusFilter?.length) {
+        jobsQuery = jobsQuery.in("status", statusFilter)
+    }
+
+    jobsQuery = jobsQuery.order("queuedAt", { ascending: false }).range(skip, skip + limitParam - 1)
+
+    const { data: jobs, error, count } = await jobsQuery
+
+    if (error) {
+        console.error("[render-jobs] Supabase fetch error:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+
+    const { count: activeCount, error: activeError } = await supabaseAdmin
+        .from("render_jobs")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["QUEUED", "RUNNING"])
+
+    if (activeError) {
+        console.error("[render-jobs] Active count error:", activeError)
+    }
+
+    const total = count ?? 0
+    const hasActive = (activeCount ?? 0) > 0
 
     return NextResponse.json({
-        jobs,
+        jobs: jobs ?? [],
         total,
         hasActive,
         pagination: {

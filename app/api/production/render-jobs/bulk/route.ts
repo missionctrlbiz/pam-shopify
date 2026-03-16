@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { supabaseAdmin } from "@/lib/supabase"
 import { auth } from "@/lib/auth"
 
 // ── DELETE /api/production/render-jobs/bulk ───────────────────────────────
@@ -14,9 +14,15 @@ export async function DELETE(req: NextRequest) {
     const ids = Array.isArray(body.ids) ? (body.ids as string[]) : []
     if (ids.length === 0) return NextResponse.json({ error: "No IDs provided" }, { status: 400 })
 
-    const { count } = await prisma.renderJob.deleteMany({
-        where: { id: { in: ids } },
-    })
+    const { error, count } = await supabaseAdmin
+        .from("render_jobs")
+        .delete({ count: "exact" })
+        .in("id", ids)
 
-    return NextResponse.json({ deleted: count })
+    if (error) {
+        console.error("[render-jobs/bulk] Delete error:", error)
+        return NextResponse.json({ error: "Failed to delete render jobs" }, { status: 500 })
+    }
+
+    return NextResponse.json({ deleted: count ?? 0 })
 }

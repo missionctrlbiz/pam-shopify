@@ -13,8 +13,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import prisma from "@/lib/prisma"
-import { PublishStatus } from "@prisma/client"
+import { supabaseAdmin } from "@/lib/supabase"
+import { PublishStatus } from "@/lib/enums"
 
 // ---------------------------------------------------------------------------
 // GET /api/production/calendar/[id]
@@ -31,34 +31,16 @@ export async function GET(
 
     const { id } = await params
 
-    const entry = await prisma.productionCalendarEntry.findUnique({
-        where: { id },
-        include: {
-            contentIdea: {
-                include: {
-                    clinicalField: {
-                        select: {
-                            fieldKey: true,
-                            displayName: true,
-                            fieldCategory: true,
-                            description: true,
-                        },
-                    },
-                    qualityGateResult: true,
-                    videoScript: true,
-                    assets: {
-                        orderBy: { createdAt: "asc" },
-                    },
-                    renderJobs: {
-                        orderBy: { queuedAt: "desc" },
-                    },
-                },
-            },
-            approvedBy: {
-                select: { id: true, name: true, email: true },
-            },
-        },
-    })
+    const { data: entry, error } = await supabaseAdmin
+        .from("production_calendar_entries")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle()
+
+    if (error) {
+        console.error("[calendar/:id] Fetch error:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
 
     if (!entry) {
         return NextResponse.json(
@@ -67,7 +49,82 @@ export async function GET(
         )
     }
 
-    return NextResponse.json({ entry })
+    const [contentIdeaRes, approvedRes] = await Promise.all([
+        supabaseAdmin
+            .from("content_ideas")
+            .select("*")
+            .eq("calendarEntryId", id)
+            .maybeSingle(),
+        entry.approvedById
+            ? supabaseAdmin
+                .from("User")
+                .select("id, name, email")
+                .eq("id", entry.approvedById)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
+    ])
+
+    if (contentIdeaRes.error) {
+        console.error("[calendar/:id] Content idea fetch error:", contentIdeaRes.error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+
+    const contentIdea = contentIdeaRes.data
+
+    if (contentIdea) {
+        const [clinicalField, qualityGateResult, videoScript, assets, renderJobs] = await Promise.all([
+            contentIdea.clinicalFieldId
+                ? supabaseAdmin
+                    .from("clinical_fields")
+                    .select("fieldKey, displayName, fieldCategory, description")
+                    .eq("id", contentIdea.clinicalFieldId)
+                    .maybeSingle()
+                    .then((res) => res.data)
+                : Promise.resolve(null),
+            supabaseAdmin
+                .from("quality_gate_results")
+                .select("*")
+                .eq("contentIdeaId", contentIdea.id)
+                .maybeSingle()
+                .then((res) => res.data),
+            supabaseAdmin
+                .from("video_scripts")
+                .select("*")
+                .eq("contentIdeaId", contentIdea.id)
+                .maybeSingle()
+                .then((res) => res.data),
+            supabaseAdmin
+                .from("content_assets")
+                .select("*")
+                .eq("contentIdeaId", contentIdea.id)
+                .order("createdAt", { ascending: true })
+                .then((res) => res.data ?? []),
+            supabaseAdmin
+                .from("render_jobs")
+                .select("*")
+                .eq("contentIdeaId", contentIdea.id)
+                .order("queuedAt", { ascending: false })
+                .then((res) => res.data ?? []),
+        ])
+
+        contentIdea.clinicalField = clinicalField
+        contentIdea.qualityGateResult = qualityGateResult ?? null
+        contentIdea.videoScript = videoScript ?? null
+        contentIdea.assets = assets ?? []
+        contentIdea.renderJobs = renderJobs ?? []
+    }
+
+    if (approvedRes.error) {
+        console.warn("[calendar/:id] Approved-by fetch warning:", approvedRes.error.message)
+    }
+
+    return NextResponse.json({
+        entry: {
+            ...entry,
+            contentIdea: contentIdea ?? null,
+            approvedBy: approvedRes.data ?? null,
+        },
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -117,10 +174,16 @@ export async function PUT(
     }
 
     // Check entry exists
-    const existing = await prisma.productionCalendarEntry.findUnique({
-        where: { id },
-        select: { id: true, contentIdea: { select: { id: true } } },
-    })
+    const { data: existing, error: existingError } = await supabaseAdmin
+        .from("production_calendar_entries")
+        .select("id, contentIdeas:content_ideas(id)")
+        .eq("id", id)
+        .maybeSingle()
+
+    if (existingError) {
+        console.error("[calendar/:id] Fetch error:", existingError)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
 
     if (!existing) {
         return NextResponse.json(
@@ -143,24 +206,36 @@ export async function PUT(
     }
 
     // Run both updates in a transaction if masterJson is also being updated
-    if (body.masterJson && existing.contentIdea) {
-        const [updatedEntry] = await prisma.$transaction([
-            prisma.productionCalendarEntry.update({
-                where: { id },
-                data: entryUpdate,
-            }),
-            prisma.contentIdea.update({
-                where: { id: existing.contentIdea.id },
-                data: { masterJson: body.masterJson as object },
-            }),
-        ])
-        return NextResponse.json({ entry: updatedEntry })
+    let updatedEntry = existing
+
+    if (Object.keys(entryUpdate).length > 0) {
+        const { data: updated, error: updateError } = await supabaseAdmin
+            .from("production_calendar_entries")
+            .update(entryUpdate)
+            .eq("id", id)
+            .select("*")
+            .single()
+
+        if (updateError) {
+            console.error("[calendar/:id] Update error:", updateError)
+            return NextResponse.json({ error: "Failed to update entry" }, { status: 500 })
+        }
+
+        updatedEntry = updated
     }
 
-    const updated = await prisma.productionCalendarEntry.update({
-        where: { id },
-        data: entryUpdate,
-    })
+    const linkedIdeaId = existing.contentIdeas?.[0]?.id
+    if (body.masterJson && linkedIdeaId) {
+        const { error: ideaError } = await supabaseAdmin
+            .from("content_ideas")
+            .update({ masterJson: body.masterJson as object })
+            .eq("id", linkedIdeaId)
 
-    return NextResponse.json({ entry: updated })
+        if (ideaError) {
+            console.error("[calendar/:id] Content idea update error:", ideaError)
+            return NextResponse.json({ error: "Failed to update content idea" }, { status: 500 })
+        }
+    }
+
+    return NextResponse.json({ entry: updatedEntry })
 }
