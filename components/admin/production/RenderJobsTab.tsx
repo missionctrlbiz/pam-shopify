@@ -460,7 +460,7 @@ export const RenderJobsTab: React.FC = () => {
                             )}
 
                             {previewAsset.assetType === "CAROUSEL_PNG" && (() => {
-                                const meta = (previewAsset as any).metadata as Record<string, unknown> | null
+                                const meta = (previewAsset as unknown as Record<string, unknown>).metadata as Record<string, unknown> | null
                                 const slideUrls = (meta?.slideUrls as string[]) ?? []
                                 return (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
@@ -479,7 +479,7 @@ export const RenderJobsTab: React.FC = () => {
                             })()}
 
                             {(previewAsset.assetType === "TEXT_POST" || previewAsset.assetType === "EMAIL_HTML" || previewAsset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
-                                const meta = (previewAsset as any).metadata as Record<string, unknown> | null
+                                const meta = (previewAsset as unknown as Record<string, unknown>).metadata as Record<string, unknown> | null
                                 const content = (meta?.content as string) ?? ""
                                 return (
                                     <div style={{ width: "100%" }}>
@@ -574,14 +574,14 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                         <span style={{ fontFamily: "monospace", fontSize: 11, background: PROD_BRAND.blueFaint, color: PROD_BRAND.blue, padding: "1px 6px", borderRadius: 4, fontWeight: 700, flexShrink: 0 }}>
                             D{String(entry.dayNumber).padStart(2, "0")}
                         </span>
-                        <span style={{ fontSize: 12, color: PLATFORM_META[entry.platform as Platform]?.color ?? PROD_BRAND.gray, fontWeight: 600, flexShrink: 0 }}>
+                        <span style={{ fontSize: 12, color: PLATFORM_META[entry.platform as Platform]?.color ?? PROD_BRAND.gray, fontWeight: 600, fontFamily: "var(--font-montserrat)", flexShrink: 0 }}>
                             {PLATFORM_META[entry.platform as Platform]?.label ?? entry.platform}
                         </span>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: PROD_BRAND.gray, flexShrink: 0 }}>
                             {POST_TYPE_META[entry.postType as PostType]?.icon}
                             {POST_TYPE_META[entry.postType as PostType]?.label ?? entry.postType}
                         </span>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: PROD_BRAND.navy, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "var(--font-montserrat)", color: PROD_BRAND.navy, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {entry.topic ?? "(no topic)"}
                         </span>
                     </div>
@@ -756,7 +756,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                         <audio controls style={{ width: "100%", height: 26 }} src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}`} />
                                                     )}
                                                     {asset.assetType === "CAROUSEL_PNG" && (() => {
-                                                        const meta = (asset as any).metadata as Record<string, unknown> | null
+                                                        const meta = (asset as unknown as Record<string, unknown>).metadata as Record<string, unknown> | null
                                                         const slideUrls = (meta?.slideUrls as string[]) ?? []
                                                         return slideUrls.length > 0 ? (
                                                             <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 4, width: "100%" }}>
@@ -779,7 +779,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                     })()}
                                                     {(asset.assetType === "TEXT_POST" || asset.assetType === "EMAIL_HTML" || asset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
                                                         // asset.metadata now exists on JobAsset with the updated API
-                                                        const meta = (asset as any).metadata as Record<string, unknown> | null
+                                                        const meta = (asset as unknown as Record<string, unknown>).metadata as Record<string, unknown> | null
                                                         const content = (meta?.content as string) ?? ""
                                                         const preview = content.slice(0, 90) + (content.length > 90 ? "…" : "")
                                                         return content ? (
@@ -814,16 +814,75 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                         </div>
                     )}
 
-                    {/* Job ID */}
-                    <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 10, color: PROD_BRAND.gray }}>Job ID:</span>
-                        <span style={{ fontFamily: "monospace", fontSize: 10, color: PROD_BRAND.gray }}>{job.id}</span>
-                        <a
-                            href={`/admin?panel=production&entryId=${entry.id}`}
-                            style={{ fontSize: 10, color: PURPLE_CONST, textDecoration: "none", fontWeight: 600 }}
-                        >
-                            → Open Entry
-                        </a>
+                    {/* Job Diagnostics Panel */}
+                    <div style={{ marginTop: 16, borderTop: `1px solid ${PROD_BRAND.border}`, paddingTop: 16 }}>
+                        <h4 style={{ fontSize: 12, fontWeight: 700, color: PROD_BRAND.navy, marginBottom: 12, fontFamily: "var(--font-montserrat)" }}>Job Diagnostics</h4>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0 }}>Job ID:</span>
+                                <span style={{ fontFamily: "monospace", fontSize: 10, color: PROD_BRAND.navy, background: PROD_BRAND.grayFaint, padding: "2px 6px", borderRadius: 4 }}>{job.id}</span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(job.id); }}
+                                    style={{ background: "none", border: "none", fontSize: 10, cursor: "pointer", color: PROD_BRAND.blue, padding: 0 }}
+                                    title="Copy Job ID"
+                                >Copy</button>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0 }}>Entry ID:</span>
+                                <span style={{ fontFamily: "monospace", fontSize: 10, color: PROD_BRAND.navy, background: PROD_BRAND.grayFaint, padding: "2px 6px", borderRadius: 4 }}>{entry.id}</span>
+                                <a
+                                    href={`/admin?panel=production&entryId=${entry.id}`}
+                                    style={{ fontSize: 10, color: PURPLE_CONST, textDecoration: "none", fontWeight: 600, display: "flex", alignItems: "center" }}
+                                >
+                                    Open Entry
+                                </a>
+                            </div>
+
+                            {/* Show callback payload indicator if we have completed assets */}
+                            {completedAssets.length > 0 && (
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                    <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0, marginTop: 2 }}>Storage:</span>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                        {completedAssets.map(a => (
+                                            <div key={a.id} style={{ fontSize: 10, fontFamily: "monospace", color: PROD_BRAND.gray, wordBreak: "break-all" }}>
+                                                {a.storageUrl ? new URL(a.storageUrl).pathname.split('/').pop() || 'Unknown path' : 'No URL'}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {job.errorMessage && (
+                                <div style={{ marginTop: 8, background: PROD_BRAND.redFaint, padding: 12, borderRadius: 8, border: `1px solid ${PROD_BRAND.red}44` }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: PROD_BRAND.red }}>Error Log</span>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(job.errorMessage || ""); }}
+                                            style={{ background: "none", border: "none", fontSize: 10, cursor: "pointer", color: PROD_BRAND.red, padding: 0, fontWeight: 600 }}
+                                        >Copy Error</button>
+                                    </div>
+                                    <pre style={{ fontSize: 10, color: PROD_BRAND.red, margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "monospace", maxHeight: 150, overflowY: "auto" }}>
+                                        {job.errorMessage}
+                                    </pre>
+                                </div>
+                            )}
+
+                            {/* Cloud Run link (simulated for diagnostics) */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                                <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0 }}>Worker Log:</span>
+                                <a
+                                    href={`https://console.cloud.google.com/run/detail/us-central1/pam-workers/logs?project=pam-project-id`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ fontSize: 10, color: PROD_BRAND.blue, textDecoration: "none", fontWeight: 600 }}
+                                    onClick={e => e.stopPropagation()}
+                                >
+                                    View in GCP Cloud Run
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

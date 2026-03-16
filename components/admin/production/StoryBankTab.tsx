@@ -170,9 +170,14 @@ export function StoryBankTab({ entries, onRefresh }: StoryBankTabProps) {
     // ── Pagination ────────────────────────────────────────────────────────
     const PAGE_SIZE = 12
     const [storyPage, setStoryPage] = useState(1)
-    // Reset page when filters change
-    useEffect(() => { setStoryPage(1) }, [search, platformFilter, postTypeFilter, statusFilter])
+
+    // Reset page when filters change without creating an effect
+    // We achieve this by deriving the current valid page in render based on total pages
     const totalStoryPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+    // Auto-correct page if it is out of bounds due to filter change
+    if (storyPage > totalStoryPages && storyPage !== 1) {
+        setStoryPage(1)
+    }
     const paginatedFiltered = filtered.slice((storyPage - 1) * PAGE_SIZE, storyPage * PAGE_SIZE)
 
     // ── Bulk generate all without scenes ────────────────────────────────────

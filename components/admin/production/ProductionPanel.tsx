@@ -7,7 +7,7 @@ import { MotionIcon } from "motion-icons-react"
 import {
     CalendarDays, LayoutList, Upload, Zap, RefreshCw, Loader2,
     Filter, ChevronLeft, ChevronRight, AlertCircle, X,
-    BarChart3, FileUp, Download, BookOpen, Layers,
+    BarChart3, FileUp, Download, BookOpen, Layers, CheckCircle2,
 } from "lucide-react"
 import type {
     CalendarEntryRow, CalendarListResponse,
@@ -106,27 +106,28 @@ function CalendarGridView() {
     const [allEntries, setAllEntries] = useState<CalendarEntryRow[]>([])
     const [gridLoading, setGridLoading] = useState(true)
 
+    const [viewDate, setViewDate] = useState<Date>(new Date())
+
     // Fetch ALL entries for grid display (no filters, high limit)
     useEffect(() => {
+        let isMounted = true;
         setGridLoading(true)
         fetch("/api/production/calendar?limit=500")
             .then(r => r.json())
-            .then((data: CalendarListResponse) => setAllEntries(data.entries))
+            .then((data: CalendarListResponse) => {
+                if (!isMounted) return;
+                setAllEntries(data.entries)
+                if (data.entries.length > 0) {
+                    setViewDate(new Date(data.entries[0].entryDate))
+                }
+            })
             .catch(() => { })
-            .finally(() => setGridLoading(false))
+            .finally(() => {
+                if (isMounted) setGridLoading(false)
+            })
+
+        return () => { isMounted = false; }
     }, [])
-
-    const [viewDate, setViewDate] = useState<Date>(() => {
-        if (allEntries.length > 0) return new Date(allEntries[0].entryDate)
-        return new Date()
-    })
-
-    // Update viewDate when entries load
-    useEffect(() => {
-        if (allEntries.length > 0) {
-            setViewDate(new Date(allEntries[0].entryDate))
-        }
-    }, [allEntries])
 
     const year = viewDate.getFullYear()
     const month = viewDate.getMonth()
@@ -591,6 +592,13 @@ export function ProductionPanel() {
     const [generateResult, setGenerateResult] = useState<GenerateCycleResponse | null>(null)
     const [generateProgress, setGenerateProgress] = useState(0)
 
+    // Toast notification
+    const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null)
+    const showToast = (msg: string, type: "success" | "error" | "info" = "info") => {
+        setToast({ msg, type })
+        setTimeout(() => setToast(null), 4000)
+    }
+
     // ── Stats ───────────────────────────────────────────────────────────────
     const stats = React.useMemo(() => ({
         total: pagination.total,
@@ -683,6 +691,11 @@ export function ProductionPanel() {
 
         setGeneratedSoFar(prev => prev + totalGenerated)
         setGenerateResult({ generated: totalGenerated, failed: totalFailed, entries: [] })
+        if (totalFailed > 0) {
+            showToast(`Generated ${totalGenerated} entries. ${totalFailed} failed.`, "error")
+        } else {
+            showToast(`Successfully generated ${totalGenerated} new calendar entries!`, "success")
+        }
         await fetchCalendar(1)
         setGenerating(false)
     }
@@ -707,6 +720,27 @@ export function ProductionPanel() {
 
     return (
         <div className="space-y-6">
+            <AnimatePresence>
+                {toast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        style={{
+                            position: "fixed", bottom: "24px", right: "24px",
+                            background: toast.type === "success" ? BRAND.purple : toast.type === "error" ? BRAND.red : BRAND.navy,
+                            color: "white", padding: "12px 24px", borderRadius: "12px",
+                            boxShadow: "0 8px 30px rgba(0,0,0,0.15)", zIndex: 9999,
+                            fontFamily: "var(--font-montserrat)", fontWeight: 600, fontSize: "14px",
+                            display: "flex", alignItems: "center", gap: "10px"
+                        }}
+                    >
+                        {toast.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                        {toast.msg}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Sub-tab bar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <ViewTabs active={view} onChange={setView} />
@@ -730,7 +764,7 @@ export function ProductionPanel() {
                     </a>
                     <button
                         onClick={() => { setGenerateResult(null); setGenerateModalOpen(true) }}
-                        className="flex items-center gap-2 px-5 py-2 text-white rounded-xl text-sm font-bold shadow-lg"
+                        className="flex items-center gap-2 px-5 py-2 text-white rounded-xl text-sm font-bold shadow-lg font-montserrat tracking-wide"
                         style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
                     >
                         <Zap size={14} /> Generate 5
@@ -779,7 +813,7 @@ export function ProductionPanel() {
 
                         {/* Quick actions */}
                         <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100">
-                            <h3 className="text-lg font-extrabold tracking-tight mb-5" style={{ color: BRAND.navy }}>Quick Actions</h3>
+                            <h3 className="text-lg font-extrabold tracking-tight mb-5 font-montserrat" style={{ color: BRAND.navy }}>Quick Actions</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 {[
                                     { view: "table" as ProdView, iconName: "Table", Icon: LayoutList, label: "View Table", desc: "Browse all entries", color: BRAND.red },
@@ -791,8 +825,8 @@ export function ProductionPanel() {
                                         <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center mb-4 transition-colors group-hover:text-[#af5ce9]">
                                             <action.Icon size={20} className="text-slate-600 group-hover:text-[#af5ce9]" />
                                         </div>
-                                        <p className="text-sm font-bold" style={{ color: BRAND.navy }}>{action.label}</p>
-                                        <p className="text-slate-500 text-xs mt-1 font-medium">{action.desc}</p>
+                                        <p className="text-sm font-bold font-montserrat" style={{ color: BRAND.navy }}>{action.label}</p>
+                                        <p className="text-slate-500 text-xs mt-1 font-medium font-sans">{action.desc}</p>
                                     </button>
                                 ))}
                             </div>

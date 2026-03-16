@@ -10,6 +10,7 @@ import type { CalendarEntryDetail, ApproveResponse, GenerateAssetsResponse } fro
 import { PROD_BRAND, StatusBadge, PLATFORM_META, POST_TYPE_META } from "./CalendarTable"
 import { QualityGatePanel } from "./QualityGatePanel"
 import { AssetGrid } from "./AssetGrid"
+import { Button } from "../ui"
 
 type PanelTab = "content" | "quality" | "assets"
 
@@ -41,7 +42,11 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
 
     // ── Fetch entry detail ────────────────────────────────────────────────────
     const fetchEntry = useCallback(async (id: string, quiet = false) => {
-        if (!quiet) setLoading(true)
+        if (!quiet) {
+            setEntry(null)
+            setActiveTab("content")
+            setLoading(true)
+        }
         try {
             const res = await fetch(`/api/production/calendar/${id}`)
             if (res.ok) {
@@ -54,8 +59,6 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
 
     useEffect(() => {
         if (entryId) {
-            setEntry(null)
-            setActiveTab("content")
             fetchEntry(entryId)
         }
     }, [entryId, fetchEntry])
@@ -173,22 +176,23 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
                         }}
                     />
 
-                    {/* Panel */}
+                    {/* Modal Shell */}
                     <motion.div
                         key="panel"
-                        initial={{ x: "100%" }}
-                        animate={{ x: 0 }}
-                        exit={{ x: "100%" }}
+                        initial={{ y: "100%", opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: "100%", opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         style={{
-                            position: "fixed", top: 0, right: 0, bottom: 0,
-                            width: Math.min(720, typeof window !== "undefined" ? window.innerWidth : 720),
-                            background: PROD_BRAND.white,
+                            position: "fixed", top: "5%", left: "5%", right: "5%", bottom: "5%",
+                            maxWidth: 1000, margin: "0 auto",
+                            background: "var(--color-surface)",
+                            borderRadius: "24px",
                             zIndex: 50,
                             display: "flex",
                             flexDirection: "column",
-                            boxShadow: "-8px 0 40px rgba(0,0,0,0.12)",
-                            overflowY: "hidden",
+                            boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+                            overflow: "hidden",
                         }}
                     >
                         {/* Toast */}
@@ -251,10 +255,10 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
                                                 </span>
                                                 <StatusBadge status={entry.publishStatus} />
                                             </div>
-                                            <div style={{ fontSize: 17, fontWeight: 700, color: PROD_BRAND.navy, lineHeight: 1.3, marginBottom: 4 }}>
+                                            <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "var(--font-montserrat)", color: PROD_BRAND.navy, lineHeight: 1.3, marginBottom: 4 }}>
                                                 {entry.topic ?? "(no topic)"}
                                             </div>
-                                            <div style={{ fontSize: 12, color: PROD_BRAND.gray }}>
+                                            <div style={{ fontSize: 12, fontFamily: "var(--font-montserrat)", color: PROD_BRAND.gray }}>
                                                 {new Date(entry.entryDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
                                                 {entry.contentIdea?.clinicalField && (
                                                     <span style={{ marginLeft: 12 }}>
@@ -267,37 +271,27 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
                                         {/* Action buttons */}
                                         <div style={{ display: "flex", gap: 8, flexShrink: 0, flexDirection: "column", alignItems: "flex-end" }}>
                                             {canApprove && (
-                                                <button
+                                                <Button
                                                     onClick={() => handleApprove(false)}
                                                     disabled={approving}
-                                                    style={{
-                                                        padding: "7px 16px", borderRadius: 6, border: "none",
-                                                        background: approving ? PROD_BRAND.border : PROD_BRAND.green,
-                                                        color: approving ? PROD_BRAND.gray : PROD_BRAND.white,
-                                                        fontSize: 12, fontWeight: 700, cursor: approving ? "not-allowed" : "pointer",
-                                                        display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
-                                                    }}
+                                                    variant="success"
+                                                    size="sm"
                                                 >
-                                                    {approving ? <><RefreshCw size={12} className="animate-spin" /> Running…</> : <><CheckCircle2 size={12} /> Approve</>}
-                                                </button>
+                                                    {approving ? <><RefreshCw size={12} className="animate-spin mr-2" /> Running…</> : <><CheckCircle2 size={12} className="mr-2" /> Approve</>}
+                                                </Button>
                                             )}
                                             {canGenerate && (
-                                                <button
+                                                <Button
                                                     onClick={handleGenerateAssets}
                                                     disabled={generating}
-                                                    style={{
-                                                        padding: "7px 16px", borderRadius: 6, border: "none",
-                                                        background: generating ? PROD_BRAND.border : PROD_BRAND.navy,
-                                                        color: generating ? PROD_BRAND.gray : PROD_BRAND.white,
-                                                        fontSize: 12, fontWeight: 700, cursor: generating ? "not-allowed" : "pointer",
-                                                        display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
-                                                    }}
+                                                    variant="primary"
+                                                    size="sm"
                                                 >
                                                     {generating
-                                                        ? <><RefreshCw size={12} className="animate-spin" /> Queueing…</>
-                                                        : <><ChevronRight size={12} /> Generate Assets</>
+                                                        ? <><RefreshCw size={12} className="animate-spin mr-2" /> Queueing…</>
+                                                        : <><ChevronRight size={12} className="mr-2" /> Generate Assets</>
                                                     }
-                                                </button>
+                                                </Button>
                                             )}
                                         </div>
                                     </>
@@ -317,7 +311,7 @@ export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpd
                                                 ? `2px solid ${PROD_BRAND.blue}`
                                                 : "2px solid transparent",
                                             color: activeTab === tab.id ? PROD_BRAND.blue : PROD_BRAND.gray,
-                                            fontSize: 13, fontWeight: activeTab === tab.id ? 700 : 400,
+                                            fontSize: 13, fontWeight: activeTab === tab.id ? 700 : 600, fontFamily: "var(--font-montserrat)",
                                             cursor: "pointer", transition: "all 0.15s",
                                         }}
                                     >
