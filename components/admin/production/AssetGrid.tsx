@@ -255,13 +255,14 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                         const slideUrls = meta?.slideUrls as string[] | undefined
                                         if (!slideUrls || slideUrls.length <= 1) return null
                                         return (
-                                            <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                            <div style={{ marginTop: 6, display: "flex", overflowX: "auto", gap: 8, paddingBottom: 8 }} className="no-scrollbar">
                                                 {slideUrls.map((url, i) => (
-                                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                                                        style={{ fontSize: 10, fontWeight: 600, color: PROD_BRAND.blue, textDecoration: "none" }}
-                                                    >
-                                                        Slide {i + 1}
-                                                    </a>
+                                                    <div key={i} style={{ flexShrink: 0, width: 120, borderRadius: 8, overflow: "hidden", border: `1px solid ${PROD_BRAND.border}`, background: PROD_BRAND.grayFaint }}>
+                                                        <img src={`/api/production/assets/proxy?url=${encodeURIComponent(url)}`} alt={`Slide ${i + 1}`} style={{ width: "100%", height: "auto", display: "block", aspectRatio: "1/1", objectFit: "cover" }} />
+                                                        <div style={{ padding: "4px 8px", fontSize: 10, fontWeight: 700, fontFamily: "var(--font-montserrat)", color: PROD_BRAND.navy, textAlign: "center", borderTop: `1px solid ${PROD_BRAND.border}`, background: PROD_BRAND.white }}>
+                                                            SLIDE {i + 1}
+                                                        </div>
+                                                    </div>
                                                 ))}
                                             </div>
                                         )

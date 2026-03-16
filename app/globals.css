@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-open-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-montserrat: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
   
   --color-psych-navy: #041f50;
   --color-psych-blue: #1f6cb9;
@@ -24,6 +24,66 @@
 
   --background-image-gradient-psych: linear-gradient(135deg, #ed415b, #ec5185, #af5ce9);
   --background-image-gradient-brain: linear-gradient(135deg, #af5ce9, #1f6cb9);
+
+  /* Design System Colors */
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8fafc; /* slate-50 */
+  --color-surface-hover: #f1f5f9; /* slate-100 */
+  --color-border: #e2e8f0; /* slate-200 */
+  --color-border-subtle: #f1f5f9; /* slate-100 */
+
+  --color-accent: var(--color-psych-purple);
+  --color-accent-hover: var(--color-psych-purple-dark);
+
+  --color-success: #10b981; /* emerald-500 */
+  --color-success-bg: #ecfdf5; /* emerald-50 */
+  --color-success-border: #d1fae5; /* emerald-100 */
+
+  --color-warning: #f59e0b; /* amber-500 */
+  --color-warning-bg: #fffbeb; /* amber-50 */
+  --color-warning-border: #fef3c7; /* amber-100 */
+
+  --color-danger: var(--color-psych-red);
+  --color-danger-bg: #fff1f2; /* rose-50 */
+  --color-danger-border: #ffe4e6; /* rose-100 */
+
+  /* Typography Scale */
+  --text-display-size: 3rem; /* 48px */
+  --text-display-line-height: 1.1;
+  --text-display-font: var(--font-montserrat);
+  --text-display-weight: 800;
+
+  --text-title-size: 2.25rem; /* 36px */
+  --text-title-line-height: 1.2;
+  --text-title-font: var(--font-montserrat);
+  --text-title-weight: 700;
+
+  --text-headline-size: 1.5rem; /* 24px */
+  --text-headline-line-height: 1.3;
+  --text-headline-font: var(--font-montserrat);
+  --text-headline-weight: 700;
+
+  --text-body-size: 0.875rem; /* 14px */
+  --text-body-line-height: 1.5;
+  --text-body-font: var(--font-sans);
+  --text-body-weight: 400;
+
+  --text-caption-size: 0.75rem; /* 12px */
+  --text-caption-line-height: 1.4;
+  --text-caption-font: var(--font-sans);
+  --text-caption-weight: 400;
+
+  /* Spacing Scale (4px baseline) */
+  --spacing-1: 0.25rem; /* 4px */
+  --spacing-2: 0.5rem; /* 8px */
+  --spacing-3: 0.75rem; /* 12px */
+  --spacing-4: 1rem; /* 16px */
+  --spacing-5: 1.25rem; /* 20px */
+  --spacing-6: 1.5rem; /* 24px */
+  --spacing-8: 2rem; /* 32px */
+  --spacing-10: 2.5rem; /* 40px */
+  --spacing-12: 3rem; /* 48px */
+  --spacing-16: 4rem; /* 64px */
   
   --animate-border-spin: border-spin 4s linear infinite;
 
@@ -43,7 +103,42 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Typography Utility Classes */
+.font-display {
+  font-family: var(--text-display-font);
+  font-size: var(--text-display-size);
+  line-height: var(--text-display-line-height);
+  font-weight: var(--text-display-weight);
+}
+
+.font-title {
+  font-family: var(--text-title-font);
+  font-size: var(--text-title-size);
+  line-height: var(--text-title-line-height);
+  font-weight: var(--text-title-weight);
+}
+
+.font-headline {
+  font-family: var(--text-headline-font);
+  font-size: var(--text-headline-size);
+  line-height: var(--text-headline-line-height);
+  font-weight: var(--text-headline-weight);
+}
+
+.font-body {
+  font-family: var(--text-body-font);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line-height);
+  font-weight: var(--text-body-weight);
+}
+
+.font-caption {
+  font-family: var(--text-caption-font);
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-line-height);
+  font-weight: var(--text-caption-weight);
 }
 
 /* Hide scrollbar while keeping scroll behaviour */
