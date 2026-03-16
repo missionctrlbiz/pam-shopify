@@ -2,7 +2,7 @@
  * POST /api/production/calendar/generate
  *
  * Generates a batch of ProductionCalendarEntry + ContentIdea rows by:
- *   1. Fetching a spread of active ClinicalField rows from Prisma
+ *   1. Fetching a spread of active ClinicalField rows from Supabase
  *   2. Calling the Gemini Content Strategist for each day requested
  *   3. Persisting entries with status DRAFT
  *

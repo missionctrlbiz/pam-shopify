@@ -94,6 +94,8 @@ async function renderSlides(input) {
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--disable-gpu",
+            "--no-zygote",
+            "--single-process",
         ],
     });
     const slides = input.slideTextBlocks.length > 0

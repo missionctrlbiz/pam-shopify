@@ -1,4 +1,5 @@
-import { put } from "@vercel/blob"
+import { createClient } from "@supabase/supabase-js"
+import { randomBytes } from "crypto"
 
 interface UploadResult {
     url: string
@@ -10,16 +11,36 @@ export async function uploadAsset(
     pathname: string,
     contentType: string
 ): Promise<UploadResult> {
-    const token = process.env.BLOB_READ_WRITE_TOKEN
-    if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is not set")
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
 
-    const blob = await put(pathname, buffer, {
-        access: "private",
-        token,
-        contentType,
-        addRandomSuffix: true,
-    })
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error("Supabase URL and Key must be set in environment variables")
+    }
 
-    console.log(`[upload] ${pathname} → ${blob.url}`)
-    return { url: blob.url, pathname: blob.pathname }
+    const supabase = createClient(supabaseUrl, supabaseKey)
+    const bucketName = process.env.SUPABASE_STORAGE_BUCKET || "assets"
+
+    const suffix = randomBytes(4).toString("hex")
+    const ext = pathname.split('.').pop()
+    const nameWithoutExt = pathname.replace(`.${ext}`, '')
+    const suffixedPathname = `${nameWithoutExt}-${suffix}.${ext}`
+
+    const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(suffixedPathname, buffer, {
+            contentType,
+            upsert: true
+        })
+
+    if (error) {
+        throw new Error(`Failed to upload ${suffixedPathname}: ${error.message}`)
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(suffixedPathname)
+
+    console.log(`[upload] ${suffixedPathname} → ${publicUrl}`)
+    return { url: publicUrl, pathname: suffixedPathname }
 }

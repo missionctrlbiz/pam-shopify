@@ -1,4 +1,5 @@
-import { put } from "@vercel/blob"
+import { createClient } from "@supabase/supabase-js"
+import { randomBytes } from "crypto"
 
 interface TextFile {
     text: string
@@ -20,25 +21,40 @@ export async function storeTextAssets(
     date: string,
     topicSlug: string
 ): Promise<StoredAsset[]> {
-    const token = process.env.BLOB_READ_WRITE_TOKEN
-    if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is not set")
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
 
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error("Supabase URL and Key must be set in environment variables")
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
     const results: StoredAsset[] = []
+    const bucketName = process.env.SUPABASE_STORAGE_BUCKET || "assets"
 
     for (const file of files) {
-        const filename = `${prefix}_${file.platform}_${date}_${topicSlug}_v1.${file.ext}`
+        const suffix = randomBytes(4).toString("hex")
+        const filename = `${prefix}_${file.platform}_${date}_${topicSlug}_v1-${suffix}.${file.ext}`
         const pathname = `${blobFolder}/${filename}`
         const contentType = file.ext === "html" ? "text/html" : "text/plain"
 
-        const blob = await put(pathname, file.text, {
-            access: "private",
-            token,
-            contentType,
-            addRandomSuffix: true,
-        })
+        const { data, error } = await supabase.storage
+            .from(bucketName)
+            .upload(pathname, file.text, {
+                contentType,
+                upsert: true
+            })
 
-        results.push({ url: blob.url, pathname: blob.pathname, filename, platform: file.platform })
-        console.log(`[upload] Stored ${filename} → ${blob.url}`)
+        if (error) {
+            throw new Error(`Failed to upload ${filename}: ${error.message}`)
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(pathname)
+
+        results.push({ url: publicUrl, pathname, filename, platform: file.platform })
+        console.log(`[upload] Stored ${filename} → ${publicUrl}`)
     }
 
     return results
