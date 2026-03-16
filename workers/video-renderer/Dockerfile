@@ -7,6 +7,24 @@ FROM node:20 AS builder
 
 RUN apt-get update && apt-get install -y \
     chromium \
+    fonts-liberation \
+    fonts-noto \
+    libgbm1 \
+    libasound2 \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libxrender1 \
+    libxshmfence1 \
+    libx11-xcb1 \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
