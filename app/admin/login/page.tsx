@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
             })
 
             if (signInError) {
-                setError(signInError.message)
+                setError(`${signInError.message} (${process.env.NEXT_PUBLIC_SUPABASE_URL || 'undefined'})`)
             } else {
                 router.push("/admin")
                 router.refresh()
