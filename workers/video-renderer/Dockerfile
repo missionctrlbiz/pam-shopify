@@ -30,6 +30,7 @@ RUN npm run build
 #    This runs Remotion's Webpack bundler and produces a static site
 #    that @remotion/renderer's Chrome instance can serve locally.
 RUN ./node_modules/.bin/remotion bundle remotion-src/index.tsx dist/bundle
+RUN if [ -d "/app/build" ]; then echo "Fixing output path" && mv /app/build /app/dist/bundle; fi
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Stage 2 — Runtime
