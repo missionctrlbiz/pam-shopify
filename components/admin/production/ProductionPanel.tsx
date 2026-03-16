@@ -110,23 +110,30 @@ function CalendarGridView() {
 
     // Fetch ALL entries for grid display (no filters, high limit)
     useEffect(() => {
-        let isMounted = true;
-        setGridLoading(true)
-        fetch("/api/production/calendar?limit=500")
-            .then(r => r.json())
-            .then((data: CalendarListResponse) => {
-                if (!isMounted) return;
-                setAllEntries(data.entries)
-                if (data.entries.length > 0) {
-                    setViewDate(new Date(data.entries[0].entryDate))
+        let isMounted = true
+        const load = async () => {
+            setGridLoading(true)
+            try {
+                const res = await fetch("/api/production/calendar?limit=500")
+                if (!res.ok) throw new Error(`Status ${res.status}`)
+                const data = await res.json() as CalendarListResponse
+                if (!isMounted) return
+                const safeEntries = Array.isArray(data.entries) ? data.entries : []
+                setAllEntries(safeEntries)
+                if (safeEntries.length > 0) {
+                    setViewDate(new Date(safeEntries[0].entryDate))
                 }
-            })
-            .catch(() => { })
-            .finally(() => {
+            } catch (err) {
+                if (isMounted) {
+                    console.warn("[CalendarGrid] fetch failed", err)
+                    setAllEntries([])
+                }
+            } finally {
                 if (isMounted) setGridLoading(false)
-            })
-
-        return () => { isMounted = false; }
+            }
+        }
+        load()
+        return () => { isMounted = false }
     }, [])
 
     const year = viewDate.getFullYear()
@@ -621,11 +628,16 @@ export function ProductionPanel() {
             p.set("page", String(page))
             p.set("limit", "50")
             const res = await fetch(`/api/production/calendar?${p}`)
-            if (res.ok) {
-                const data = await res.json() as CalendarListResponse
-                setEntries(data.entries)
-                setPagination({ total: data.pagination.total, page: data.pagination.page, totalPages: data.pagination.totalPages })
-            }
+            if (!res.ok) throw new Error(`status ${res.status}`)
+            const data = await res.json() as CalendarListResponse
+            const safeEntries = Array.isArray(data.entries) ? data.entries : []
+            setEntries(safeEntries)
+            const pag = data.pagination ?? { total: safeEntries.length, page, limit: safeEntries.length, totalPages: 1 }
+            setPagination({
+                total: pag.total ?? safeEntries.length,
+                page: pag.page ?? page,
+                totalPages: pag.totalPages ?? 1,
+            })
         } catch { /* silent */ }
 
         setLoading(false)
