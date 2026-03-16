@@ -28,9 +28,8 @@ export const supabaseAdmin = supabaseServiceRoleKey
 // ---------------------------------------------------------------------------
 // Server-Side Auth Helper (for API routes / Server Components)
 // ---------------------------------------------------------------------------
-import { cookies } from "next/headers"
-
 export async function getServerAuth() {
+    const { cookies } = require("next/headers")
     const cookieStore = await cookies()
 
     return createServerClient(
