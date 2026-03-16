@@ -80,6 +80,7 @@ model Buyer {
   id        String   @id @default(cuid())
   email     String   @unique
   createdAt DateTime @default(now())
+  @@map("buyers")
 }
 
 // ==========================================
@@ -98,6 +99,7 @@ model Lead {
 
   @@index([email])
   @@index([userId])
+  @@map("leads")
 }
 
 // ==========================================
@@ -113,6 +115,7 @@ model SoapHistory {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@map("soap_histories")
 }
 
 // ==========================================
@@ -130,6 +133,7 @@ model UsageEvent {
   @@index([action])
   @@index([createdAt])
   @@index([userId])
+  @@map("usage_events")
 }
 
 // ==========================================
@@ -237,6 +241,7 @@ model ClinicalField {
 
   @@index([isActive])
   @@index([fieldCategory])
+  @@map("clinical_fields")
 }
 
 // ==========================================
@@ -269,6 +274,7 @@ model ProductionCalendarEntry {
   @@index([publishStatus])
   @@index([platform])
   @@index([approvedById])
+  @@map("production_calendar_entries")
 }
 
 // ==========================================
@@ -297,6 +303,7 @@ model ContentIdea {
 
   @@index([clinicalFieldId])
   @@index([generatedById])
+  @@map("content_ideas")
 }
 
 // ==========================================
@@ -322,6 +329,7 @@ model QualityGateResult {
   evaluatedAt       DateTime    @default(now())
 
   contentIdea ContentIdea @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
+  @@map("quality_gate_results")
 }
 
 // ==========================================
@@ -340,6 +348,7 @@ model VideoScript {
   updatedAt         DateTime    @updatedAt
 
   contentIdea ContentIdea @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
+  @@map("video_scripts")
 }
 
 // ==========================================
@@ -366,6 +375,7 @@ model ContentAsset {
 
   @@index([contentIdeaId, platform])
   @@index([status])
+  @@map("content_assets")
 }
 
 // ==========================================
@@ -388,4 +398,5 @@ model RenderJob {
 
   contentIdea ContentIdea    @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
   assets      ContentAsset[]
+  @@map("render_jobs")
 }
