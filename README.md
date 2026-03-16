@@ -22,7 +22,7 @@ GCP Infrastructure
 
 Storage
 ├── Vercel Blob — rendered PNG/MP4 assets
-└── Prisma Postgres — content calendar, leads, buyers, job status
+└── Supabase Postgres — content calendar, leads, buyers, job status
 ```
 
 ---
@@ -61,7 +61,7 @@ Storage
 | Layer       | Technology                                           |
 | ----------- | ---------------------------------------------------- |
 | Frontend    | Next.js 16 (App Router), TypeScript, Tailwind CSS v4 |
-| Auth        | NextAuth v5 + Prisma adapter                         |
+| Auth        | Supabase Auth                                        |
 | AI          | Google Gemini 1.5 Pro                                |
 | Commerce    | Shopify Storefront API (headless)                    |
 | Video       | Remotion + ElevenLabs TTS                            |
@@ -70,8 +70,8 @@ Storage
 | Queue       | Google Cloud Tasks                                   |
 | Images      | Artifact Registry (Docker)                           |
 | Secrets     | Google Secret Manager                                |
-| Database    | Prisma + Postgres (Prisma Data Platform)             |
-| Storage     | Vercel Blob                                          |
+| Database    | Supabase Postgres                                    |
+| Storage     | Supabase Storage                                     |
 | Hosting     | Vercel (Next.js) + GCP (workers)                     |
 
 ---
@@ -95,8 +95,6 @@ npm install
 Copy `.env` and fill in all values (see **Environment Variables** below), then:
 
 ```bash
-npx prisma db push        # apply schema to Postgres
-npx prisma db seed        # optional: seed site content
 npm run dev
 ```
 
@@ -121,8 +119,10 @@ SHOPIFY_STOREFRONT_ACCESS_TOKEN=
 # AI
 GEMINI_API_KEY=
 
-# Vercel Blob
-BLOB_READ_WRITE_TOKEN=
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE=
 
 # GCP
 GCP_PROJECT_ID=psych-mastery-production

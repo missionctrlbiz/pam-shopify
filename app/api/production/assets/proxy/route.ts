@@ -11,17 +11,13 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const url = searchParams.get("url")
     const filename = searchParams.get("filename") || searchParams.get("fileName")
-    const token = process.env.BLOB_READ_WRITE_TOKEN
 
     if (!url) return NextResponse.json({ error: "url required" }, { status: 400 })
-    if (!token) return NextResponse.json({ error: "missing token" }, { status: 500 })
 
     try {
-        const res = await fetch(url, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+        const res = await fetch(url)
 
-        if (!res.ok) return NextResponse.json({ error: "failed to fetch or authenticate blob" }, { status: res.status })
+        if (!res.ok) return NextResponse.json({ error: "failed to fetch blob" }, { status: res.status })
 
         const headers: Record<string, string> = {
             "Content-Type": res.headers.get("Content-Type") || "application/octet-stream",

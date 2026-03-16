@@ -52,7 +52,6 @@ next-env.d.ts
 *.pdf
 *.txt
 
-/lib/generated/prisma
 
 .vercel
 

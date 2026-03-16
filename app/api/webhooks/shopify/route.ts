@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
         const normalizedEmail = email.trim().toLowerCase();
 
-        // 1. Store in Prisma 'Buyer' table (Upsert avoids errors if buying twice)
+        // 1. Store in Supabase 'Buyer' table (Upsert avoids errors if buying twice)
         console.log(`[Shopify Webhook] Logging buyer email to Postgres: ${normalizedEmail}`);
 
         const { error } = await supabaseAdmin
