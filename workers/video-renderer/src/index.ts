@@ -93,7 +93,24 @@ app.post("/", async (req: Request, res: Response) => {
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         console.error(`[video-renderer] Job ${renderJobId} FAILED:`, message)
-        await postCallback(callbackUrl, { renderJobId, secret: callbackSecret, assets: [], error: message })
+
+        let dirContentBrief = ""
+        try {
+            const fs = await import("fs")
+            const path = await import("path")
+            const testPath = process.env.REMOTION_BUNDLE_PATH || "/app/dist/bundle"
+            if (fs.existsSync(testPath)) {
+                const files = fs.readdirSync(testPath)
+                dirContentBrief = ` (Files found inside ${testPath}: [${files.join(", ")}])`
+            } else {
+                dirContentBrief = ` (Directory ${testPath} does not exist entirely)`
+            }
+        } catch (dirErr) {
+            dirContentBrief = ` (Failed to read dir: ${(dirErr as Error).message})`
+        }
+
+        const finalError = `${message}${dirContentBrief}`
+        await postCallback(callbackUrl, { renderJobId, secret: callbackSecret, assets: [], error: finalError })
             .catch((e) => console.error("[video-renderer] Callback failed:", e))
     }
 })
