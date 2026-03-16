@@ -11,7 +11,7 @@
  */
 
 import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
-import { put } from "@vercel/blob"
+import { supabaseAdmin } from "@/lib/supabase"
 import satori from "satori"
 import { Resvg } from "@resvg/resvg-js"
 import prisma from "@/lib/prisma"
@@ -205,14 +205,31 @@ async function callGemini(prompt: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// Vercel Blob helper
+// Supabase Storage helper
 // ---------------------------------------------------------------------------
 
 async function storeBlob(pathname: string, content: string | Buffer, contentType: string): Promise<string> {
-    const token = process.env.BLOB_READ_WRITE_TOKEN
-    if (!token) throw new Error("BLOB_READ_WRITE_TOKEN not set")
-    const blob = await put(pathname, content, { access: "private", contentType, token, addRandomSuffix: true })
-    return blob.url
+    const bucket = 'production'
+
+    const { data, error } = await supabaseAdmin
+        .storage
+        .from(bucket)
+        .upload(pathname, content, {
+            contentType,
+            upsert: true // Overwrite if exists, standard for Vercel Blob
+        })
+
+    if (error) {
+        throw new Error(`Supabase Storage upload failed for ${pathname}: ${error.message}`)
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabaseAdmin
+        .storage
+        .from(bucket)
+        .getPublicUrl(pathname)
+
+    return publicUrl
 }
 
 // ---------------------------------------------------------------------------

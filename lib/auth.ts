@@ -1,50 +1,44 @@
-import NextAuth from "next-auth"
-import Credentials from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import prisma from "@/lib/prisma"
-import bcrypt from "bcryptjs"
-import { authConfig } from "./auth.config"
+import { getServerAuth, supabaseAdmin } from "./supabase"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-    ...authConfig,
-    adapter: PrismaAdapter(prisma),
-    session: { strategy: "jwt" },
-    providers: [
-        Credentials({
-            name: "credentials",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
-            },
-            async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) {
-                    return null
-                }
+/**
+ * Custom auth() wrapper replacing NextAuth for backward compatibility.
+ * Fetches the user from Supabase and packs it into the expected Session structure.
+ */
+export const auth = async () => {
+    try {
+        const supabase = await getServerAuth()
+        const { data: { user }, error } = await supabase.auth.getUser()
 
-                const user = await prisma.user.findUnique({
-                    where: { email: credentials.email as string },
-                })
+        if (error || !user) {
+            return null
+        }
 
-                if (!user || !user.password) {
-                    return null
-                }
+        // Fetch user profile for role verification
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
 
-                const isPasswordValid = await bcrypt.compare(
-                    credentials.password as string,
-                    user.password
-                )
+        return {
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.user_metadata?.name || null,
+                role: profile?.role || 'USER', // Supabase profile role mapping
+            }
+        }
+    } catch (e) {
+        console.error("[auth] wrapper error:", e)
+        return null
+    }
+}
 
-                if (!isPasswordValid) {
-                    return null
-                }
+export const signIn = () => {
+    throw new Error("signIn() is disabled from back, use supabaseBrowser.auth.signInWithPassword client-side.")
+}
 
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    role: user.role,
-                }
-            },
-        }),
-    ],
-})
+export const signOut = () => {
+    throw new Error("signOut() is disabled from back, use supabaseBrowser.auth.signOut client-side.")
+}
+

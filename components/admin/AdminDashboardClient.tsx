@@ -3,13 +3,13 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { signOut } from "next-auth/react"
+import { supabaseBrowser } from "@/lib/supabase"
 import { MotionIcon } from "motion-icons-react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import {
     Users, Mail, BarChart3, LogOut, Plus,
-    Trash2, Search, Activity, RefreshCw, Loader2, FileEdit, CalendarDays
+    Trash2, Search, Activity, RefreshCw, Loader2, FileEdit, CalendarDays, Globe
 } from "lucide-react"
 import { ContentEditor } from "./ContentEditor"
 import Link from "next/link"
@@ -206,17 +206,20 @@ export function AdminDashboardClient({ session }: { session: any }) {
 
                 <div className="p-4 border-t border-slate-100 mt-auto space-y-3">
                     <div className="flex items-center gap-3 px-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-200 to-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs uppercase shadow-inner">
-                            {session?.user?.email?.charAt(0) || "A"}
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 overflow-hidden shadow-inner">
+                            <Image src="/favicon-white.png" alt="Avatar" width={32} height={32} className="object-cover" />
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-xs font-bold text-slate-700 truncate">{session?.user?.email}</p>
+                            <p className="text-xs font-bold text-slate-700 truncate">Anthonia Ojomo</p>
                             <p className="text-[10px] text-slate-500 uppercase tracking-wide">Administrator</p>
                         </div>
                     </div>
 
                     <button
-                        onClick={() => signOut({ callbackUrl: "/" })}
+                        onClick={async () => {
+                            await supabaseBrowser.auth.signOut()
+                            router.push("/")
+                        }}
                         className="flex w-full items-center justify-center gap-2 px-4 py-2.5 mt-2 text-sm font-bold text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-sm"
                     >
                         <LogOut size={16} />
@@ -231,7 +234,10 @@ export function AdminDashboardClient({ session }: { session: any }) {
                 <button
                     type="button"
                     aria-label="Logout"
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    onClick={async () => {
+                        await supabaseBrowser.auth.signOut()
+                        router.push("/")
+                    }}
                     className="p-2 text-slate-500 bg-slate-100 rounded-lg"
                 >
                     <LogOut size={18} />
@@ -265,6 +271,14 @@ export function AdminDashboardClient({ session }: { session: any }) {
                         </div>
 
                         <div className="flex items-center gap-4">
+                            <Link href="/">
+                                <button
+                                    className="flex items-center gap-2 px-4 py-2 text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-sm text-sm font-bold"
+                                >
+                                    <Globe size={14} />
+                                    View Website
+                                </button>
+                            </Link>
                             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 shadow-sm">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-emerald-700 text-[10px] font-bold uppercase tracking-widest">Sys. Live</span>

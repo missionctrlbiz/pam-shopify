@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { supabaseBrowser } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { Lock, Mail, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { motion } from "framer-motion"
@@ -21,14 +21,13 @@ export default function AdminLoginPage() {
         setIsLoading(true)
 
         try {
-            const res = await signIn("credentials", {
+            const { error: signInError } = await supabaseBrowser.auth.signInWithPassword({
                 email,
                 password,
-                redirect: false,
             })
 
-            if (res?.error) {
-                setError("Invalid email or password.")
+            if (signInError) {
+                setError(signInError.message)
             } else {
                 router.push("/admin")
                 router.refresh()
