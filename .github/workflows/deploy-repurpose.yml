@@ -56,4 +56,4 @@ jobs:
             --concurrency=1 \
             --min-instances=0 \
             --max-instances=3 \
-            --set-secrets=GEMINI_API_KEY=pam-gemini-api-key:latest,NEXT_PUBLIC_SUPABASE_ANON_KEY=pam-supabase-anon-key:latest,SUPABASE_URL=pam-supabase-url:latest,RENDER_CALLBACK_SECRET=pam-render-callback-secret:latest
+            --set-secrets=GEMINI_API_KEY=pam-gemini-api-key:latest,NEXT_PUBLIC_SUPABASE_ANON_KEY=pam-supabase-anon-key:latest,SUPABASE_URL=pam-supabase-url:latest,SUPABASE_SERVICE_ROLE=pam-supabase-service-role:latest,RENDER_CALLBACK_SECRET=pam-render-callback-secret:latest
