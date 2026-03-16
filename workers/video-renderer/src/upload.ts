@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob"
+import { createClient } from "@supabase/supabase-js"
 
 interface UploadResult {
     url: string
@@ -6,20 +6,48 @@ interface UploadResult {
 }
 
 export async function uploadAsset(
-    buffer: Buffer,
+    buffer: Buffer | string,
     pathname: string,
     contentType: string
 ): Promise<UploadResult> {
-    const token = process.env.BLOB_READ_WRITE_TOKEN
-    if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is not set")
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE
 
-    const blob = await put(pathname, buffer, {
-        access: "private",
-        token,
-        contentType,
-        addRandomSuffix: true,
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error("Supabase credentials are not set (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE)")
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
     })
 
-    console.log(`[upload] ${pathname} → ${blob.url}`)
-    return { url: blob.url, pathname: blob.pathname }
+    const randomSuffix = Math.random().toString(36).substring(2, 8)
+    const extIndex = pathname.lastIndexOf(".")
+    let finalPathname = pathname
+    if (extIndex !== -1) {
+        finalPathname = `${pathname.substring(0, extIndex)}_${randomSuffix}${pathname.substring(extIndex)}`
+    } else {
+        finalPathname = `${pathname}_${randomSuffix}`
+    }
+
+    const { data, error } = await supabase.storage
+        .from("production")
+        .upload(finalPathname, buffer, {
+            contentType,
+            upsert: true
+        })
+
+    if (error) {
+        throw new Error(`Failed to upload asset ${finalPathname}: ${error.message}`)
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+        .from("production")
+        .getPublicUrl(finalPathname)
+
+    console.log(`[upload] ${finalPathname} → ${publicUrl}`)
+    return { url: publicUrl, pathname: finalPathname }
 }

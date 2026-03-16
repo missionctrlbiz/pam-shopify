@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "Psychiatric Assessment Mastery | Clinical Workbook for Nursing & PMHNP Students",
   description: "The step-by-step psychiatric assessment workbook for nursing students, PMHNP students, and mental health nurses. Master clinical rotations, SOAP notes, MSE documentation, and differential diagnosis. Simple English. ESL friendly. Zero fluff.",
   keywords: [

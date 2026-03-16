@@ -28,7 +28,10 @@ export const auth = async () => {
                 role: profile?.role || 'USER', // Supabase profile role mapping
             }
         }
-    } catch (e) {
+    } catch (e: any) {
+        if (e?.digest === 'DYNAMIC_SERVER_USAGE') {
+            throw e
+        }
         console.error("[auth] wrapper error:", e)
         return null
     }
@@ -41,4 +44,3 @@ export const signIn = () => {
 export const signOut = () => {
     throw new Error("signOut() is disabled from back, use supabaseBrowser.auth.signOut client-side.")
 }
-
