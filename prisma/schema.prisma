@@ -19,12 +19,12 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   email         String    @unique
-  emailVerified DateTime?
+  emailVerified DateTime? @map("email_verified")
   password      String?   // Hashed password for credentials login
   image         String?
   role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   accounts      Account[]
   sessions      Session[]
@@ -39,10 +39,10 @@ model User {
 
 model Account {
   id                String  @id @default(cuid())
-  userId            String
+  userId            String @map("user_id")
   type              String
   provider          String
-  providerAccountId String
+  providerAccountId String @map("provider_account_id")
   refresh_token     String?
   access_token      String?
   expires_at        Int?
@@ -58,8 +58,8 @@ model Account {
 
 model Session {
   id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
+  sessionToken String   @unique @map("session_token")
+  userId       String @map("user_id")
   expires      DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -79,7 +79,7 @@ model VerificationToken {
 model Buyer {
   id        String   @id @default(cuid())
   email     String   @unique
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
   @@map("buyers")
 }
 
@@ -92,8 +92,8 @@ model Lead {
   name      String?
   source    String   @default("lead-magnet")
   ip        String?
-  userId    String?
-  createdAt DateTime @default(now())
+  userId    String? @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -107,10 +107,10 @@ model Lead {
 // ==========================================
 model SoapHistory {
   id        String   @id @default(cuid())
-  userId    String
+  userId    String @map("user_id")
   input     String
   output    String
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -123,10 +123,10 @@ model SoapHistory {
 // ==========================================
 model UsageEvent {
   id        String   @id @default(cuid())
-  userId    String?
+  userId    String? @map("user_id")
   action    String   // "soap_generate", "cheat_sheet_view", "lead_signup", etc.
   metadata  Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -227,15 +227,15 @@ enum FieldCategory {
 
 model ClinicalField {
   id              String        @id @default(cuid())
-  fieldKey        String        @unique
-  fieldCategory   FieldCategory
-  displayName     String
+  fieldKey        String        @unique @map("field_key")
+  fieldCategory   FieldCategory @map("field_category")
+  displayName     String @map("display_name")
   description     String        @default("")
-  exampleValues   Json          @default("[]")
-  clinicalContext String?
-  isActive        Boolean       @default(true)
-  fieldType       String        @default("text")
-  createdAt       DateTime      @default(now())
+  exampleValues   Json          @default("[]") @map("example_values")
+  clinicalContext String? @map("clinical_context")
+  isActive        Boolean       @default(true) @map("is_active")
+  fieldType       String        @default("text") @map("field_type")
+  createdAt       DateTime      @default(now()) @map("created_at")
 
   contentIdeas ContentIdea[]
 
@@ -250,22 +250,22 @@ model ClinicalField {
 
 model ProductionCalendarEntry {
   id            String        @id @default(cuid())
-  dayNumber     Int
-  entryDate     DateTime
+  dayNumber     Int @map("day_number")
+  entryDate     DateTime @map("entry_date")
   platform      Platform
   topic         String
-  contentGoal   String
-  funnelStage   FunnelStage
-  postType      PostType
+  contentGoal   String @map("content_goal")
+  funnelStage   FunnelStage @map("funnel_stage")
+  postType      PostType @map("post_type")
   hook          String
   cta           String
-  publishStatus PublishStatus  @default(DRAFT)
-  approvedAt    DateTime?
-  approvedById  String?
-  scheduledAt   DateTime?
-  publishedAt   DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  publishStatus PublishStatus  @default(DRAFT) @map("publish_status")
+  approvedAt    DateTime? @map("approved_at")
+  approvedById  String? @map("approved_by_id")
+  scheduledAt   DateTime? @map("scheduled_at")
+  publishedAt   DateTime? @map("published_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
 
   approvedBy  User?        @relation(fields: [approvedById], references: [id], onDelete: SetNull)
   contentIdea ContentIdea?
@@ -283,14 +283,14 @@ model ProductionCalendarEntry {
 
 model ContentIdea {
   id                String            @id @default(cuid())
-  calendarEntryId   String            @unique
-  clinicalFieldId   String?
-  masterJson        Json
-  rawGeminiPrompt   String
-  qualityGateStatus QualityGateStatus @default(PENDING)
-  generatedById     String
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  calendarEntryId   String            @unique @map("calendar_entry_id")
+  clinicalFieldId   String? @map("clinical_field_id")
+  masterJson        Json @map("master_json")
+  rawGeminiPrompt   String @map("raw_gemini_prompt")
+  qualityGateStatus QualityGateStatus @default(PENDING) @map("quality_gate_status")
+  generatedById     String @map("generated_by_id")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
 
   calendarEntry     ProductionCalendarEntry @relation(fields: [calendarEntryId], references: [id], onDelete: Cascade)
   clinicalField     ClinicalField?          @relation(fields: [clinicalFieldId], references: [id], onDelete: SetNull)
@@ -312,7 +312,7 @@ model ContentIdea {
 
 model QualityGateResult {
   id                String      @id @default(cuid())
-  contentIdeaId     String      @unique
+  contentIdeaId     String      @unique @map("content_idea_id")
   question1         String
   question2         String
   question3         String
@@ -323,10 +323,10 @@ model QualityGateResult {
   score3            Int
   score4            Int
   score5            Int
-  overallScore      Decimal
+  overallScore      Decimal @map("overall_score")
   passed            Boolean
-  geminiRawResponse Json
-  evaluatedAt       DateTime    @default(now())
+  geminiRawResponse Json @map("gemini_raw_response")
+  evaluatedAt       DateTime    @default(now()) @map("evaluated_at")
 
   contentIdea ContentIdea @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
   @@map("quality_gate_results")
@@ -338,14 +338,14 @@ model QualityGateResult {
 
 model VideoScript {
   id                String      @id @default(cuid())
-  contentIdeaId     String      @unique
-  scriptJson        Json
-  totalDurationSecs Int
-  elevenLabsJobId   String?
-  audioStorageUrl   String?
-  audioStatus       AssetStatus @default(PENDING)
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  contentIdeaId     String      @unique @map("content_idea_id")
+  scriptJson        Json @map("script_json")
+  totalDurationSecs Int @map("total_duration_secs")
+  elevenLabsJobId   String? @map("eleven_labs_job_id")
+  audioStorageUrl   String? @map("audio_storage_url")
+  audioStatus       AssetStatus @default(PENDING) @map("audio_status")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
 
   contentIdea ContentIdea @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
   @@map("video_scripts")
@@ -357,18 +357,18 @@ model VideoScript {
 
 model ContentAsset {
   id            String      @id @default(cuid())
-  contentIdeaId String
-  renderJobId   String?
+  contentIdeaId String @map("content_idea_id")
+  renderJobId   String? @map("render_job_id")
   platform      Platform
-  assetType     AssetType
-  fileName      String
-  storageUrl    String?
-  storagePath   String?
+  assetType     AssetType @map("asset_type")
+  fileName      String @map("file_name")
+  storageUrl    String? @map("storage_url")
+  storagePath   String? @map("storage_path")
   version       Int         @default(1)
   status        AssetStatus @default(PENDING)
   metadata      Json?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
 
   contentIdea ContentIdea @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
   renderJob   RenderJob?  @relation(fields: [renderJobId], references: [id], onDelete: SetNull)
@@ -384,17 +384,17 @@ model ContentAsset {
 
 model RenderJob {
   id                  String          @id @default(cuid())
-  contentIdeaId       String
-  jobType             RenderJobType
-  cloudRunExecutionId String?
-  cloudTasksTaskId    String?
+  contentIdeaId       String @map("content_idea_id")
+  jobType             RenderJobType @map("job_type")
+  cloudRunExecutionId String? @map("cloud_run_execution_id")
+  cloudTasksTaskId    String? @map("cloud_tasks_task_id")
   status              RenderJobStatus @default(QUEUED)
-  inputPayload        Json
-  queuedAt            DateTime        @default(now())
-  startedAt           DateTime?
-  completedAt         DateTime?
-  errorMessage        String?
-  retryCount          Int             @default(0)
+  inputPayload        Json @map("input_payload")
+  queuedAt            DateTime        @default(now()) @map("queued_at")
+  startedAt           DateTime? @map("started_at")
+  completedAt         DateTime? @map("completed_at")
+  errorMessage        String? @map("error_message")
+  retryCount          Int             @default(0) @map("retry_count")
 
   contentIdea ContentIdea    @relation(fields: [contentIdeaId], references: [id], onDelete: Cascade)
   assets      ContentAsset[]
