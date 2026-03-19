@@ -2261,7 +2261,7 @@ var renderContent = (Root) => {
     renderToDOM(/* @__PURE__ */ (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)("div", {
       children: /* @__PURE__ */ (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(DelayedSpinner, {})
     }));
-    Promise.all(/* import() */[__webpack_require__.e(45), __webpack_require__.e(845)]).then(__webpack_require__.bind(__webpack_require__, 4045)).then(({ StudioInternals }) => {
+    Promise.all(/* import() */[__webpack_require__.e(934), __webpack_require__.e(845)]).then(__webpack_require__.bind(__webpack_require__, 3934)).then(({ StudioInternals }) => {
       window.remotion_isStudio = true;
       window.remotion_isReadOnlyStudio = true;
       window.remotion_inputProps = "{}";
@@ -2521,7 +2521,7 @@ function truthy(value) {
 }
 
 // src/version.ts
-var VERSION = "4.0.435";
+var VERSION = "4.0.438";
 
 // src/multiple-versions-warning.ts
 var checkMultipleRemotionVersions = () => {
@@ -5837,7 +5837,7 @@ var useBasicMediaInTimeline = ({
   const videoConfig = useVideoConfig();
   const [initialVolume] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(() => volume);
   const mediaDuration = calculateMediaDuration({
-    mediaDurationInFrames: videoConfig.durationInFrames,
+    mediaDurationInFrames: videoConfig.durationInFrames + (trimBefore ?? 0),
     playbackRate,
     trimBefore,
     trimAfter
