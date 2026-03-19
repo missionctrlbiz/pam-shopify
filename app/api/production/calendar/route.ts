@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
         const statusParam = searchParams.get("status") as PublishStatus | null
         const platformParam = searchParams.get("platform") as Platform | null
         const page = Math.max(1, Number(searchParams.get("page") ?? 1))
-        const limit = Math.min(30, Math.max(1, Number(searchParams.get("limit") ?? 30)))
+        const limit = Math.min(500, Math.max(1, Number(searchParams.get("limit") ?? 10)))
         const skip = (page - 1) * limit
 
         // Validate enum values if provided
@@ -41,11 +41,21 @@ export async function GET(req: NextRequest) {
         const statusFilter = statusParam && validStatuses.includes(statusParam) ? statusParam : undefined
         const platformFilter = platformParam && validPlatforms.includes(platformParam) ? platformParam : undefined
 
-        const selectClause = `*,
+        const selectClause = `
+            id,
+            dayNumber:day_number,
+            entryDate:entry_date,
+            platform,
+            postType:post_type,
+            publishStatus:publish_status,
+            topic,
+            contentGoal:content_goal,
             contentIdea:content_ideas(
-                *,
+                id,
+                masterJson:master_json,
+                qualityGateStatus:quality_gate_status,
                 qualityGateResult:quality_gate_results(*),
-                clinicalField:clinical_fields(fieldKey, displayName, fieldCategory)
+                clinicalField:clinical_fields(fieldKey:field_key, displayName:display_name, fieldCategory:field_category)
             )`
 
         let query = supabaseAdmin
@@ -53,7 +63,7 @@ export async function GET(req: NextRequest) {
             .select(selectClause, { count: "exact" })
 
         if (statusFilter) {
-            query = query.eq("publishStatus", statusFilter)
+            query = query.eq("publish_status", statusFilter)
         }
 
         if (platformFilter) {
@@ -61,7 +71,7 @@ export async function GET(req: NextRequest) {
         }
 
         query = query
-            .order("entryDate", { ascending: true })
+            .order("entry_date", { ascending: true })
             .range(skip, skip + limit - 1)
 
         const { data: entries, error, count } = await query
@@ -71,8 +81,32 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Internal server error" }, { status: 500 })
         }
 
+        const normalizedEntries = (entries ?? []).map((entry) => {
+            const rawIdea = Array.isArray(entry.contentIdea) ? entry.contentIdea[0] : entry.contentIdea
+            const rawMasterJson = rawIdea?.masterJson as Record<string, unknown> | null | undefined
+            const rawQualityGateResult = Array.isArray(rawIdea?.qualityGateResult)
+                ? rawIdea.qualityGateResult[0]
+                : rawIdea?.qualityGateResult
+            const rawClinicalField = Array.isArray(rawIdea?.clinicalField)
+                ? rawIdea.clinicalField[0]
+                : rawIdea?.clinicalField
+
+            return {
+                ...entry,
+                contentIdea: rawIdea
+                    ? {
+                        id: rawIdea.id,
+                        hook: typeof rawMasterJson?.hook === "string" ? rawMasterJson.hook : null,
+                        qualityGateStatus: rawIdea.qualityGateStatus,
+                        qualityGateResult: rawQualityGateResult ?? null,
+                        clinicalField: rawClinicalField ?? null,
+                    }
+                    : null,
+            }
+        })
+
         return NextResponse.json({
-            entries: entries ?? [],
+            entries: normalizedEntries,
             pagination: {
                 total: count ?? 0,
                 page,

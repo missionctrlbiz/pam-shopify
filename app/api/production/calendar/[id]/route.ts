@@ -33,7 +33,21 @@ export async function GET(
 
     const { data: entry, error } = await supabaseAdmin
         .from("production_calendar_entries")
-        .select("*")
+        .select(`
+            id,
+            dayNumber:day_number,
+            entryDate:entry_date,
+            platform,
+            postType:post_type,
+            publishStatus:publish_status,
+            topic,
+            contentGoal:content_goal,
+            scheduledAt:scheduled_at,
+            approvedAt:approved_at,
+            approvedById:approved_by_id,
+            hook,
+            cta
+        `)
         .eq("id", id)
         .maybeSingle()
 
@@ -52,12 +66,17 @@ export async function GET(
     const [contentIdeaRes, approvedRes] = await Promise.all([
         supabaseAdmin
             .from("content_ideas")
-            .select("*")
-            .eq("calendarEntryId", id)
+            .select(`
+                id,
+                masterJson:master_json,
+                qualityGateStatus:quality_gate_status,
+                clinicalFieldId:clinical_field_id
+            `)
+            .eq("calendar_entry_id", id)
             .maybeSingle(),
         entry.approvedById
             ? supabaseAdmin
-                .from("User")
+                .from("profiles")
                 .select("id, name, email")
                 .eq("id", entry.approvedById)
                 .maybeSingle()
@@ -69,44 +88,93 @@ export async function GET(
         return NextResponse.json({ error: "Internal server error" }, { status: 500 })
     }
 
-    const contentIdea = contentIdeaRes.data
+    const contentIdea = contentIdeaRes.data as (typeof contentIdeaRes.data & {
+        hook?: string | null
+        cta?: string | null
+        clinicalField?: unknown
+        qualityGateResult?: unknown
+        videoScript?: unknown
+        assets?: unknown[]
+        renderJobs?: unknown[]
+    }) | null
 
     if (contentIdea) {
+        const masterJson = contentIdea.masterJson as Record<string, unknown> | null | undefined
         const [clinicalField, qualityGateResult, videoScript, assets, renderJobs] = await Promise.all([
             contentIdea.clinicalFieldId
                 ? supabaseAdmin
                     .from("clinical_fields")
-                    .select("fieldKey, displayName, fieldCategory, description")
+                    .select("fieldKey:field_key, displayName:display_name, fieldCategory:field_category, description")
                     .eq("id", contentIdea.clinicalFieldId)
                     .maybeSingle()
                     .then((res) => res.data)
                 : Promise.resolve(null),
             supabaseAdmin
                 .from("quality_gate_results")
-                .select("*")
-                .eq("contentIdeaId", contentIdea.id)
+                .select(`
+                    id,
+                    passed,
+                    overallScore:overall_score,
+                    qualityGateStatus:quality_gate_status,
+                    score1,
+                    score2,
+                    score3,
+                    score4,
+                    score5,
+                    evaluatedAt:evaluated_at,
+                    createdAt:created_at
+                `)
+                .eq("content_idea_id", contentIdea.id)
                 .maybeSingle()
                 .then((res) => res.data),
             supabaseAdmin
                 .from("video_scripts")
-                .select("*")
-                .eq("contentIdeaId", contentIdea.id)
+                .select(`
+                    id,
+                    scriptJson:script_json,
+                    totalDurationSecs:total_duration_secs,
+                    audioStatus:audio_status,
+                    audioStorageUrl:audio_storage_url,
+                    elevenLabsJobId:eleven_labs_job_id
+                `)
+                .eq("content_idea_id", contentIdea.id)
                 .maybeSingle()
                 .then((res) => res.data),
             supabaseAdmin
                 .from("content_assets")
-                .select("*")
-                .eq("contentIdeaId", contentIdea.id)
-                .order("createdAt", { ascending: true })
+                .select(`
+                    id,
+                    assetType:asset_type,
+                    platform,
+                    assetStatus:status,
+                    storageUrl:storage_url,
+                    fileName:file_name,
+                    storagePath:storage_path,
+                    metadata,
+                    createdAt:created_at,
+                    updatedAt:updated_at
+                `)
+                .eq("content_idea_id", contentIdea.id)
+                .order("created_at", { ascending: true })
                 .then((res) => res.data ?? []),
             supabaseAdmin
                 .from("render_jobs")
-                .select("*")
-                .eq("contentIdeaId", contentIdea.id)
-                .order("queuedAt", { ascending: false })
+                .select(`
+                    id,
+                    jobType:job_type,
+                    status,
+                    queuedAt:queued_at,
+                    startedAt:started_at,
+                    completedAt:completed_at,
+                    errorMessage:error_message
+                `)
+                .eq("content_idea_id", contentIdea.id)
+                .order("queued_at", { ascending: false })
                 .then((res) => res.data ?? []),
         ])
 
+        contentIdea.hook = typeof masterJson?.hook === "string" ? masterJson.hook : null
+        contentIdea.cta = typeof masterJson?.cta === "string" ? masterJson.cta : null
         contentIdea.clinicalField = clinicalField
         contentIdea.qualityGateResult = qualityGateResult ?? null
         contentIdea.videoScript = videoScript ?? null
@@ -197,23 +265,37 @@ export async function PUT(
     if (body.hook !== undefined) entryUpdate.hook = body.hook
     if (body.cta !== undefined) entryUpdate.cta = body.cta
     if (body.topic !== undefined) entryUpdate.topic = body.topic
-    if (body.contentGoal !== undefined) entryUpdate.contentGoal = body.contentGoal
+    if (body.contentGoal !== undefined) entryUpdate.content_goal = body.contentGoal
     if (body.scheduledAt !== undefined) {
-        entryUpdate.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null
+        entryUpdate.scheduled_at = body.scheduledAt ? new Date(body.scheduledAt) : null
     }
     if (body.publishStatus !== undefined) {
-        entryUpdate.publishStatus = body.publishStatus as PublishStatus
+        entryUpdate.publish_status = body.publishStatus as PublishStatus
     }
 
     // Run both updates in a transaction if masterJson is also being updated
-    let updatedEntry = existing
+    let updatedEntry: Record<string, unknown> = existing as unknown as Record<string, unknown>
 
     if (Object.keys(entryUpdate).length > 0) {
         const { data: updated, error: updateError } = await supabaseAdmin
             .from("production_calendar_entries")
             .update(entryUpdate)
             .eq("id", id)
-            .select("*")
+            .select(`
+                id,
+                dayNumber:day_number,
+                entryDate:entry_date,
+                platform,
+                postType:post_type,
+                publishStatus:publish_status,
+                topic,
+                contentGoal:content_goal,
+                scheduledAt:scheduled_at,
+                approvedAt:approved_at,
+                approvedById:approved_by_id,
+                hook,
+                cta
+            `)
             .single()
 
         if (updateError) {
@@ -228,7 +310,7 @@ export async function PUT(
     if (body.masterJson && linkedIdeaId) {
         const { error: ideaError } = await supabaseAdmin
             .from("content_ideas")
-            .update({ masterJson: body.masterJson as object })
+            .update({ master_json: body.masterJson as object })
             .eq("id", linkedIdeaId)
 
         if (ideaError) {

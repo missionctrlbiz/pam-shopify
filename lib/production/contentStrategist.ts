@@ -27,6 +27,7 @@ export interface ClinicalFieldInput {
     fieldCategory: string
     description: string
     clinicalContext?: string | null
+    exampleValues?: string[] | null
 }
 
 export interface ContentIdeaInput {
@@ -110,11 +111,143 @@ export interface ContentIdeaMasterJson {
     totalDurationSecs?: number
 }
 
+const FIELD_TOKEN_MAP: Record<string, string> = {
+    app: "appearance",
+    assess: "assessment",
+    b12: "vitamin B12",
+    cbc: "CBC",
+    cbt: "CBT",
+    cmp: "CMP",
+    cogn: "cognition",
+    cont: "content",
+    dbt: "DBT",
+    diff: "differential",
+    dx: "diagnosis",
+    ekg: "EKG",
+    et: "etiology",
+    fu: "follow-up",
+    hi: "homicidal ideation",
+    hx: "history",
+    iop: "intensive outpatient",
+    lab: "labs",
+    loc: "level of care",
+    med: "medication",
+    mse: "mental status exam",
+    nssi: "non-suicidal self-injury",
+    outpt: "outpatient",
+    plan: "plan",
+    risk: "risk",
+    si: "suicidal ideation",
+    sub: "substance-related",
+    tf: "trauma-focused",
+    tsh: "TSH",
+    tx: "treatment",
+    uds: "urine drug screen",
+}
+
+function cleanGeneratedText(value: string): string {
+    return value
+        .replace(/```[\s\S]*?```/g, "")
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .replace(/__(.+?)__/g, "$1")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/\[(.+?)\]\(.+?\)/g, "$1")
+        .replace(/[\u2022\u25CF\u25AA]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+}
+
+function sentenceCase(value: string): string {
+    const cleaned = cleanGeneratedText(value)
+    if (!cleaned) return cleaned
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+}
+
+function expandFieldKey(fieldKey: string): string {
+    return fieldKey
+        .split(/[_\s]+/)
+        .filter(Boolean)
+        .map((token) => FIELD_TOKEN_MAP[token.toLowerCase()] ?? token)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function looksLowSignal(value: string): boolean {
+    const cleaned = cleanGeneratedText(value)
+    if (!cleaned) return true
+
+    const tokens = cleaned.split(/\s+/).filter(Boolean)
+    const shortTokens = tokens.filter((token) => token.length <= 2).length
+
+    return (
+        cleaned.includes("_") ||
+        /^[a-z0-9_]+$/i.test(cleaned) ||
+        cleaned.length < 8 ||
+        shortTokens >= Math.max(2, Math.ceil(tokens.length / 2))
+    )
+}
+
+function normalizeFieldContext(field: ClinicalFieldInput) {
+    const expandedFieldKey = expandFieldKey(field.fieldKey)
+    const normalizedDisplayName = looksLowSignal(field.displayName)
+        ? expandedFieldKey
+        : sentenceCase(field.displayName)
+
+    const normalizedDescription = !field.description || looksLowSignal(field.description)
+        ? `This clinical concept focuses on ${normalizedDisplayName} in the ${sentenceCase(field.fieldCategory.replace(/_/g, " ").toLowerCase())} domain.`
+        : sentenceCase(field.description)
+
+    const normalizedClinicalContext = field.clinicalContext
+        ? sentenceCase(field.clinicalContext)
+        : `Provide clinically accurate PMHNP-level teaching on ${normalizedDisplayName}, including why it changes assessment quality and documentation accuracy.`
+
+    const normalizedExamples = (field.exampleValues ?? [])
+        .map((value) => sentenceCase(value))
+        .filter(Boolean)
+        .slice(0, 5)
+
+    return {
+        expandedFieldKey,
+        normalizedDisplayName,
+        normalizedDescription,
+        normalizedClinicalContext,
+        normalizedExamples,
+    }
+}
+
+function sanitizeMasterJson<T>(value: T): T {
+    if (typeof value === "string") {
+        return cleanGeneratedText(value) as T
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => sanitizeMasterJson(item)) as T
+    }
+
+    if (value && typeof value === "object") {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, item]) => [key, sanitizeMasterJson(item)])
+        ) as T
+    }
+
+    return value
+}
+
 // ---------------------------------------------------------------------------
 // Prompt builder
 // ---------------------------------------------------------------------------
 
 function buildPrompt(field: ClinicalFieldInput, meta: ContentIdeaInput): string {
+    const {
+        expandedFieldKey,
+        normalizedDisplayName,
+        normalizedDescription,
+        normalizedClinicalContext,
+        normalizedExamples,
+    } = normalizeFieldContext(field)
+
     return `
 You are the Content Strategist for Psychiatric Assessment Mastery™ (PAM), an educational brand
 created by Tonia Ojomo, PMHNP-BC. Your audience is psychiatric nurse practitioner (PMHNP) students
@@ -127,13 +260,18 @@ BRAND VOICE RULES (non-negotiable):
 - Teaching points must be actionable: things the reader can DO in their next assessment.
 - NO generic phrases like "mental health matters", "self-care is important", "therapy can help".
 - Content must be specific enough that it could ONLY come from a psychiatric assessment expert.
+- Treat raw source labels as internal shorthand only. Never surface field keys, CSV fragments, underscores, abbreviations, or truncated labels in final copy.
+- Write clean prose only. No markdown, no asterisks, no code fences, and no placeholder-style formatting.
 
 CLINICAL FIELD CONTEXT:
-  Field Key:       ${field.fieldKey}
-  Category:        ${field.fieldCategory}
-  Display Name:    ${field.displayName}
-  Description:     ${field.description || `This field maps to the psychiatric assessment concept: "${field.displayName}" in the ${field.fieldCategory} domain.`}
-  ${field.clinicalContext ? `Extended Clinical Context: ${field.clinicalContext}` : `Provide clinically accurate context for ${field.displayName} as it applies to PMHNP-level assessment.`}
+    Raw Field Key:            ${field.fieldKey}
+    Expanded Field Key:       ${expandedFieldKey}
+    Raw Source Label:         ${field.displayName}
+    Normalized Clinical Name: ${normalizedDisplayName}
+    Category:                 ${field.fieldCategory}
+    Description:              ${normalizedDescription}
+    Extended Clinical Context:${" "}${normalizedClinicalContext}
+    ${normalizedExamples.length > 0 ? `Example Phrases:          ${normalizedExamples.map((value) => `"${value}"`).join(" | ")}` : `Example Phrases:          Use polished PMHNP clinical terminology only.`}
 
 CONTENT SCHEDULING CONTEXT:
   Platform:        ${meta.platform}
@@ -146,7 +284,7 @@ DELIVERABLES — return a single JSON object matching this exact structure:
 {
   "title": "A clear, compelling 5-8 word content title. Examples: 'The 3 Risks Behind Every Depressed Mood', 'Why Your MSE Thought Process Is Wrong', 'Bipolar vs MDD: The Assessment Trap'. Must be readable, specific, and professional — never abbreviated or cryptic.",
   "hook": "One compelling sentence (10-20 words). Must create clinical tension, name a real diagnostic mistake, or challenge a common assumption. Write it as a complete, clear English sentence — NOT an abbreviation or code. Examples: 'Most PMHNPs miss these three critical risks hiding behind a depressed mood chief complaint.', 'Your MSE thought process documentation probably confuses content with process — here is why it matters.'",
-  "teachingPoints": ["3-5 bullet points — each a concrete, actionable clinical insight rooted in ${field.displayName}"],
+    "teachingPoints": ["3-5 bullet points — each a concrete, actionable clinical insight rooted in ${normalizedDisplayName}"],
   "cta": "One sentence driving the reader toward PAM workbook, the PAM Mastery Bundle, or saving/sharing.",
   "clinicalGrounding": "1-2 sentences explaining WHY this topic matters clinically, citing DSM-5-TR patterns or assessment evidence.",
   "platformAdaptations": {
@@ -164,6 +302,8 @@ CRITICAL — title and hook quality requirements:
 - The "title" must be a SHORT, READABLE phrase a human would use as a content title. NEVER use field codes, abbreviations, or technical variable names.
 - The "hook" must be a complete English sentence that creates curiosity. It must make sense when read aloud.
 - Both title and hook must reference the CLINICAL CONCEPT, not the field key or field code.
+- If the source data is abbreviated, silently translate it into polished clinical language before writing.
+- Do not include markdown characters such as **, *, _, #, backticks, or code fences anywhere in the JSON values.
 
 INSTRUCTIONS for slideTextBlocks:
 - Minimum 6 slides, maximum 10 slides. Remove optional slots you do not use.
@@ -192,7 +332,7 @@ export async function generateContentIdea(
 
     let masterJson: ContentIdeaMasterJson
     try {
-        masterJson = JSON.parse(text) as ContentIdeaMasterJson
+        masterJson = sanitizeMasterJson(JSON.parse(text) as ContentIdeaMasterJson)
     } catch {
         throw new Error(
             `Gemini returned non-parseable JSON for field "${field.fieldKey}": ${text.slice(0, 200)}`

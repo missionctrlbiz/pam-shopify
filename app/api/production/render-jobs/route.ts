@@ -40,9 +40,9 @@ export async function GET(req: NextRequest) {
     const selectClause = `*,
         contentIdea:content_ideas(
             id,
-            calendarEntry:production_calendar_entries(id, dayNumber, platform, postType, topic, entryDate)
+            calendarEntry:production_calendar_entries(id, dayNumber:day_number, platform, postType:post_type, topic, entryDate:entry_date)
         ),
-        assets:content_assets(id, assetType, platform, status, storageUrl, fileName, metadata)
+        assets:content_assets(id, assetType:asset_type, platform, status, storageUrl:storage_url, fileName:file_name, metadata)
     `
 
     let jobsQuery = supabaseAdmin
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
         jobsQuery = jobsQuery.in("status", statusFilter)
     }
 
-    jobsQuery = jobsQuery.order("queuedAt", { ascending: false }).range(skip, skip + limitParam - 1)
+    jobsQuery = jobsQuery.order("queued_at", { ascending: false }).range(skip, skip + limitParam - 1)
 
     const { data: jobs, error, count } = await jobsQuery
 

@@ -15,65 +15,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { tasks } from "@trigger.dev/sdk"
 import { auth } from "@/lib/auth"
-import { supabaseAdmin } from "@/lib/supabase"
-import { generateContentIdea } from "@/lib/production/contentStrategist"
-import {
-    Platform,
-    FunnelStage,
-    PostType,
-} from "@/lib/enums"
+import { runCalendarGenerationBatch } from "@/lib/production/calendarGeneration"
+import type { productionCalendarBatchTask } from "@/trigger/production"
 
 // Allow up to 5 minutes for batch generation (Vercel Pro / Fluid compute)
 export const maxDuration = 300
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * 30-day schedule template.
- * Defines the platform/postType/funnelStage/contentGoal rotation so the
- * generated calendar mirrors the SOP tracker columns exactly.
- * Repeat/cycle if fewer than 30 days are requested.
- */
-const SCHEDULE_TEMPLATE: Array<{
-    platform: Platform
-    postType: PostType
-    funnelStage: FunnelStage
-    contentGoal: string
-}> = [
-        { platform: "IG", postType: "CAROUSEL", funnelStage: "AWARENESS", contentGoal: "Educate & build trust with PMHNP students" },
-        { platform: "TIKTOK", postType: "VIDEO", funnelStage: "AWARENESS", contentGoal: "Hook new audience with clinical tension" },
-        { platform: "LINKEDIN", postType: "TEXT_POST", funnelStage: "CONSIDERATION", contentGoal: "Establish Tonia as clinical thought leader" },
-        { platform: "IG", postType: "REEL", funnelStage: "AWARENESS", contentGoal: "Convert scroll to follow with quick clinical tip" },
-        { platform: "FB", postType: "TEXT_POST", funnelStage: "CONSIDERATION", contentGoal: "Drive community discussion around clinical challenges" },
-        { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "CONVERSION", contentGoal: "Nurture leads toward PAM Mastery Bundle purchase" },
-        { platform: "IG", postType: "CAROUSEL", funnelStage: "CONSIDERATION", contentGoal: "Deepen expertise, drive saves" },
-        { platform: "TIKTOK", postType: "VIDEO", funnelStage: "AWARENESS", contentGoal: "Reach new PMHNP students with high-yield tip" },
-        { platform: "IG", postType: "STORY", funnelStage: "RETENTION", contentGoal: "Re-engage existing followers with poll/quiz" },
-        { platform: "LINKEDIN", postType: "TEXT_POST", funnelStage: "CONVERSION", contentGoal: "Drive clicks to PAM product page" },
-        { platform: "IG", postType: "CAROUSEL", funnelStage: "AWARENESS", contentGoal: "Educate & build trust with PMHNP students" },
-        { platform: "VIDEO", postType: "VIDEO", funnelStage: "CONSIDERATION", contentGoal: "Deliver AI voice educational video for YouTube/IG" },
-        { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "CONVERSION", contentGoal: "Abandoned cart sequence — highlight PAM bundle value" },
-        { platform: "TIKTOK", postType: "REEL", funnelStage: "AWARENESS", contentGoal: "Viral potential — clinical myth-busting" },
-        { platform: "IG", postType: "CAROUSEL", funnelStage: "CONVERSION", contentGoal: "Social proof + direct offer CTA" },
-        { platform: "FB", postType: "TEXT_POST", funnelStage: "RETENTION", contentGoal: "Long-form case breakdown, drive group engagement" },
-        { platform: "IG", postType: "REEL", funnelStage: "AWARENESS", contentGoal: "Broad reach — hook on diagnostic mistake" },
-        { platform: "LINKEDIN", postType: "TEXT_POST", funnelStage: "CONSIDERATION", contentGoal: "Build professional credibility, invite follows" },
-        { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "CONVERSION", contentGoal: "Final nudge sequence — last chance bundle offer" },
-        { platform: "IG", postType: "CAROUSEL", funnelStage: "CONSIDERATION", contentGoal: "Deep-dive clinical skill, drive saves" },
-        { platform: "TIKTOK", postType: "VIDEO", funnelStage: "AWARENESS", contentGoal: "New audience acquisition — trending audio format" },
-        { platform: "IG", postType: "STORY", funnelStage: "RETENTION", contentGoal: "Ask-me-anything or rapid-fire clinical tips" },
-        { platform: "VIDEO", postType: "VIDEO", funnelStage: "CONSIDERATION", contentGoal: "Second weekly AI voice video — MSE deep-dive" },
-        { platform: "LINKEDIN", postType: "TEXT_POST", funnelStage: "CONVERSION", contentGoal: "Testimonial + direct link to PAM bundle" },
-        { platform: "IG", postType: "CAROUSEL", funnelStage: "AWARENESS", contentGoal: "Top-of-funnel awareness — shareable quick reference" },
-        { platform: "FB", postType: "TEXT_POST", funnelStage: "CONSIDERATION", contentGoal: "Group warm-up, invite replies" },
-        { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "RETENTION", contentGoal: "Post-purchase onboarding email mini-lesson" },
-        { platform: "TIKTOK", postType: "REEL", funnelStage: "AWARENESS", contentGoal: "Clinical storytelling — patient scenario hook" },
-        { platform: "IG", postType: "CAROUSEL", funnelStage: "CONVERSION", contentGoal: "Month-end conversion push — bundle CTA" },
-        { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "CONVERSION", contentGoal: "Day 30 — re-engagement + strong purchase CTA" },
-    ]
 
 // ---------------------------------------------------------------------------
 // Route handler
@@ -100,119 +48,40 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Session user ID missing" }, { status: 400 })
         }
 
-        // Optionally clear existing DRAFT entries
-        if (overwrite) {
-            const { error: deleteError } = await supabaseAdmin
-                .from("production_calendar_entries")
-                .delete()
-                .eq("publishStatus", "DRAFT")
+        const triggerConfigured = Boolean(process.env.TRIGGER_SECRET_KEY)
 
-            if (deleteError) {
-                console.error("[calendar/generate] Delete error:", deleteError)
-                return NextResponse.json({ error: "Failed to clear drafts" }, { status: 500 })
-            }
-        }
+        if (triggerConfigured && days > 1) {
+            const handle = await tasks.triggerAndWait<typeof productionCalendarBatchTask>("production-calendar-batch", {
+                days,
+                offset,
+                overwrite,
+                startDate: startDate.toISOString(),
+                generatedById,
+            })
 
-        // Fetch active clinical fields
-        const { data: clinicalFields, error: clinicalError } = await supabaseAdmin
-            .from("clinical_fields")
-            .select("*")
-            .eq("isActive", true)
-            .order("fieldCategory", { ascending: true })
-
-        if (clinicalError) {
-            console.error("[calendar/generate] Clinical field fetch error:", clinicalError)
-            return NextResponse.json({ error: "Failed to read clinical fields" }, { status: 500 })
-        }
-
-        if (clinicalFields.length === 0) {
-            return NextResponse.json(
-                { error: "No active ClinicalField records found. Run the seed first." },
-                { status: 422 }
-            )
-        }
-
-        const results = []
-        const errors: string[] = []
-
-        for (let i = 0; i < days; i++) {
-            const absoluteDay = offset + i
-            const template = SCHEDULE_TEMPLATE[absoluteDay % SCHEDULE_TEMPLATE.length]
-            const field = clinicalFields[absoluteDay % clinicalFields.length]
-            const entryDate = new Date(startDate)
-            entryDate.setDate(startDate.getDate() + absoluteDay)
-
-            try {
-                const { masterJson, rawPrompt } = await generateContentIdea(
-                    {
-                        fieldKey: field.fieldKey,
-                        displayName: field.displayName,
-                        fieldCategory: field.fieldCategory,
-                        description: field.description,
-                        clinicalContext: field.clinicalContext,
-                    },
-                    {
-                        platform: template.platform,
-                        postType: template.postType,
-                        funnelStage: template.funnelStage,
-                        contentGoal: template.contentGoal,
-                        dayNumber: i + 1,
-                    }
+            // Run successfully completed, return its output synchronously to frontend!
+            if (handle.ok && handle.output) {
+                return NextResponse.json(handle.output, {
+                    status: handle.output.failed > 0 && handle.output.generated === 0 ? 500 : 207
+                })
+            } else {
+                return NextResponse.json(
+                    { error: "Trigger.dev task failed during execution" },
+                    { status: 500 }
                 )
-
-                // Create entry + idea in a transaction
-                const { data: calEntry, error: entryError } = await supabaseAdmin
-                    .from("production_calendar_entries")
-                    .insert({
-                        dayNumber: absoluteDay + 1,
-                        entryDate: entryDate.toISOString(),
-                        platform: template.platform,
-                        topic: masterJson.title || masterJson.hook || field.displayName,
-                        contentGoal: template.contentGoal,
-                        funnelStage: template.funnelStage,
-                        postType: template.postType,
-                        hook: masterJson.hook,
-                        cta: masterJson.cta,
-                        publishStatus: "DRAFT",
-                    })
-                    .select("*")
-                    .single()
-
-                if (entryError || !calEntry) {
-                    throw new Error(entryError?.message ?? "Failed to create calendar entry")
-                }
-
-                const { error: ideaError } = await supabaseAdmin
-                    .from("content_ideas")
-                    .insert({
-                        calendarEntryId: calEntry.id,
-                        clinicalFieldId: field.id,
-                        masterJson: masterJson as object,
-                        rawGeminiPrompt: rawPrompt,
-                        qualityGateStatus: "PENDING",
-                        generatedById,
-                    })
-
-                if (ideaError) {
-                    throw new Error(ideaError.message)
-                }
-
-                results.push({ dayNumber: absoluteDay + 1, entryId: calEntry.id, topic: masterJson.title || masterJson.hook || field.displayName })
-            } catch (err) {
-                const msg = err instanceof Error ? err.message : String(err)
-                errors.push(`Day ${absoluteDay + 1} (${field.fieldKey}): ${msg}`)
-                console.error(`[calendar/generate] Day ${absoluteDay + 1} failed:`, err)
             }
         }
+        const result = await runCalendarGenerationBatch({
+            days,
+            offset,
+            overwrite,
+            startDate: startDate.toISOString(),
+            generatedById,
+        })
 
         return NextResponse.json(
-            {
-                generated: results.length,
-                failed: errors.length,
-                entries: results,
-                errors: errors.length > 0 ? errors : undefined,
-            },
-            { status: errors.length > 0 && results.length === 0 ? 500 : 207 }
+            result,
+            { status: result.failed > 0 && result.generated === 0 ? 500 : 207 }
         )
     } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)

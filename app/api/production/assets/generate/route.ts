@@ -2,8 +2,8 @@
  * POST /api/production/assets/generate
  *
  * Triggers asset generation for an APPROVED ProductionCalendarEntry.
- * When GCP_SERVICE_ACCOUNT_JSON_B64 is set, enqueues to Cloud Tasks → Cloud Run workers.
- * Otherwise runs Gemini repurposing inline (no GCP needed — Vercel Pro 60 s timeout).
+ * GCP / Cloud Tasks dispatch is currently disabled during the Trigger.dev migration.
+ * For now, assets run through the inline path only.
  *
  * Body params:
  *   contentIdeaId — required. The ContentIdea of the approved entry.
@@ -18,50 +18,61 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { tasks } from "@trigger.dev/sdk"
 import { auth } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 import { AssetType, Platform, RenderJobType } from "@/lib/enums"
-import { runRepurposeInline, runCarouselInline, runVideoScriptInline } from "@/lib/production/repurposeInline"
+import {
+    runRepurposeInline,
+    runCarouselInline,
+    runVideoScriptInline,
+    type RepurposeInlineInput,
+} from "@/lib/production/repurposeInline"
+import type {
+    productionCarouselTask,
+    productionRepurposeTask,
+    productionVideoTask,
+} from "@/trigger/production"
 
 // Vercel Pro: allow up to 60 s (inline Gemini call ~10–20 s)
 export const maxDuration = 60
+export const dynamic = "force-dynamic"
 
 // ---------------------------------------------------------------------------
-// GCP / Cloud Tasks — DISABLED during Railway migration.
-// Restore getTasksClient() + enqueueTask() once WORKER_SERVER_URL is live,
-// then replace gcpConfigured below with a WORKER_SERVER_URL check.
+// GCP / Cloud Tasks integration is intentionally commented out while we move
+// background execution over to Trigger.dev.
 // ---------------------------------------------------------------------------
-async function getTasksClient() {
-    const { CloudTasksClient } = await import("@google-cloud/tasks")
-    const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
-    if (b64) {
-        const credentials = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"))
-        return new CloudTasksClient({ credentials })
-    }
-    return new CloudTasksClient()
-}
-
-async function enqueueTask(workerUrl: string, payload: Record<string, unknown>): Promise<string> {
-    const client = await getTasksClient()
-    const projectId = process.env.GCP_PROJECT_ID!.trim()
-    const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
-    const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
-    const saEmail = process.env.WORKER_SA_EMAIL!.trim()
-    const parent = client.queuePath(projectId, location, queue)
-    const [task] = await client.createTask({
-        parent,
-        task: {
-            httpRequest: {
-                httpMethod: "POST",
-                url: workerUrl,
-                body: Buffer.from(JSON.stringify(payload)),
-                headers: { "Content-Type": "application/json" },
-                oidcToken: { serviceAccountEmail: saEmail, audience: workerUrl },
-            },
-        },
-    })
-    return task.name ?? ""
-}
+// async function getTasksClient() {
+//     const { CloudTasksClient } = await import("@google-cloud/tasks")
+//     const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
+//     if (b64) {
+//         const credentials = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"))
+//         return new CloudTasksClient({ credentials })
+//     }
+//     return new CloudTasksClient()
+// }
+//
+// async function enqueueTask(workerUrl: string, payload: Record<string, unknown>): Promise<string> {
+//     const client = await getTasksClient()
+//     const projectId = process.env.GCP_PROJECT_ID!.trim()
+//     const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
+//     const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
+//     const saEmail = process.env.WORKER_SA_EMAIL!.trim()
+//     const parent = client.queuePath(projectId, location, queue)
+//     const [task] = await client.createTask({
+//         parent,
+//         task: {
+//             httpRequest: {
+//                 httpMethod: "POST",
+//                 url: workerUrl,
+//                 body: Buffer.from(JSON.stringify(payload)),
+//                 headers: { "Content-Type": "application/json" },
+//                 oidcToken: { serviceAccountEmail: saEmail, audience: workerUrl },
+//             },
+//         },
+//     })
+//     return task.name ?? ""
+// }
 
 // TODO (Railway): uncomment and use instead of gcpConfigured=false:
 // async function dispatchToWorker(payload: Record<string, unknown>): Promise<void> {
@@ -86,13 +97,14 @@ const REPURPOSE_ASSET_TYPES: Array<{ assetType: AssetType; platform: Platform }>
 ]
 
 // ---------------------------------------------------------------------------
-// Static worker URL map (dynamic process.env[key] breaks Turbopack)
+// Worker URL env mappings are commented out while external GCP workers remain
+// disabled for the Trigger.dev migration.
 // ---------------------------------------------------------------------------
-const WORKER_URLS: Record<string, string | undefined> = {
-    CAROUSEL_RENDERER_URL: process.env.CAROUSEL_RENDERER_URL,
-    REPURPOSE_WORKER_URL: process.env.REPURPOSE_WORKER_URL,
-    VIDEO_RENDERER_URL: process.env.VIDEO_RENDERER_URL,
-}
+// const WORKER_URLS: Record<string, string | undefined> = {
+//     CAROUSEL_RENDERER_URL: process.env.CAROUSEL_RENDERER_URL,
+//     REPURPOSE_WORKER_URL: process.env.REPURPOSE_WORKER_URL,
+//     VIDEO_RENDERER_URL: process.env.VIDEO_RENDERER_URL,
+// }
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -117,7 +129,18 @@ export async function POST(req: NextRequest) {
 
         const { data: idea, error: ideaError } = await supabaseAdmin
             .from("content_ideas")
-            .select(`*, calendarEntry:production_calendar_entries(*)`)
+            .select(`
+                id,
+                masterJson:master_json,
+                calendarEntry:production_calendar_entries(
+                    id,
+                    entryDate:entry_date,
+                    publishStatus:publish_status,
+                    platform,
+                    postType:post_type,
+                    topic
+                )
+            `)
             .eq("id", contentIdeaId)
             .maybeSingle()
 
@@ -133,7 +156,7 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const entry = idea.calendarEntry as {
+        const entry = (Array.isArray(idea.calendarEntry) ? idea.calendarEntry[0] : idea.calendarEntry) as {
             id: string
             entryDate: string
             publishStatus: string
@@ -164,18 +187,33 @@ export async function POST(req: NextRequest) {
         const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "localhost:3000"
         const protocol = host.includes("localhost") ? "http" : "https"
         const baseUrl = `${protocol}://${host}`
-        const callbackUrl = `${baseUrl}/api/production/render-done`
-        const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
+        // const callbackUrl = `${baseUrl}/api/production/render-done`
+        // const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
-        // GCP/Cloud Tasks can be enabled via ENABLE_GCP_TASKS=true in Vercel
-        const gcpConfigured = process.env.ENABLE_GCP_TASKS === "true" && !!process.env.WORKER_SA_EMAIL
+        const triggerConfigured = Boolean(process.env.TRIGGER_SECRET_KEY)
         const jobs: Array<{ jobType: RenderJobType; taskId: string; renderJobId: string }> = []
         const errors: string[] = []
 
-        // Determine which workers to run
-        const needsCarousel = ["CAROUSEL"].includes(entry.postType)
-        const needsVideo = ["VIDEO", "REEL"].includes(entry.postType)
-        const needsRepurpose = true // always
+        // Deduplicate jobs by checking if COMPLETE assets already exist for this contentIdeaId
+        const { data: existingAssets } = await supabaseAdmin
+            .from("content_assets")
+            .select("asset_type")
+            .eq("content_idea_id", contentIdeaId)
+            .eq("status", "COMPLETE")
+
+        const completedTypes = new Set(existingAssets?.map(a => a.asset_type) || [])
+
+        // Determine which workers to run (skip if already COMPLETE)
+        const needsCarousel = ["CAROUSEL"].includes(entry.postType) && !completedTypes.has("CAROUSEL_PNG")
+        const needsVideo = ["VIDEO", "REEL"].includes(entry.postType) && !completedTypes.has("VIDEO_MP4")
+        const needsRepurpose = !completedTypes.has("TEXT_POST") || !completedTypes.has("EMAIL_HTML")
+
+        if (!needsCarousel && !needsVideo && !needsRepurpose) {
+            return NextResponse.json(
+                { message: "All assets are already marked as COMPLETE. No rendering queued." },
+                { status: 200 }
+            )
+        }
 
         // ------------------------------------------------------------------
         // Helper: create RenderJob row + (optionally) enqueue task
@@ -183,11 +221,9 @@ export async function POST(req: NextRequest) {
         // ------------------------------------------------------------------
         const dispatch = async (
             jobType: RenderJobType,
-            workerUrlEnvKey: string,
             assetTypes: Array<{ assetType: AssetType; platform: Platform }>,
             extraPayload: Record<string, unknown> = {}
         ): Promise<string> => {
-            const workerUrl = WORKER_URLS[workerUrlEnvKey]
 
             const payload = {
                 contentIdeaId,
@@ -202,10 +238,10 @@ export async function POST(req: NextRequest) {
             const { data: renderJob, error: renderJobError } = await supabaseAdmin
                 .from("render_jobs")
                 .insert({
-                    contentIdeaId,
-                    jobType,
+                    content_idea_id: contentIdeaId,
+                    job_type: jobType,
                     status: "QUEUED",
-                    inputPayload: payload as object,
+                    input_payload: payload as object,
                 })
                 .select("id")
                 .single()
@@ -215,11 +251,11 @@ export async function POST(req: NextRequest) {
             }
 
             const placeholders = assetTypes.map(({ assetType, platform }) => ({
-                contentIdeaId,
+                content_idea_id: contentIdeaId,
                 platform,
-                assetType,
-                renderJobId: renderJob.id,
-                fileName: buildFileName(platform, entryDateIso, entry.topic, assetType, 1),
+                asset_type: assetType,
+                render_job_id: renderJob.id,
+                file_name: buildFileName(platform, entryDateIso, entry.topic, assetType, 1),
                 status: "PENDING" as const,
             }))
 
@@ -234,41 +270,39 @@ export async function POST(req: NextRequest) {
                 }
             }
 
-            // Enqueue to Cloud Tasks — skip if GCP credentials are absent (inline path)
-            if (!gcpConfigured || !workerUrl) {
+            if (!triggerConfigured) {
                 jobs.push({ jobType, taskId: "inline", renderJobId: renderJob.id })
                 return renderJob.id
             }
 
-            // TODO (Railway): dispatch to worker via fetch + X-Worker-Secret header
             try {
-                const taskName = await enqueueTask(workerUrl, {
+                const taskPayload: RepurposeInlineInput = {
                     renderJobId: renderJob.id,
                     contentIdeaId,
+                    calendarEntryId: entry.id,
                     masterJson: master,
                     platform: entry.platform,
                     postType: entry.postType,
                     topic: entry.topic,
                     entryDate: entryDateIso,
-                    callbackUrl,
-                    callbackSecret,
-                    ...extraPayload,
-                })
-
-                const { error: updateTaskError } = await supabaseAdmin
-                    .from("render_jobs")
-                    .update({ cloudTasksTaskId: taskName })
-                    .eq("id", renderJob.id)
-
-                if (updateTaskError) {
-                    console.error("[assets/generate] Failed to save Cloud Task id:", updateTaskError)
+                    voiceId: typeof extraPayload.voiceId === "string" ? extraPayload.voiceId : undefined,
                 }
-                jobs.push({ jobType, taskId: taskName, renderJobId: renderJob.id })
+
+                let handle: { id: string }
+                if (jobType === "CAROUSEL") {
+                    handle = await tasks.trigger<typeof productionCarouselTask>("production-carousel", taskPayload)
+                } else if (jobType === "REPURPOSE") {
+                    handle = await tasks.trigger<typeof productionRepurposeTask>("production-repurpose", taskPayload)
+                } else {
+                    handle = await tasks.trigger<typeof productionVideoTask>("production-video", taskPayload)
+                }
+
+                jobs.push({ jobType, taskId: handle.id, renderJobId: renderJob.id })
             } catch (err) {
-                errors.push(`Failed to enqueue ${jobType}: ${(err as Error).message}`)
+                errors.push(`Failed to trigger ${jobType}: ${(err as Error).message}`)
                 await supabaseAdmin
                     .from("render_jobs")
-                    .update({ status: "FAILED", errorMessage: (err as Error).message })
+                    .update({ status: "FAILED", error_message: (err as Error).message })
                     .eq("id", renderJob.id)
             }
 
@@ -276,10 +310,10 @@ export async function POST(req: NextRequest) {
         }
 
         if (needsCarousel) {
-            const carouselJobId = await dispatch("CAROUSEL", "CAROUSEL_RENDERER_URL", [
+            const carouselJobId = await dispatch("CAROUSEL", [
                 { assetType: "CAROUSEL_PNG", platform: entry.platform },
             ])
-            if (!gcpConfigured) {
+            if (!triggerConfigured) {
                 try {
                     await runCarouselInline({
                         renderJobId: carouselJobId,
@@ -300,9 +334,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (needsRepurpose) {
-            const repurposeJobId = await dispatch("REPURPOSE", "REPURPOSE_WORKER_URL", REPURPOSE_ASSET_TYPES)
-            // If Cloud Tasks not configured, run Gemini inline right now
-            if (!gcpConfigured) {
+            const repurposeJobId = await dispatch("REPURPOSE", REPURPOSE_ASSET_TYPES)
+            if (!triggerConfigured) {
                 try {
                     await runRepurposeInline({
                         renderJobId: repurposeJobId,
@@ -324,13 +357,14 @@ export async function POST(req: NextRequest) {
         }
 
         if (needsVideo) {
-            const videoJobId = await dispatch("VIDEO", "VIDEO_RENDERER_URL", [
+            const videoJobId = await dispatch("VIDEO", [
                 { assetType: "VIDEO_SCRIPT_JSON", platform: entry.platform },
                 { assetType: "AUDIO_MP3", platform: entry.platform },
+                { assetType: "VIDEO_MP4", platform: entry.platform },
             ], {
                 voiceId: voiceId ?? null,
             })
-            if (!gcpConfigured) {
+            if (!triggerConfigured) {
                 try {
                     await runVideoScriptInline({
                         renderJobId: videoJobId,
@@ -358,7 +392,7 @@ export async function POST(req: NextRequest) {
         if (jobs.length > 0 && hasAsyncJobs) {
             const { error: statusError } = await supabaseAdmin
                 .from("production_calendar_entries")
-                .update({ publishStatus: "GENERATING" })
+                .update({ publish_status: "GENERATING" })
                 .eq("id", entry.id)
 
             if (statusError) {

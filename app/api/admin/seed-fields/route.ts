@@ -11,7 +11,7 @@ import { auth } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 import { FieldCategory } from "@/lib/enums"
 
-const CLINICAL_FIELDS: Array<{
+export const CLINICAL_FIELDS: Array<{
     fieldKey: string
     fieldCategory: FieldCategory
     displayName: string
@@ -181,15 +181,15 @@ export async function POST() {
         .from("clinical_fields")
         .upsert(
             CLINICAL_FIELDS.map((field) => ({
-                fieldKey: field.fieldKey,
-                fieldCategory: field.fieldCategory,
-                displayName: field.displayName,
+                field_key: field.fieldKey,
+                field_category: field.fieldCategory,
+                display_name: field.displayName,
                 description: field.description,
-                clinicalContext: field.clinicalContext,
-                exampleValues: field.exampleValues,
-                isActive: true,
+                clinical_context: field.clinicalContext,
+                example_values: field.exampleValues,
+                is_active: true,
             })),
-            { onConflict: "fieldKey" }
+            { onConflict: "field_key" }
         )
 
     if (upsertError) {
@@ -219,7 +219,7 @@ export async function GET() {
     const { count, error } = await supabaseAdmin
         .from("clinical_fields")
         .select("id", { count: "exact", head: true })
-        .eq("isActive", true)
+        .eq("is_active", true)
 
     if (error) {
         console.error("[seed-fields] Count fetch error:", error)

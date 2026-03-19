@@ -357,7 +357,7 @@ export function ProductionDashboardClient() {
                     <StatCard label="Total Entries" value={stats.total} color={PROD_BRAND.navy} />
                     <StatCard label="Approved" value={stats.approved} color={PROD_BRAND.green} sublabel="Ready to render" />
                     <StatCard label="Pending" value={stats.pending} color={PROD_BRAND.amber} sublabel="Needs review" />
-                    <StatCard label="Generating" value={stats.generating} color={PROD_BRAND.blue} sublabel="Cloud Run active" />
+                    <StatCard label="Generating" value={stats.generating} color={PROD_BRAND.blue} sublabel="Background jobs active" />
                     <StatCard label="Published" value={stats.published} color={PROD_BRAND.green} sublabel="Live content" />
                 </div>
 

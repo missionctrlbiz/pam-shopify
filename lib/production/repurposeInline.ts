@@ -12,8 +12,34 @@
 
 import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
 import { supabaseAdmin } from "@/lib/supabase"
+import { createRequire } from "node:module"
 import satori from "satori"
-import { Resvg } from "@resvg/resvg-js"
+
+type ResvgRenderer = {
+    render(): {
+        asPng(): Uint8Array
+    }
+}
+
+type ResvgConstructor = new (
+    svg: string,
+    options: {
+        fitTo: {
+            mode: "width"
+            value: number
+        }
+    }
+) => ResvgRenderer
+
+const require = createRequire(import.meta.url)
+let cachedResvg: ResvgConstructor | null = null
+
+function getResvg(): ResvgConstructor {
+    if (cachedResvg) return cachedResvg;
+    const { Resvg } = require("@resvg/resvg-js") as { Resvg: ResvgConstructor }
+    cachedResvg = Resvg
+    return Resvg
+}
 
 // ---------------------------------------------------------------------------
 // Markdown stripper
@@ -292,9 +318,9 @@ export async function checkAllRenderJobsComplete(contentIdeaId: string, calendar
     try {
         const { data: allJobs, error } = await supabaseAdmin
             .from("render_jobs")
-            .select("jobType, status")
-            .eq("contentIdeaId", contentIdeaId)
-            .order("queuedAt", { ascending: false })
+            .select("jobType:job_type, status")
+            .eq("content_idea_id", contentIdeaId)
+            .order("queued_at", { ascending: false })
 
         if (error) {
             console.error("[inline] Failed to fetch render jobs for completion check:", error)
@@ -314,7 +340,7 @@ export async function checkAllRenderJobsComplete(contentIdeaId: string, calendar
         if (allDone && calendarEntryId) {
             const { error: entryError } = await supabaseAdmin
                 .from("production_calendar_entries")
-                .update({ publishStatus: "APPROVED" })
+                .update({ publish_status: "APPROVED" })
                 .eq("id", calendarEntryId)
 
             if (entryError) {
@@ -340,7 +366,7 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
     const startTime = new Date().toISOString()
     const { error: startError } = await supabaseAdmin
         .from("render_jobs")
-        .update({ status: "RUNNING", startedAt: startTime })
+        .update({ status: "RUNNING", started_at: startTime })
         .eq("id", renderJobId)
 
     if (startError) {
@@ -363,10 +389,10 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
 
             const { error: assetError } = await supabaseAdmin
                 .from("content_assets")
-                .update({ status: "COMPLETE", storageUrl, metadata: { content, ...meta } })
-                .eq("renderJobId", renderJobId)
+                .update({ status: "COMPLETE", storage_url: storageUrl, metadata: { content, ...meta } })
+                .eq("render_job_id", renderJobId)
                 .eq("platform", mapping.platform)
-                .eq("assetType", mapping.assetType)
+                .eq("asset_type", mapping.assetType)
 
             if (assetError) {
                 throw new Error(`Failed to update ${mapping.platform} asset: ${assetError.message}`)
@@ -375,7 +401,7 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
 
         const { error: completeError } = await supabaseAdmin
             .from("render_jobs")
-            .update({ status: "COMPLETE", completedAt: new Date().toISOString() })
+            .update({ status: "COMPLETE", completed_at: new Date().toISOString() })
             .eq("id", renderJobId)
 
         if (completeError) {
@@ -387,7 +413,7 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
         const failureTime = new Date().toISOString()
         const { error: failJobError } = await supabaseAdmin
             .from("render_jobs")
-            .update({ status: "FAILED", completedAt: failureTime, errorMessage: msg })
+            .update({ status: "FAILED", completed_at: failureTime, error_message: msg })
             .eq("id", renderJobId)
 
         if (failJobError) {
@@ -397,7 +423,7 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
         const { error: failAssetsError } = await supabaseAdmin
             .from("content_assets")
             .update({ status: "FAILED" })
-            .eq("renderJobId", renderJobId)
+            .eq("render_job_id", renderJobId)
 
         if (failAssetsError) {
             console.error("[repurposeInline] Failed to mark assets FAILED:", failAssetsError)
@@ -512,6 +538,7 @@ async function renderSlideToPng(
             { name: "Montserrat", data: regularFont, weight: 400, style: "normal" },
         ],
     })
+    const Resvg = getResvg()
     const resvg = new Resvg(svg, { fitTo: { mode: "width", value: 1080 } })
     return Buffer.from(resvg.render().asPng())
 }
@@ -520,7 +547,7 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
     const { renderJobId, contentIdeaId, calendarEntryId, entryDate, topic } = input
     const { error: startError } = await supabaseAdmin
         .from("render_jobs")
-        .update({ status: "RUNNING", startedAt: new Date().toISOString() })
+        .update({ status: "RUNNING", started_at: new Date().toISOString() })
         .eq("id", renderJobId)
 
     if (startError) {
@@ -572,11 +599,11 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
             .from("content_assets")
             .update({
                 status: "COMPLETE",
-                storageUrl: slideUrls[0],
+                storage_url: slideUrls[0],
                 metadata: JSON.parse(JSON.stringify({ content: readable, slideUrls, script })),
             })
-            .eq("renderJobId", renderJobId)
-            .eq("assetType", "CAROUSEL_PNG")
+            .eq("render_job_id", renderJobId)
+            .eq("asset_type", "CAROUSEL_PNG")
 
         if (assetError) {
             throw new Error(`Failed to update carousel metadata: ${assetError.message}`)
@@ -584,7 +611,7 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
 
         const { error: completeError } = await supabaseAdmin
             .from("render_jobs")
-            .update({ status: "COMPLETE", completedAt: new Date().toISOString() })
+            .update({ status: "COMPLETE", completed_at: new Date().toISOString() })
             .eq("id", renderJobId)
 
         if (completeError) {
@@ -596,7 +623,7 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
         const failureTime = new Date().toISOString()
         const { error: failJobError } = await supabaseAdmin
             .from("render_jobs")
-            .update({ status: "FAILED", completedAt: failureTime, errorMessage: msg })
+            .update({ status: "FAILED", completed_at: failureTime, error_message: msg })
             .eq("id", renderJobId)
 
         if (failJobError) {
@@ -606,7 +633,7 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
         const { error: failAssetsError } = await supabaseAdmin
             .from("content_assets")
             .update({ status: "FAILED" })
-            .eq("renderJobId", renderJobId)
+            .eq("render_job_id", renderJobId)
 
         if (failAssetsError) {
             console.error("[carouselInline] Failed to mark assets FAILED:", failAssetsError)
@@ -647,14 +674,54 @@ async function runAudioInline(
 }
 
 // ---------------------------------------------------------------------------
-// VIDEO SCRIPT inline — Gemini script + ElevenLabs audio
+// VIDEO SCRIPT inline — Gemini script + ElevenLabs audio + Remotion MP4
 // ---------------------------------------------------------------------------
+
+async function renderVideoInline(input: {
+    hook: string
+    teachingPoints: string[]
+    cta: string
+    audioUrl: string
+    topic: string
+}): Promise<Buffer> {
+    const { renderMedia, selectComposition } = await import("@remotion/renderer")
+    const { join } = await import("node:path")
+    const { tmpdir } = await import("node:os")
+    const { readFileSync, unlinkSync } = await import("node:fs")
+
+    const serveUrl = process.env.REMOTION_BUNDLE_PATH || join(process.cwd(), "workers", "video-renderer", "build")
+
+    const composition = await selectComposition({
+        serveUrl,
+        id: "PAMVideo",
+        inputProps: input,
+    })
+
+    const tmpFile = join(tmpdir(), `pam-video-${Date.now()}.mp4`)
+
+    await renderMedia({
+        composition,
+        serveUrl,
+        codec: "h264",
+        outputLocation: tmpFile,
+        inputProps: input,
+        chromiumOptions: {
+            disableWebSecurity: true,
+        },
+        timeoutInMilliseconds: 600_000,
+    })
+
+    const buffer = readFileSync(tmpFile)
+    unlinkSync(tmpFile)
+
+    return buffer
+}
 
 export async function runVideoScriptInline(input: RepurposeInlineInput): Promise<void> {
     const { renderJobId, contentIdeaId, calendarEntryId, entryDate, topic, voiceId } = input
     const { error: startError } = await supabaseAdmin
         .from("render_jobs")
-        .update({ status: "RUNNING", startedAt: new Date().toISOString() })
+        .update({ status: "RUNNING", started_at: new Date().toISOString() })
         .eq("id", renderJobId)
 
     if (startError) {
@@ -695,18 +762,19 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
         const scriptMeta = JSON.parse(JSON.stringify({ content: readable, script }))
         const { error: scriptAssetError } = await supabaseAdmin
             .from("content_assets")
-            .update({ status: "COMPLETE", storageUrl: scriptUrl, metadata: scriptMeta })
-            .eq("renderJobId", renderJobId)
-            .eq("assetType", "VIDEO_SCRIPT_JSON")
+            .update({ status: "COMPLETE", storage_url: scriptUrl, metadata: scriptMeta })
+            .eq("render_job_id", renderJobId)
+            .eq("asset_type", "VIDEO_SCRIPT_JSON")
 
         if (scriptAssetError) {
             throw new Error(`Failed to update video script asset: ${scriptAssetError.message}`)
         }
 
         // ElevenLabs audio (non-fatal if it fails)
-        const voiceoverText = [script.hook, ...script.segments.map(s => s.voiceover), script.ctaOutro].join(" ")
+        let generatedAudioUrl: string | undefined = undefined;
+
         try {
-            const audioUrl = await runAudioInline(
+            generatedAudioUrl = await runAudioInline(
                 contentIdeaId,
                 voiceoverText,
                 `PAM_AUDIO_${date}_${slug}_v1.mp3`,
@@ -716,34 +784,82 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
                 .from("content_assets")
                 .update({
                     status: "COMPLETE",
-                    storageUrl: audioUrl,
+                    storage_url: generatedAudioUrl,
                     metadata: {
                         content: `Audio voiceover: ${script.title} (~${script.durationEstimateSecs}s)`,
                         durationEstimateSecs: script.durationEstimateSecs,
                     },
                 })
-                .eq("renderJobId", renderJobId)
-                .eq("assetType", "AUDIO_MP3")
+                .eq("render_job_id", renderJobId)
+                .eq("asset_type", "AUDIO_MP3")
 
             if (audioAssetError) {
                 console.error("[videoScriptInline] Failed to update audio asset:", audioAssetError)
             }
         } catch (audioErr) {
-            console.error("[videoScriptInline] ElevenLabs failed (non-fatal):", audioErr)
+            console.error("[videoScriptInline] ElevenLabs failed:", audioErr)
             const { error: audioFailError } = await supabaseAdmin
                 .from("content_assets")
                 .update({ status: "FAILED" })
-                .eq("renderJobId", renderJobId)
-                .eq("assetType", "AUDIO_MP3")
+                .eq("render_job_id", renderJobId)
+                .eq("asset_type", "AUDIO_MP3")
 
             if (audioFailError) {
                 console.error("[videoScriptInline] Failed to mark audio asset FAILED:", audioFailError)
             }
         }
 
+        // Remotion MP4 generation
+        if (generatedAudioUrl) {
+            console.log(`[videoScriptInline] Triggering local Remotion renderer...`)
+            try {
+                const videoBuffer = await renderVideoInline({
+                    hook: script.hook,
+                    teachingPoints: script.segments.map(s => s.voiceover),
+                    cta: script.ctaOutro,
+                    audioUrl: generatedAudioUrl,
+                    topic,
+                })
+
+                const videoUrl = await storeBlob(
+                    `production/${contentIdeaId}/VIDEO_MP4/PAM_VIDEO_${date}_${slug}_v1.mp4`,
+                    videoBuffer,
+                    "video/mp4"
+                )
+
+                const { error: videoAssetError } = await supabaseAdmin
+                    .from("content_assets")
+                    .update({ status: "COMPLETE", storage_url: videoUrl })
+                    .eq("render_job_id", renderJobId)
+                    .eq("asset_type", "VIDEO_MP4")
+
+                if (videoAssetError) {
+                    throw new Error(`Failed to update video asset metadata: ${videoAssetError.message}`)
+                }
+                console.log(`[videoScriptInline] Remotion MP4 generation generated successfully: ${videoUrl}`)
+            } catch (videoErr) {
+                console.error("[videoScriptInline] Remotion failed:", videoErr)
+                await supabaseAdmin
+                    .from("content_assets")
+                    .update({ status: "FAILED" })
+                    .eq("render_job_id", renderJobId)
+                    .eq("asset_type", "VIDEO_MP4")
+                throw videoErr
+            }
+        } else {
+            console.warn("[videoScriptInline] Skipping MP4 generation because audio generation failed.")
+            await supabaseAdmin
+                .from("content_assets")
+                .update({ status: "FAILED" })
+                .eq("render_job_id", renderJobId)
+                .eq("asset_type", "VIDEO_MP4")
+            throw new Error("No audio available to orchestrate the MP4 Remotion engine.")
+        }
+
+
         const { error: completeError } = await supabaseAdmin
             .from("render_jobs")
-            .update({ status: "COMPLETE", completedAt: new Date().toISOString() })
+            .update({ status: "COMPLETE", completed_at: new Date().toISOString() })
             .eq("id", renderJobId)
 
         if (completeError) {
@@ -755,7 +871,7 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
         const failureTime = new Date().toISOString()
         const { error: failJobError } = await supabaseAdmin
             .from("render_jobs")
-            .update({ status: "FAILED", completedAt: failureTime, errorMessage: msg })
+            .update({ status: "FAILED", completed_at: failureTime, error_message: msg })
             .eq("id", renderJobId)
 
         if (failJobError) {
@@ -765,7 +881,7 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
         const { error: failAssetsError } = await supabaseAdmin
             .from("content_assets")
             .update({ status: "FAILED" })
-            .eq("renderJobId", renderJobId)
+            .eq("render_job_id", renderJobId)
 
         if (failAssetsError) {
             console.error("[videoScriptInline] Failed to mark assets FAILED:", failAssetsError)

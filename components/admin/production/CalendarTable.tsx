@@ -136,10 +136,13 @@ interface CalendarTableProps {
     selectedId: string | null
     onSelect: (entry: CalendarEntryRow) => void
     loading: boolean
+    bulkSelectedIds?: Set<string>
+    onToggleSelect?: (id: string) => void
+    onToggleSelectAll?: (allIds: string[]) => void
 }
 
 export const CalendarTable: React.FC<CalendarTableProps> = ({
-    entries, selectedId, onSelect, loading,
+    entries, selectedId, onSelect, loading, bulkSelectedIds, onToggleSelect, onToggleSelectAll
 }) => {
     if (loading) {
         return (
@@ -164,8 +167,22 @@ export const CalendarTable: React.FC<CalendarTableProps> = ({
         )
     }
 
+    const allSelected = entries.length > 0 && bulkSelectedIds?.size === entries.length
+
     return (
         <div className="space-y-2 p-1">
+            {/* Header / Select All row (optional, simplified) */}
+            {onToggleSelectAll && entries.length > 0 && (
+                <div className="px-5 py-2 flex items-center gap-4 border-b border-slate-100">
+                    <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={() => onToggleSelectAll(entries.map(e => e.id))}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-slate-500 uppercase">Select All</span>
+                </div>
+            )}
             {entries.map((entry, idx) => {
                 const isSelected = entry.id === selectedId
                 const qgStatus = entry.contentIdea?.qualityGateStatus ?? "PENDING"
@@ -184,13 +201,25 @@ export const CalendarTable: React.FC<CalendarTableProps> = ({
                         transition={{ delay: idx * 0.015, duration: 0.2 }}
                         onClick={() => onSelect(entry)}
                         className={`group flex items-center gap-4 px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-200 ${isSelected
-                                ? "bg-blue-50 ring-2 ring-blue-200 shadow-sm"
-                                : "hover:bg-slate-50 hover:shadow-sm"
+                            ? "bg-blue-50 ring-2 ring-blue-200 shadow-sm"
+                            : "hover:bg-slate-50 hover:shadow-sm"
                             }`}
                         style={{
                             borderLeft: isSelected ? `3px solid ${PROD_BRAND.blue}` : "3px solid transparent",
                         }}
                     >
+                        {/* Checkbox */}
+                        {onToggleSelect && (
+                            <div className="flex-shrink-0 flex items-center justify-center mr-1" onClick={e => e.stopPropagation()}>
+                                <input
+                                    type="checkbox"
+                                    checked={bulkSelectedIds?.has(entry.id) || false}
+                                    onChange={() => onToggleSelect(entry.id)}
+                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                />
+                            </div>
+                        )}
+
                         {/* Day number badge */}
                         <div
                             className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm"

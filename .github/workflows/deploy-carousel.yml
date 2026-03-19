@@ -1,61 +1,14 @@
-name: Deploy Carousel Renderer
+name: Disabled carousel deploy
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'workers/carousel-renderer/**'
-      - '.github/workflows/deploy-carousel.yml'
-
-permissions:
-  contents: 'read'
-  id-token: 'write'
-
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  LOCATION: us-central1
-  REPO: pam-workers
-  SERVICE_NAME: carousel-renderer
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  parked:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: GCP deploy parked
+        run: echo "GCP deploy is disabled during the Trigger.dev migration."
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: pam-worker-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Configure Docker for GCP
-        run: |
-          gcloud auth configure-docker ${{ env.LOCATION }}-docker.pkg.dev --quiet
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./workers/carousel-renderer
-          push: true
-          tags: ${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image=${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest \
-            --region=${{ env.LOCATION }} \
-            --service-account=pam-worker-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
-            --no-allow-unauthenticated \
-            --memory=2Gi \
-            --cpu=2 \
-            --concurrency=1 \
-            --min-instances=0 \
-            --max-instances=3 \
-            --set-secrets=GEMINI_API_KEY=pam-gemini-api-key:latest,NEXT_PUBLIC_SUPABASE_ANON_KEY=pam-supabase-anon-key:latest,SUPABASE_URL=pam-supabase-url:latest,SUPABASE_SERVICE_ROLE=pam-supabase-service-role:latest,RENDER_CALLBACK_SECRET=pam-render-callback-secret:latest
+# GCP Cloud Run deployment is intentionally parked during the Trigger.dev migration.
+# Restore the original workflow only if the GCP worker path is revived.

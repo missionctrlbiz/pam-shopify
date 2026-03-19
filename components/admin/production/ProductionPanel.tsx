@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { MotionIcon } from "motion-icons-react"
 import {
     CalendarDays, LayoutList, Upload, Zap, RefreshCw, Loader2,
-    Filter, ChevronLeft, ChevronRight, AlertCircle, X,
+    Filter, ChevronLeft, ChevronRight, AlertCircle, X, Archive,
     BarChart3, FileUp, Download, BookOpen, Layers, CheckCircle2,
 } from "lucide-react"
 import type {
@@ -309,7 +309,14 @@ function GenerateModal({ open, onClose, onConfirm, running, result, progress }: 
                             </p>
                         </div>
 
-                        {result && (
+                        {result?.queued ? (
+                            <div className="mb-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                                <p className="text-sm font-semibold text-blue-700">Background batch queued</p>
+                                <p className="mt-1 text-xs leading-relaxed text-blue-600">
+                                    {result.message ?? `Queued ${result.requestedDays ?? 5} entries in Trigger.dev.`} Refresh will continue automatically.
+                                </p>
+                            </div>
+                        ) : result && (
                             <div className="flex gap-3 mb-5">
                                 <div className="flex-1 bg-emerald-50 rounded-2xl p-4 text-center border border-emerald-100">
                                     <p className="text-3xl font-extrabold text-emerald-600">{result.generated}</p>
@@ -360,6 +367,62 @@ function GenerateModal({ open, onClose, onConfirm, running, result, progress }: 
                                     }
                                 </button>
                             )}
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
+    )
+}
+
+// ─── Reusable Confirm Modal ───────────────────────────────────────────────────
+function ConfirmModal({ open, onClose, onConfirm, title, desc, actionLabel, loading }: {
+    open: boolean
+    onClose: () => void
+    onConfirm: () => void
+    title: string
+    desc: string
+    actionLabel: string
+    loading?: boolean
+}) {
+    return (
+        <AnimatePresence>
+            {open && (
+                <>
+                    <motion.div key="bd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
+                    <motion.div key="modal"
+                        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[90vw] bg-white rounded-3xl shadow-2xl p-7 z-60"
+                    >
+                        <div className="flex items-start justify-between mb-4">
+                            <div>
+                                <h3 className="text-xl font-extrabold tracking-tight mb-1" style={{ color: BRAND.navy }}>
+                                    {title}
+                                </h3>
+                                <p className="text-sm text-slate-500 leading-relaxed">
+                                    {desc}
+                                </p>
+                            </div>
+                            <button onClick={onClose} aria-label="Close" className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition ml-4">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button onClick={onClose} disabled={loading}
+                                className="px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
+                                Cancel
+                            </button>
+                            <button onClick={onConfirm} disabled={loading}
+                                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-50 shadow-lg"
+                                style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}>
+                                {loading && <Loader2 size={14} className="animate-spin" />}
+                                {actionLabel}
+                            </button>
                         </div>
                     </motion.div>
                 </>
@@ -599,6 +662,18 @@ export function ProductionPanel() {
     const [generateResult, setGenerateResult] = useState<GenerateCycleResponse | null>(null)
     const [generateProgress, setGenerateProgress] = useState(0)
 
+    // Multi-select state
+    const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set())
+    const [deletingBulk, setDeletingBulk] = useState(false)
+
+    // Generic confirming state
+    const [confirmModal, setConfirmModal] = useState<{
+        title: string;
+        desc: string;
+        actionLabel: string;
+        onConfirm: () => void;
+    } | null>(null)
+
     // Toast notification
     const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null)
     const showToast = (msg: string, type: "success" | "error" | "info" = "info") => {
@@ -626,7 +701,7 @@ export function ProductionPanel() {
             if (statusFilter) p.set("status", statusFilter)
             if (platformFilter) p.set("platform", platformFilter)
             p.set("page", String(page))
-            p.set("limit", "50")
+            p.set("limit", "10")
             const res = await fetch(`/api/production/calendar?${p}`)
             if (!res.ok) throw new Error(`status ${res.status}`)
             const data = await res.json() as CalendarListResponse
@@ -645,7 +720,10 @@ export function ProductionPanel() {
     }, [statusFilter, platformFilter])
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { void fetchCalendar(1) }, [statusFilter, platformFilter])
+    useEffect(() => {
+        setBulkSelectedIds(new Set()) // Clear selection on filter change
+        void fetchCalendar(1)
+    }, [statusFilter, platformFilter])
 
     // NO auto-polling — user clicks Sync manually to refresh
 
@@ -667,49 +745,91 @@ export function ProductionPanel() {
         startDate.setHours(9, 0, 0, 0)
         const startDateStr = startDate.toISOString()
 
-        let totalGenerated = 0
-        let totalFailed = 0
         const offset = generatedSoFar
 
-        // Generate 5 entries, one API call per entry to avoid timeouts
-        for (let i = 0; i < BATCH_SIZE; i++) {
-            try {
-                const res = await fetch("/api/production/calendar/generate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        days: 1,
-                        offset: offset + i,
-                        startDate: startDateStr,
-                        overwrite: offset === 0 && i === 0,
-                    }),
-                })
-                const ct = res.headers.get("content-type") ?? ""
-                if (!ct.includes("application/json")) {
-                    console.error(`[generate] entry ${offset + i} returned non-JSON (${res.status})`)
-                    totalFailed += 1
-                    setGenerateProgress(Math.round(((i + 1) / BATCH_SIZE) * 100))
-                    continue
-                }
-                const data = await res.json() as GenerateCycleResponse
-                totalGenerated += data.generated ?? 0
-                totalFailed += data.failed ?? 0
-                setGenerateProgress(Math.round(((i + 1) / BATCH_SIZE) * 100))
-            } catch {
-                totalFailed += 1
-                setGenerateProgress(Math.round(((i + 1) / BATCH_SIZE) * 100))
-            }
-        }
+        // Smooth simulated progress for the parallel payload execution
+        const intervalId = setInterval(() => {
+            setGenerateProgress(p => (p < 95 ? p + Math.floor(Math.random() * 12) + 4 : p))
+        }, 1000)
 
-        setGeneratedSoFar(prev => prev + totalGenerated)
-        setGenerateResult({ generated: totalGenerated, failed: totalFailed, entries: [] })
-        if (totalFailed > 0) {
-            showToast(`Generated ${totalGenerated} entries. ${totalFailed} failed.`, "error")
-        } else {
-            showToast(`Successfully generated ${totalGenerated} new calendar entries!`, "success")
+        try {
+            const res = await fetch("/api/production/calendar/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    days: BATCH_SIZE,
+                    offset,
+                    startDate: startDateStr,
+                    overwrite: offset === 0,
+                }),
+            })
+
+            const data = await res.json() as GenerateCycleResponse
+            clearInterval(intervalId)
+            setGenerateProgress(100)
+            setGenerateResult(data)
+
+            if (data.queued) {
+                setGeneratedSoFar(prev => prev + BATCH_SIZE)
+                showToast(data.message ?? `Queued ${BATCH_SIZE} entries in the background.`, "info")
+                setGenerating(false)
+                await fetchCalendar(1)
+
+                void (async () => {
+                    for (let i = 0; i < 6; i++) {
+                        await new Promise((resolve) => setTimeout(resolve, 10000))
+                        await fetchCalendar(1, true)
+                    }
+                })()
+                return
+            }
+
+            setGeneratedSoFar(prev => prev + (data.generated ?? 0))
+            if ((data.failed ?? 0) > 0) {
+                showToast(`Generated ${data.generated ?? 0} entries. ${data.failed ?? 0} failed.`, "error")
+            } else {
+                showToast(`Successfully generated ${data.generated ?? 0} new calendar entries!`, "success")
+            }
+            await fetchCalendar(1)
+        } catch {
+            clearInterval(intervalId)
+            showToast("Calendar generation failed.", "error")
+        } finally {
+            clearInterval(intervalId)
+            setGenerating(false)
         }
-        await fetchCalendar(1)
-        setGenerating(false)
+    }
+
+    const handleBulkDelete = async () => {
+        if (bulkSelectedIds.size === 0) return
+
+        setConfirmModal({
+            title: "Delete Entries",
+            desc: `Are you sure you want to permanently delete these ${bulkSelectedIds.size} calendar entries? This action cannot be undone.`,
+            actionLabel: deletingBulk ? "Deleting…" : "Delete",
+            onConfirm: async () => {
+                setConfirmModal(null)
+                setDeletingBulk(true)
+                try {
+                    const res = await fetch("/api/production/calendar/bulk-delete", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ids: Array.from(bulkSelectedIds) }),
+                    })
+                    const data = await res.json()
+                    if (res.ok) {
+                        showToast(`Deleted ${data.deleted} entries successfully`, "success")
+                        setBulkSelectedIds(new Set())
+                        await fetchCalendar(pagination.page)
+                    } else {
+                        showToast(data.error ?? "Failed to delete entries", "error")
+                    }
+                } catch {
+                    showToast("Network error deleting entries", "error")
+                }
+                setDeletingBulk(false)
+            }
+        })
     }
 
     const statCards = [
@@ -758,22 +878,6 @@ export function ProductionPanel() {
                 <ViewTabs active={view} onChange={setView} />
 
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => fetchCalendar(pagination.page, true)}
-                        className="flex items-center gap-2 px-4 py-2 text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-sm text-sm font-bold"
-                    >
-                        <motion.div animate={refreshing ? { rotate: 360 } : {}} transition={{ duration: 0.6 }}>
-                            <RefreshCw size={14} />
-                        </motion.div>
-                        {refreshing ? "Refreshing…" : "Sync"}
-                    </button>
-                    <a
-                        href="/api/production/export/canva"
-                        download
-                        className="flex items-center gap-2 px-4 py-2 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition shadow-sm text-sm font-bold"
-                    >
-                        <Download size={14} /> Export CSV
-                    </a>
                     <button
                         onClick={() => { setGenerateResult(null); setGenerateModalOpen(true) }}
                         className="flex items-center gap-2 px-5 py-2 text-white rounded-xl text-sm font-bold shadow-lg font-montserrat tracking-wide"
@@ -875,7 +979,31 @@ export function ProductionPanel() {
                                 ))}
                             </select>
 
+                            {/* Bulk Delete Feature */}
+                            <AnimatePresence>
+                                {bulkSelectedIds.size > 0 && (
+                                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            disabled={deletingBulk}
+                                            className="px-3 py-1.5 flex items-center gap-2 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors"
+                                        >
+                                            <Archive size={14} />
+                                            {deletingBulk ? "Deleting…" : `Delete ${bulkSelectedIds.size}`}
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             <div className="flex-1" />
+
+                            <a
+                                href="/api/production/export/canva"
+                                download
+                                className="flex items-center gap-2 px-3 py-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition shadow-sm text-xs font-bold"
+                            >
+                                <Download size={12} /> Export CSV
+                            </a>
 
                             {/* Pagination */}
                             {pagination.totalPages > 1 && (
@@ -904,6 +1032,22 @@ export function ProductionPanel() {
                                 selectedId={selectedId}
                                 onSelect={entry => setSelectedId(entry.id)}
                                 loading={refreshing}
+                                bulkSelectedIds={bulkSelectedIds}
+                                onToggleSelect={(id) => {
+                                    setBulkSelectedIds(prev => {
+                                        const n = new Set(prev)
+                                        if (n.has(id)) n.delete(id)
+                                        else n.add(id)
+                                        return n
+                                    })
+                                }}
+                                onToggleSelectAll={(allIds) => {
+                                    if (bulkSelectedIds.size === entries.length && entries.length > 0) {
+                                        setBulkSelectedIds(new Set()) // unselect all
+                                    } else {
+                                        setBulkSelectedIds(new Set(allIds)) // select all currently visible
+                                    }
+                                }}
                             />
                         </div>
                     </motion.div>
@@ -956,6 +1100,17 @@ export function ProductionPanel() {
                 running={generating}
                 result={generateResult}
                 progress={generateProgress}
+            />
+
+            {/* Confirmation modal */}
+            <ConfirmModal
+                open={!!confirmModal}
+                onClose={() => setConfirmModal(null)}
+                title={confirmModal?.title ?? ""}
+                desc={confirmModal?.desc ?? ""}
+                actionLabel={confirmModal?.actionLabel ?? ""}
+                onConfirm={confirmModal?.onConfirm ?? (() => { })}
+                loading={deletingBulk}
             />
         </div>
     )

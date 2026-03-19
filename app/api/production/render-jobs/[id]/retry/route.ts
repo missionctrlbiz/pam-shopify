@@ -2,17 +2,28 @@
  * POST /api/production/render-jobs/[id]/retry
  *
  * Re-queues a FAILED RenderJob using its stored inputPayload.
- * Creates a fresh RenderJob row and re-enqueues to Cloud Tasks.
+ * GCP re-dispatch is currently disabled during the Trigger.dev migration.
  * Marks any FAILED ContentAsset rows linked to the old job back to PENDING.
  *
  * Protected: admin only.
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { tasks } from "@trigger.dev/sdk"
 import { auth } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
-import { runRepurposeInline, runCarouselInline, runVideoScriptInline } from "@/lib/production/repurposeInline"
+import {
+    runRepurposeInline,
+    runCarouselInline,
+    runVideoScriptInline,
+    type RepurposeInlineInput,
+} from "@/lib/production/repurposeInline"
 import { AssetType, Platform } from "@/lib/enums"
+import type {
+    productionCarouselTask,
+    productionRepurposeTask,
+    productionVideoTask,
+} from "@/trigger/production"
 
 type ExistingAsset = {
     id: string
@@ -23,17 +34,19 @@ type ExistingAsset = {
 
 // Inline Gemini call can take up to ~20 s; match the generate route timeout
 export const maxDuration = 60
-// GCP / Cloud Tasks — DISABLED during Railway migration.
+export const dynamic = "force-dynamic"
+// GCP / Cloud Tasks integration is intentionally commented out while we move
+// retries over to Trigger.dev.
 // ---------------------------------------------------------------------------
-async function getTasksClient() {
-    const { CloudTasksClient } = await import("@google-cloud/tasks")
-    const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
-    if (b64) {
-        const credentials = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"))
-        return new CloudTasksClient({ credentials })
-    }
-    return new CloudTasksClient()
-}
+// async function getTasksClient() {
+//     const { CloudTasksClient } = await import("@google-cloud/tasks")
+//     const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
+//     if (b64) {
+//         const credentials = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"))
+//         return new CloudTasksClient({ credentials })
+//     }
+//     return new CloudTasksClient()
+// }
 
 export async function POST(
     _req: NextRequest,
@@ -46,13 +59,13 @@ export async function POST(
 
     const { id: jobId } = await params
 
-    // Worker URL map — kept for Railway restoration; unused while gcpConfigured=false
-    const WORKER_URLS: Record<string, string | undefined> = {
-        CAROUSEL: process.env.CAROUSEL_RENDERER_URL?.trim(),
-        VIDEO: process.env.VIDEO_RENDERER_URL?.trim(),
-        AUDIO: process.env.VIDEO_RENDERER_URL?.trim(),
-        REPURPOSE: process.env.REPURPOSE_WORKER_URL?.trim(),
-    }
+    // External worker URL mappings are disabled while GCP workers are parked.
+    // const WORKER_URLS: Record<string, string | undefined> = {
+    //     CAROUSEL: process.env.CAROUSEL_RENDERER_URL?.trim(),
+    //     VIDEO: process.env.VIDEO_RENDERER_URL?.trim(),
+    //     AUDIO: process.env.VIDEO_RENDERER_URL?.trim(),
+    //     REPURPOSE: process.env.REPURPOSE_WORKER_URL?.trim(),
+    // }
 
     // ------------------------------------------------------------------
     // Fetch original job
@@ -62,9 +75,9 @@ export async function POST(
         .select(`*,
             contentIdea:content_ideas(
                 id,
-                calendarEntry:production_calendar_entries(id, publishStatus)
+                calendarEntry:production_calendar_entries(id, publishStatus:publish_status)
             ),
-            assets:content_assets(id, assetType, platform, fileName)
+            assets:content_assets(id, assetType:asset_type, platform, fileName:file_name)
         `)
         .eq("id", jobId)
         .maybeSingle()
@@ -95,16 +108,15 @@ export async function POST(
 
 
 
-    // GCP/Cloud Tasks disabled — Railway migration in progress. All retries run inline.
+    // Trigger.dev when configured, otherwise inline fallback.
     const storedPayload = (original.inputPayload ?? {}) as Record<string, unknown>
-    const gcpConfigured = process.env.ENABLE_GCP_TASKS === "true" && !!process.env.WORKER_SA_EMAIL
-    const workerUrl = WORKER_URLS[original.jobType]
+    const triggerConfigured = Boolean(process.env.TRIGGER_SECRET_KEY)
 
     const host = _req.headers.get("x-forwarded-host") || _req.headers.get("host") || "localhost:3000"
     const protocol = host.includes("localhost") ? "http" : "https"
     const baseUrl = `${protocol}://${host}`
-    const callbackUrl = `${baseUrl}/api/production/render-done`
-    const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
+    // const callbackUrl = `${baseUrl}/api/production/render-done`
+    // const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
     // ------------------------------------------------------------------
     // Create new RenderJob + asset placeholders (both paths need this)
@@ -112,10 +124,10 @@ export async function POST(
     const { data: newJob, error: newJobError } = await supabaseAdmin
         .from("render_jobs")
         .insert({
-            contentIdeaId: original.contentIdeaId,
-            jobType: original.jobType,
+            content_idea_id: original.content_idea_id,
+            job_type: original.job_type,
             status: "QUEUED",
-            inputPayload: storedPayload as object,
+            input_payload: storedPayload as object,
         })
         .select("id")
         .single()
@@ -130,11 +142,11 @@ export async function POST(
 
     if (originalAssets.length > 0) {
         const placeholders = originalAssets.map((a) => ({
-            contentIdeaId: original.contentIdeaId,
-            renderJobId: newJob.id,
-            assetType: a.assetType,
+            content_idea_id: original.content_idea_id,
+            render_job_id: newJob.id,
+            asset_type: a.assetType,
             platform: a.platform,
-            fileName: a.fileName ?? `retry_${newJob.id}`,
+            file_name: a.fileName ?? `retry_${newJob.id}`,
             status: "PENDING" as const,
         }))
 
@@ -152,10 +164,10 @@ export async function POST(
     // ------------------------------------------------------------------
     // Inline path — GCP not configured, run synchronously like generate route
     // ------------------------------------------------------------------
-    if (!gcpConfigured) {
+    if (!triggerConfigured) {
         const inlineInput = {
             renderJobId: newJob.id,
-            contentIdeaId: original.contentIdeaId,
+            contentIdeaId: original.content_idea_id,
             calendarEntryId,
             masterJson: (storedPayload.masterJson ?? {}) as Record<string, unknown>,
             platform: (storedPayload.platform as string) ?? "",
@@ -166,15 +178,15 @@ export async function POST(
         }
 
         try {
-            if (original.jobType === "REPURPOSE") {
+            if (original.job_type === "REPURPOSE") {
                 await runRepurposeInline(inlineInput)
-            } else if (original.jobType === "CAROUSEL") {
+            } else if (original.job_type === "CAROUSEL") {
                 await runCarouselInline(inlineInput)
-            } else if (original.jobType === "VIDEO" || original.jobType === "AUDIO") {
+            } else if (original.job_type === "VIDEO" || original.job_type === "AUDIO") {
                 await runVideoScriptInline(inlineInput)
             } else {
                 return NextResponse.json(
-                    { error: `Inline retry not supported for job type: ${original.jobType}` },
+                    { error: `Inline retry not supported for job type: ${original.job_type}` },
                     { status: 422 }
                 )
             }
@@ -193,50 +205,40 @@ export async function POST(
         })
     }
 
-    // ------------------------------------------------------------------
-    // Cloud Tasks enqueue — DISABLED (gcpConfigured is always false during Railway migration)
-    // TODO (Railway): restore this block, replacing getTasksClient() with dispatchToWorker()
-    // ------------------------------------------------------------------
     try {
-        const tasks = await getTasksClient()
-        const projectId = process.env.GCP_PROJECT_ID!.trim()
-        const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
-        const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
-        const saEmail = process.env.WORKER_SA_EMAIL!.trim()
-        const parent = tasks.queuePath(projectId, location, queue)
-
-        const [task] = await tasks.createTask({
-            parent,
-            task: {
-                httpRequest: {
-                    httpMethod: "POST",
-                    url: workerUrl,
-                    body: Buffer.from(JSON.stringify({
-                        ...storedPayload,
-                        renderJobId: newJob.id,
-                        callbackUrl,
-                        callbackSecret,
-                    })),
-                    headers: { "Content-Type": "application/json" },
-                    oidcToken: { serviceAccountEmail: saEmail, audience: workerUrl },
-                },
-            },
-        })
-        const { error: taskUpdateError } = await supabaseAdmin
-            .from("render_jobs")
-            .update({ cloudTasksTaskId: task.name ?? "" })
-            .eq("id", newJob.id)
-
-        if (taskUpdateError) {
-            console.error("[render-jobs:retry] Failed to save Cloud Task id:", taskUpdateError)
+        const taskPayload: RepurposeInlineInput = {
+            renderJobId: newJob.id,
+            contentIdeaId: original.content_idea_id,
+            calendarEntryId,
+            masterJson: (storedPayload.masterJson ?? {}) as Record<string, unknown>,
+            platform: (storedPayload.platform as string) ?? "",
+            postType: (storedPayload.postType as string) ?? "",
+            topic: (storedPayload.topic as string) ?? "",
+            entryDate: (storedPayload.entryDate as string) ?? new Date().toISOString(),
+            voiceId: storedPayload.voiceId as string | undefined,
         }
+
+        let handle: { id: string }
+        if (original.job_type === "REPURPOSE") {
+            handle = await tasks.trigger<typeof productionRepurposeTask>("production-repurpose", taskPayload)
+        } else if (original.job_type === "CAROUSEL") {
+            handle = await tasks.trigger<typeof productionCarouselTask>("production-carousel", taskPayload)
+        } else if (original.job_type === "VIDEO" || original.job_type === "AUDIO") {
+            handle = await tasks.trigger<typeof productionVideoTask>("production-video", taskPayload)
+        } else {
+            return NextResponse.json(
+                { error: `Trigger.dev retry not supported for job type: ${original.job_type}` },
+                { status: 422 }
+            )
+        }
+
     } catch (err) {
         await supabaseAdmin
             .from("render_jobs")
-            .update({ status: "FAILED", errorMessage: (err as Error).message })
+            .update({ status: "FAILED", error_message: (err as Error).message })
             .eq("id", newJob.id)
         return NextResponse.json(
-            { error: `Failed to enqueue task: ${(err as Error).message}` },
+            { error: `Failed to trigger retry task: ${(err as Error).message}` },
             { status: 502 }
         )
     }
@@ -244,7 +246,7 @@ export async function POST(
     // Bump calendar entry back to GENERATING
     const { error: statusError } = await supabaseAdmin
         .from("production_calendar_entries")
-        .update({ publishStatus: "GENERATING" })
+        .update({ publish_status: "GENERATING" })
         .eq("id", calendarEntryId)
 
     if (statusError) {

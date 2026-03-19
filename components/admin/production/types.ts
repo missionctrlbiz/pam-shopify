@@ -147,4 +147,8 @@ export interface GenerateCycleResponse {
     failed: number
     entries: { dayNumber: number; entryId: string; topic: string }[]
     errors?: string[]
+    queued?: boolean
+    batchId?: string
+    requestedDays?: number
+    message?: string
 }

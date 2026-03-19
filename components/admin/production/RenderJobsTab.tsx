@@ -5,8 +5,9 @@ import {
     RefreshCw, AlertCircle, CheckCircle2, Clock, Zap,
     Download, Image, Video, Music, FileText, Film,
     RotateCcw, ChevronDown, ChevronUp,
-    Trash2, Square, CheckSquare,
+    Trash2, Square, CheckSquare, X, Loader2,
 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import { PROD_BRAND, PLATFORM_META, POST_TYPE_META } from "./CalendarTable"
 import type { Platform, PostType } from "./types"
 
@@ -123,6 +124,12 @@ export const RenderJobsTab: React.FC = () => {
     const [bulkActing, setBulkActing] = useState(false)
     const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null)
     const [previewAsset, setPreviewAsset] = useState<JobAsset | null>(null)
+    const [confirmModal, setConfirmModal] = useState<{
+        title: string;
+        desc: string;
+        actionLabel: string;
+        onConfirm: () => void;
+    } | null>(null)
     const pollRef = useRef<NodeJS.Timeout | null>(null)
 
     const showToast = (msg: string, type: "ok" | "err" = "ok") => {
@@ -234,20 +241,27 @@ export const RenderJobsTab: React.FC = () => {
     }
 
     const handleBulkDelete = async () => {
-        if (!confirm(`Permanently delete ${selected.size} job${selected.size !== 1 ? "s" : ""}?`)) return
-        setBulkActing(true)
-        try {
-            const res = await fetch("/api/production/render-jobs/bulk", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ids: [...selected] }),
-            })
-            if (!res.ok) throw new Error("Delete failed")
-            showToast(`Deleted ${selected.size} job${selected.size !== 1 ? "s" : ""}`)
-            clearSelect()
-            await fetchJobs()
-        } catch (e) { showToast(String(e), "err") }
-        setBulkActing(false)
+        setConfirmModal({
+            title: "Delete Jobs",
+            desc: `Permanently delete these ${selected.size} job${selected.size !== 1 ? "s" : ""}? This action cannot be undone.`,
+            actionLabel: bulkActing ? "Deleting…" : "Delete",
+            onConfirm: async () => {
+                setConfirmModal(null)
+                setBulkActing(true)
+                try {
+                    const res = await fetch("/api/production/render-jobs/bulk", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ids: [...selected] }),
+                    })
+                    if (!res.ok) throw new Error("Delete failed")
+                    showToast(`Deleted ${selected.size} job${selected.size !== 1 ? "s" : ""}`)
+                    clearSelect()
+                    await fetchJobs()
+                } catch (e) { showToast(String(e), "err") }
+                setBulkActing(false)
+            }
+        })
     }
 
     // ── Render ────────────────────────────────────────────────────────────
@@ -506,7 +520,83 @@ export const RenderJobsTab: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Confirmation modal */}
+            <ConfirmModal
+                open={!!confirmModal}
+                onClose={() => setConfirmModal(null)}
+                title={confirmModal?.title ?? ""}
+                desc={confirmModal?.desc ?? ""}
+                actionLabel={confirmModal?.actionLabel ?? ""}
+                onConfirm={confirmModal?.onConfirm ?? (() => { })}
+                loading={bulkActing}
+            />
         </div>
+    )
+}
+
+// ─── Reusable Confirm Modal ───────────────────────────────────────────────────
+function ConfirmModal({ open, onClose, onConfirm, title, desc, actionLabel, loading }: {
+    open: boolean
+    onClose: () => void
+    onConfirm: () => void
+    title: string
+    desc: string
+    actionLabel: string
+    loading?: boolean
+}) {
+    return (
+        <AnimatePresence>
+            {open && (
+                <>
+                    <motion.div key="bd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.4)", zIndex: 10000 }} onClick={onClose} />
+                    <motion.div key="modal"
+                        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                        style={{
+                            position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+                            width: 420, maxWidth: "90vw", background: "#ffffff", borderRadius: 24, padding: 28,
+                            boxShadow: "0 20px 50px rgba(0,0,0,0.15)", zIndex: 10001
+                        }}
+                    >
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+                            <div>
+                                <h3 style={{ fontSize: 20, fontWeight: 800, tracking: "-0.02em", marginBottom: 4, color: PROD_BRAND.navy, margin: 0 }}>
+                                    {title}
+                                </h3>
+                                <p style={{ fontSize: 13, color: PROD_BRAND.gray, lineHeight: 1.6, margin: "4px 0 0" }}>
+                                    {desc}
+                                </p>
+                            </div>
+                            <button onClick={onClose} aria-label="Close" style={{ padding: 6, borderRadius: 10, background: "none", border: "none", cursor: "pointer", color: PROD_BRAND.gray, marginLeft: 16 }}>
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+                            <button onClick={onClose} disabled={loading}
+                                style={{ padding: "10px 18px", borderRadius: 12, border: `1px solid ${PROD_BRAND.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: PROD_BRAND.gray, cursor: "pointer" }}>
+                                Cancel
+                            </button>
+                            <button onClick={onConfirm} disabled={loading}
+                                style={{
+                                    padding: "10px 22px", borderRadius: 12, border: "none",
+                                    background: "linear-gradient(135deg, #ed415b, #ec5185, #af5ce9)",
+                                    color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                    display: "flex", alignItems: "center", gap: 6, opacity: loading ? 0.7 : 1
+                                }}
+                            >
+                                {loading && <Loader2 size={12} className="animate-spin" />}
+                                {actionLabel}
+                            </button>
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
     )
 }
 
@@ -869,18 +959,13 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                 </div>
                             )}
 
-                            {/* Cloud Run link (simulated for diagnostics) */}
+                            {/*
+                              GCP Cloud Run diagnostics are parked during the Trigger.dev migration.
+                              Restore the external log link if we bring Cloud Run back later.
+                            */}
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
                                 <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0 }}>Worker Log:</span>
-                                <a
-                                    href={`https://console.cloud.google.com/run/detail/us-central1/pam-workers/logs?project=pam-project-id`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ fontSize: 10, color: PROD_BRAND.blue, textDecoration: "none", fontWeight: 600 }}
-                                    onClick={e => e.stopPropagation()}
-                                >
-                                    View in GCP Cloud Run
-                                </a>
+                                <span style={{ fontSize: 10, color: PROD_BRAND.gray }}>External worker logs temporarily disabled</span>
                             </div>
                         </div>
                     </div>

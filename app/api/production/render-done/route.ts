@@ -1,7 +1,7 @@
 /**
  * POST /api/production/render-done
  *
- * Webhook called by Cloud Run workers when a render job completes (or fails).
+ * Webhook called by background workers when a render job completes (or fails).
  *
  * Security: The request body must include a `secret` field matching
  * RENDER_CALLBACK_SECRET (constant-time comparison). This mirrors the shared
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
     // ------------------------------------------------------------------
     const { data: renderJob, error: renderJobError } = await supabaseAdmin
         .from("render_jobs")
-        .select(`*, contentIdea:content_ideas(id, calendarEntryId)`)
+        .select(`id, contentIdeaId:content_idea_id, contentIdea:content_ideas(id, calendarEntryId:calendar_entry_id)`)
         .eq("id", renderJobId)
         .maybeSingle()
 
@@ -129,7 +129,8 @@ export async function POST(req: NextRequest) {
     }
 
     const contentIdeaId = renderJob.contentIdeaId
-    const calendarEntryId = renderJob.contentIdea?.calendarEntryId ?? null
+    const contentIdea = Array.isArray(renderJob.contentIdea) ? renderJob.contentIdea[0] : renderJob.contentIdea
+    const calendarEntryId = contentIdea?.calendarEntryId ?? null
 
     // ------------------------------------------------------------------
     // Handle FAILED job
@@ -141,12 +142,12 @@ export async function POST(req: NextRequest) {
         const [jobUpdate, assetUpdate] = await Promise.all([
             supabaseAdmin
                 .from("render_jobs")
-                .update({ status: "FAILED", completedAt: failedAt, errorMessage: jobError })
+                .update({ status: "FAILED", completed_at: failedAt, error_message: jobError })
                 .eq("id", renderJobId),
             supabaseAdmin
                 .from("content_assets")
                 .update({ status: "FAILED" })
-                .eq("renderJobId", renderJobId),
+                .eq("render_job_id", renderJobId),
         ])
 
         if (jobUpdate.error) {
@@ -170,7 +171,7 @@ export async function POST(req: NextRequest) {
 
     const { error: jobCompleteError } = await supabaseAdmin
         .from("render_jobs")
-        .update({ status: "COMPLETE", completedAt: now.toISOString() })
+        .update({ status: "COMPLETE", completed_at: now.toISOString() })
         .eq("id", renderJobId)
 
     if (jobCompleteError) {
@@ -183,13 +184,13 @@ export async function POST(req: NextRequest) {
             .from("content_assets")
             .update({
                 status: "COMPLETE",
-                storageUrl: asset.storageUrl,
-                storagePath: asset.storagePath ?? null,
-                fileName: asset.fileName,
+                storage_url: asset.storageUrl,
+                storage_path: asset.storagePath ?? null,
+                file_name: asset.fileName,
                 ...(asset.metadata ? { metadata: asset.metadata as object } : {}),
             })
-            .eq("renderJobId", renderJobId)
-            .eq("assetType", asset.assetType)
+            .eq("render_job_id", renderJobId)
+            .eq("asset_type", asset.assetType)
             .eq("platform", asset.platform)
 
         const { error: assetError } = await update

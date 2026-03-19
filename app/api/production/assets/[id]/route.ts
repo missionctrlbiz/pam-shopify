@@ -27,25 +27,25 @@ export async function GET(
         .select(`*,
             contentIdea:content_ideas(
                 id,
-                qualityGateStatus,
+                qualityGateStatus:quality_gate_status,
                 calendarEntry:production_calendar_entries(
                     id,
-                    dayNumber,
-                    entryDate,
+                    dayNumber:day_number,
+                    entryDate:entry_date,
                     platform,
                     topic,
-                    publishStatus
+                    publishStatus:publish_status
                 )
             ),
             renderJob:render_jobs(
                 id,
-                jobType,
+                jobType:job_type,
                 status,
-                queuedAt,
-                startedAt,
-                completedAt,
-                errorMessage,
-                retryCount
+                queuedAt:queued_at,
+                startedAt:started_at,
+                completedAt:completed_at,
+                errorMessage:error_message,
+                retryCount:retry_count
             )`)
         .eq("id", id)
         .maybeSingle()

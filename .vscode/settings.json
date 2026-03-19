@@ -22,5 +22,6 @@
         "typescript:S6656": {
             "level": "off"
         }
-    }
+    },
+    "Codegeex.CompletionDelay": 2
 }

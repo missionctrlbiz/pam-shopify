@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
+import { Analytics } from "@vercel/analytics/react"
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { supabaseBrowser } from "@/lib/supabase"
@@ -518,6 +519,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                         <strong className="text-purple-600 mx-1">{stats.totalUsageEvents}</strong> AI generation events tracked globally.
                                     </p>
                                     <p className="text-slate-400 mt-6 text-sm">Advanced visual charts and historical telemetry pipelines are currently gathering statistical baseline data.</p>
+                                    <Analytics />
                                 </div>
                             </motion.div>
                         )}

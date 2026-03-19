@@ -41,7 +41,12 @@ export async function PUT(
     // Fetch entry with idea
     const { data: entry, error } = await supabaseAdmin
         .from("production_calendar_entries")
-        .select("*")
+        .select(`
+            id,
+            platform,
+            postType:post_type,
+            publishStatus:publish_status
+        `)
         .eq("id", id)
         .maybeSingle()
 
@@ -59,8 +64,8 @@ export async function PUT(
 
     const { data: contentIdea, error: ideaError } = await supabaseAdmin
         .from("content_ideas")
-        .select("id, masterJson, qualityGateStatus")
-        .eq("calendarEntryId", id)
+        .select("id, masterJson:master_json, qualityGateStatus:quality_gate_status")
+        .eq("calendar_entry_id", id)
         .maybeSingle()
 
     if (ideaError) {
@@ -94,14 +99,14 @@ export async function PUT(
             supabaseAdmin
                 .from("production_calendar_entries")
                 .update({
-                    publishStatus: "APPROVED",
-                    approvedAt: new Date().toISOString(),
-                    approvedById: adminId ?? null,
+                    publish_status: "APPROVED",
+                    approved_at: new Date().toISOString(),
+                    approved_by_id: adminId ?? null,
                 })
                 .eq("id", id),
             supabaseAdmin
                 .from("content_ideas")
-                .update({ qualityGateStatus: "BYPASSED" })
+                .update({ quality_gate_status: "BYPASSED" })
                 .eq("id", contentIdea.id),
         ])
 
@@ -152,44 +157,54 @@ export async function PUT(
     const newEntryStatus = gateOutput.passed ? "APPROVED" : "DRAFT"
     const newIdeaStatus = gateOutput.passed ? "PASSED" : "FAILED"
 
-    const [qgUpsert, ideaUpdate, entryUpdate] = await Promise.all([
-        supabaseAdmin
-            .from("quality_gate_results")
-            .upsert({
-                contentIdeaId: contentIdea.id,
-                question1: gateOutput.question1,
-                question2: gateOutput.question2,
-                question3: gateOutput.question3,
-                question4: gateOutput.question4,
-                question5: gateOutput.question5,
-                score1: gateOutput.score1,
-                score2: gateOutput.score2,
-                score3: gateOutput.score3,
-                score4: gateOutput.score4,
-                score5: gateOutput.score5,
-                overallScore: gateOutput.overallScore,
-                passed: gateOutput.passed,
-                geminiRawResponse: gateOutput as object,
-                evaluatedAt: new Date().toISOString(),
-            }, { onConflict: "contentIdeaId" }),
-        supabaseAdmin
-            .from("content_ideas")
-            .update({ qualityGateStatus: newIdeaStatus })
-            .eq("id", contentIdea.id),
-        supabaseAdmin
-            .from("production_calendar_entries")
-            .update({
-                publishStatus: newEntryStatus,
-                ...(gateOutput.passed
-                    ? { approvedAt: new Date().toISOString(), approvedById: adminId ?? null }
-                    : {}),
-            })
-            .eq("id", id),
-    ])
+    const qgUpsert = await supabaseAdmin
+        .from("quality_gate_results")
+        .upsert({
+            content_idea_id: contentIdea.id,
+            question1: gateOutput.question1,
+            question2: gateOutput.question2,
+            question3: gateOutput.question3,
+            question4: gateOutput.question4,
+            question5: gateOutput.question5,
+            score1: gateOutput.score1,
+            score2: gateOutput.score2,
+            score3: gateOutput.score3,
+            score4: gateOutput.score4,
+            score5: gateOutput.score5,
+            overall_score: gateOutput.overallScore,
+            passed: gateOutput.passed,
+            gemini_raw_response: gateOutput as object,
+            evaluated_at: new Date().toISOString(),
+        }, { onConflict: "content_idea_id" })
 
-    if (qgUpsert.error || ideaUpdate.error || entryUpdate.error) {
-        console.error("[approve] Supabase update error:", qgUpsert.error || ideaUpdate.error || entryUpdate.error)
-        return NextResponse.json({ error: "Failed to update approval state" }, { status: 500 })
+    if (qgUpsert.error) {
+        console.error("[approve] qgUpsert error:", qgUpsert.error)
+        return NextResponse.json({ error: `upsert quality_gate_results: ${(qgUpsert.error as Error).message || qgUpsert.error.code}` }, { status: 500 })
+    }
+
+    const ideaUpdate = await supabaseAdmin
+        .from("content_ideas")
+        .update({ quality_gate_status: newIdeaStatus })
+        .eq("id", contentIdea.id)
+
+    if (ideaUpdate.error) {
+        console.error("[approve] ideaUpdate error:", ideaUpdate.error)
+        return NextResponse.json({ error: `update content_ideas: ${(ideaUpdate.error as Error).message || ideaUpdate.error.code}` }, { status: 500 })
+    }
+
+    const entryUpdate = await supabaseAdmin
+        .from("production_calendar_entries")
+        .update({
+            publish_status: newEntryStatus,
+            ...(gateOutput.passed
+                ? { approved_at: new Date().toISOString(), approved_by_id: adminId ?? null }
+                : {}),
+        })
+        .eq("id", id)
+
+    if (entryUpdate.error) {
+        console.error("[approve] entryUpdate error:", entryUpdate.error)
+        return NextResponse.json({ error: `update entry: ${(entryUpdate.error as Error).message || entryUpdate.error.code}` }, { status: 500 })
     }
 
     return NextResponse.json({

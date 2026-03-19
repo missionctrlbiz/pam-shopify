@@ -3,7 +3,7 @@
 import React, { useEffect, useCallback } from "react"
 import {
     Image, FileText, Video, Music, ExternalLink,
-    RefreshCw, AlertCircle, Clock, Zap, CheckCircle2, Copy, Check,
+    RefreshCw, AlertCircle, Clock, Zap, CheckCircle2, Copy, Check, X,
 } from "lucide-react"
 import type { ContentAsset, RenderJob, AssetStatus, AssetType } from "./types"
 import { PROD_BRAND } from "./CalendarTable"
@@ -52,11 +52,84 @@ function CopyButton({ text }: { text: string }) {
     )
 }
 
+function AssetPreviewModal({ asset, onClose }: { asset: ContentAsset, onClose: () => void }) {
+    const [content, setContent] = React.useState<string>("");
+    const [loading, setLoading] = React.useState(true);
+
+    useEffect(() => {
+        const meta = asset.metadata as Record<string, unknown> | null;
+        if (meta?.content) {
+            setContent(meta.content as string);
+            setLoading(false);
+        } else if (asset.storageUrl) {
+            fetch(`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}`)
+                .then(res => res.text())
+                .then(text => setContent(text))
+                .catch(err => setContent("Error loading content: " + String(err)))
+                .finally(() => setLoading(false));
+        } else {
+            setContent("");
+            setLoading(false);
+        }
+    }, [asset]);
+
+    return (
+        <div
+            onClick={onClose}
+            style={{
+                position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                background: "rgba(0,0,0,0.6)", zIndex: 9999, backdropFilter: "blur(2px)",
+                display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+            }}
+        >
+            <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                    background: "#fff", borderRadius: 12, padding: 24, width: "100%", maxWidth: 800,
+                    height: "80vh", display: "flex", flexDirection: "column", gap: 16,
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.2)"
+                }}
+            >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ color: PROD_BRAND.gray }}>{ASSET_ICON[asset.assetType] ?? <FileText size={16} />}</span>
+                        <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: PROD_BRAND.navy }}>{asset.assetType.replace(/_/g, " ")}</h2>
+                    </div>
+                    <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={20} color={PROD_BRAND.gray} /></button>
+                </div>
+                {loading ? (
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: PROD_BRAND.gray }}>
+                        <RefreshCw size={24} className="animate-spin" />
+                    </div>
+                ) : (
+                    <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", gap: 16 }}>
+                        {asset.assetType === "EMAIL_HTML" ? (
+                            <iframe srcDoc={content} style={{ width: "100%", flex: 1, border: `1px solid ${PROD_BRAND.border}`, borderRadius: 8, background: "#fff" }} />
+                        ) : (
+                            <pre style={{ width: "100%", flex: 1, overflow: "auto", background: PROD_BRAND.grayFaint, padding: 16, borderRadius: 8, margin: 0, fontSize: 12, whiteSpace: "pre-wrap", color: PROD_BRAND.navy, border: `1px solid ${PROD_BRAND.border}` }}>{content}</pre>
+                        )}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ fontSize: 12, color: PROD_BRAND.gray }}>
+                                <span style={{ fontWeight: 600 }}>File:</span> {asset.fileName ?? "N/A"}
+                            </div>
+                            <div style={{ padding: "8px 16px", background: PROD_BRAND.blueFaint, borderRadius: 8 }}>
+                                <CopyButton text={content} />
+                                <span style={{ fontSize: 11, fontWeight: 600, color: PROD_BRAND.blue, marginLeft: 6 }}>Copy Raw Code</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
 export const AssetGrid: React.FC<AssetGridProps> = ({
     assets, renderJobs, entryId, onGenerateAssets, generating,
 }) => {
     const hasActiveJobs = renderJobs.some(j => j.status === "QUEUED" || j.status === "RUNNING")
     const hasAnyAssets = assets.length > 0
+    const [previewAsset, setPreviewAsset] = React.useState<ContentAsset | null>(null)
 
     // ── Polling: auto-refresh every 5 s while jobs are active ──────────────
     const [pollCount, setPollCount] = React.useState(0)
@@ -268,19 +341,27 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                         )
                                     })()}
 
-                                    {/* Open/download for binary assets */}
                                     {asset.storageUrl && asset.assetStatus === "COMPLETE" &&
                                         !asset.storageUrl.startsWith("data:") && (
                                             <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                                                <a
-                                                    href={asset.storageUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: PROD_BRAND.blue, textDecoration: "none" }}
-                                                >
-                                                    Open <ExternalLink size={10} />
-                                                </a>
-                                                {(asset.assetType === "VIDEO_MP4" || asset.assetType === "AUDIO_MP3" || asset.assetType === "CAROUSEL_PNG" || asset.assetType === "VIDEO_SCRIPT_JSON") && (
+                                                {(asset.assetType === "EMAIL_HTML" || asset.assetType === "TEXT_POST" || asset.assetType === "VIDEO_SCRIPT_JSON") ? (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setPreviewAsset(asset); }}
+                                                        style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: PROD_BRAND.blue, textDecoration: "none", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                                                    >
+                                                        Open <ExternalLink size={10} />
+                                                    </button>
+                                                ) : (
+                                                    <a
+                                                        href={asset.storageUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: PROD_BRAND.blue, textDecoration: "none" }}
+                                                    >
+                                                        Open <ExternalLink size={10} />
+                                                    </a>
+                                                )}
+                                                {(asset.assetType === "VIDEO_MP4" || asset.assetType === "AUDIO_MP3" || asset.assetType === "CAROUSEL_PNG" || asset.assetType === "VIDEO_SCRIPT_JSON" || asset.assetType === "EMAIL_HTML") && (
                                                     <a
                                                         href={asset.storageUrl}
                                                         download={asset.fileName ?? undefined}
@@ -297,6 +378,9 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                     })}
                 </div>
             )}
+
+            {/* Modal */}
+            {previewAsset && <AssetPreviewModal asset={previewAsset} onClose={() => setPreviewAsset(null)} />}
         </div>
     )
 }
