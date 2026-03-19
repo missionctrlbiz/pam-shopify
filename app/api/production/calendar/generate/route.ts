@@ -59,7 +59,13 @@ export async function POST(req: NextRequest) {
                 generatedById,
             })
 
-            const runData = handle.payload as { generated?: number, failed?: number, entries?: unknown[], errors?: string[] } | undefined
+            if (!handle.ok) {
+                return NextResponse.json({
+                    error: `Trigger run failed: ${String(handle.error)}`,
+                }, { status: 500 })
+            }
+
+            const runData = handle.output as { generated?: number, failed?: number, entries?: unknown[], errors?: string[] } | undefined
 
             return NextResponse.json({
                 generated: runData?.generated ?? 0,
