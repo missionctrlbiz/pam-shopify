@@ -564,7 +564,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, desc, actionLabel, load
                     >
                         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
                             <div>
-                                <h3 style={{ fontSize: 20, fontWeight: 800, tracking: "-0.02em", marginBottom: 4, color: PROD_BRAND.navy, margin: 0 }}>
+                                <h3 style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 4, color: PROD_BRAND.navy, margin: 0 }}>
                                     {title}
                                 </h3>
                                 <p style={{ fontSize: 13, color: PROD_BRAND.gray, lineHeight: 1.6, margin: "4px 0 0" }}>

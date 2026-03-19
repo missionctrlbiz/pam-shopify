@@ -774,6 +774,12 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
         let generatedAudioUrl: string | undefined = undefined;
 
         try {
+            const voiceoverText = [
+                script.hook,
+                ...script.segments.map(s => s.voiceover),
+                script.ctaOutro
+            ].filter(Boolean).join(" ");
+
             generatedAudioUrl = await runAudioInline(
                 contentIdeaId,
                 voiceoverText,
