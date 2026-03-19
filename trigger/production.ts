@@ -10,9 +10,6 @@ import {
 export const productionRepurposeTask = task({
     id: "production-repurpose",
     maxDuration: 900,
-    queue: {
-        concurrencyLimit: 2,
-    },
     retry: {
         maxAttempts: 3,
     },
@@ -34,12 +31,6 @@ export const productionRepurposeTask = task({
 export const productionCarouselTask = task({
     id: "production-carousel",
     maxDuration: 900,
-    queue: {
-        concurrencyLimit: 1,
-    },
-    machine: {
-        preset: "small-2x",
-    },
     retry: {
         maxAttempts: 2,
     },
@@ -61,12 +52,6 @@ export const productionCarouselTask = task({
 export const productionVideoTask = task({
     id: "production-video",
     maxDuration: 1800,
-    queue: {
-        concurrencyLimit: 1,
-    },
-    machine: {
-        preset: "small-2x",
-    },
     retry: {
         maxAttempts: 2,
     },
@@ -89,12 +74,6 @@ export const productionVideoTask = task({
 export const productionCalendarBatchTask = task({
     id: "production-calendar-batch",
     maxDuration: 1800,
-    queue: {
-        concurrencyLimit: 1,
-    },
-    machine: {
-        preset: "small-1x",
-    },
     retry: {
         maxAttempts: 2,
     },

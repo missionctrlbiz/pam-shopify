@@ -44,7 +44,8 @@ function getResvg(): ResvgConstructor {
 // ---------------------------------------------------------------------------
 // Markdown stripper
 // ---------------------------------------------------------------------------
-function cleanText(s: string): string {
+function cleanText(s: string | undefined | null): string {
+    if (typeof s !== "string") return ""
     return s
         .replace(/\*\*(.+?)\*\*/g, "$1")
         .replace(/\*(.+?)\*/g, "$1")
@@ -737,7 +738,7 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
         script.hook = cleanText(script.hook)
         script.ctaOutro = cleanText(script.ctaOutro)
         script.captionVersion = cleanText(script.captionVersion)
-        script.segments = script.segments.map(s => ({ ...s, visual: cleanText(s.visual), voiceover: cleanText(s.voiceover) }))
+        script.segments = (script.segments || []).map(s => ({ ...s, visual: cleanText(s.visual), voiceover: cleanText(s.voiceover) }))
 
         const { date, slug } = makeSlug(entryDate, topic)
 
@@ -842,9 +843,9 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
                 if (videoAssetError) {
                     throw new Error(`Failed to update video asset metadata: ${videoAssetError.message}`)
                 }
-                console.log(`[videoScriptInline] Remotion MP4 generation generated successfully: ${videoUrl}`)
+                console.log(`[videoScriptInline] Remotion MP4 generated successfully locally: ${videoUrl}`)
             } catch (videoErr) {
-                console.error("[videoScriptInline] Remotion failed:", videoErr)
+                console.error("[videoScriptInline] Remotion local failed:", videoErr)
                 await supabaseAdmin
                     .from("content_assets")
                     .update({ status: "FAILED" })
