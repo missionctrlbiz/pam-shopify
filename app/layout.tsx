@@ -3,6 +3,7 @@ import { Montserrat, Open_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { CookieBanner } from "@/components/CookieBanner";
+import { Analytics } from "@vercel/analytics/next";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -84,6 +85,7 @@ export default function RootLayout({
           {children}
           <CookieBanner />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
