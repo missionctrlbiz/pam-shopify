@@ -23,6 +23,7 @@ interface JobAsset {
     status: string
     storageUrl: string | null
     fileName: string | null
+    metadata?: Record<string, unknown> | null
 }
 
 // ── Carousel Slider Subcomponent ──────────────────────────────────────────────────
@@ -170,6 +171,12 @@ function relTime(iso: string | null): string {
     const h = Math.round(m / 60)
     if (h < 24) return `${h}h ago`
     return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
+function buildAssetProxyUrl(storageUrl: string, fileName?: string | null): string {
+    const params = new URLSearchParams({ url: storageUrl })
+    if (fileName) params.set("filename", fileName)
+    return `/api/production/assets/proxy?${params.toString()}`
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -530,26 +537,35 @@ export const RenderJobsTab: React.FC = () => {
 
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120 }}>
                             {previewAsset.assetType === "AUDIO_MP3" && previewAsset.storageUrl && (
-                                <audio controls autoPlay style={{ width: "100%" }} src={`/api/production/assets/proxy?url=${encodeURIComponent(previewAsset.storageUrl)}`} />
+                                <audio controls autoPlay style={{ width: "100%" }} src={buildAssetProxyUrl(previewAsset.storageUrl, previewAsset.fileName)} />
+                            )}
+
+                            {previewAsset.assetType === "VIDEO_MP4" && previewAsset.storageUrl && (
+                                <video
+                                    controls
+                                    autoPlay
+                                    playsInline
+                                    preload="metadata"
+                                    style={{ width: "100%", maxHeight: "65vh", borderRadius: 8, background: "#000" }}
+                                    src={buildAssetProxyUrl(previewAsset.storageUrl, previewAsset.fileName)}
+                                />
                             )}
 
                             {previewAsset.assetType === "CAROUSEL_PNG" && (() => {
-                                const meta = (previewAsset as unknown as Record<string, unknown>).metadata as Record<string, unknown> | null
-                                const slideUrls = (meta?.slideUrls as string[]) ?? []
+                                const slideUrls = (previewAsset.metadata?.slideUrls as string[]) ?? []
                                 return (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
                                         {slideUrls.length > 0 ? (
                                             <CarouselPreview slideUrls={slideUrls} />
                                         ) : previewAsset.storageUrl ? (
-                                            <img src={`/api/production/assets/proxy?url=${encodeURIComponent(previewAsset.storageUrl)}`} alt="Slide" style={{ width: "100%", height: "auto", borderRadius: 8 }} />
+                                            <img src={buildAssetProxyUrl(previewAsset.storageUrl, previewAsset.fileName)} alt="Slide" style={{ width: "100%", height: "auto", borderRadius: 8 }} />
                                         ) : null}
                                     </div>
                                 )
                             })()}
 
                             {(previewAsset.assetType === "TEXT_POST" || previewAsset.assetType === "EMAIL_HTML" || previewAsset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
-                                const meta = (previewAsset as unknown as Record<string, unknown>).metadata as Record<string, unknown> | null
-                                const content = (meta?.content as string) ?? ""
+                                const content = (previewAsset.metadata?.content as string) ?? ""
                                 return (
                                     <div style={{ width: "100%" }}>
                                         <div style={{
@@ -868,7 +884,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                 {isDone && asset.storageUrl && (
                                                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                                         <a
-                                                            href={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}&filename=${encodeURIComponent(asset.fileName || "asset")}`}
+                                                            href={buildAssetProxyUrl(asset.storageUrl, asset.fileName)}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             onClick={e => e.stopPropagation()}
@@ -898,17 +914,24 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                             {isDone && asset.storageUrl && (
                                                 <div style={{ marginTop: 2 }}>
                                                     {asset.assetType === "AUDIO_MP3" && (
-                                                        <audio controls style={{ width: "100%", height: 26 }} src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}`} />
+                                                        <audio controls style={{ width: "100%", height: 26 }} src={buildAssetProxyUrl(asset.storageUrl, asset.fileName)} />
+                                                    )}
+                                                    {asset.assetType === "VIDEO_MP4" && (
+                                                        <video
+                                                            controls
+                                                            preload="metadata"
+                                                            style={{ width: "100%", height: 140, borderRadius: 4, background: "#000", display: "block" }}
+                                                            src={buildAssetProxyUrl(asset.storageUrl, asset.fileName)}
+                                                        />
                                                     )}
                                                     {asset.assetType === "CAROUSEL_PNG" && (() => {
-                                                        const meta = (asset as unknown as Record<string, unknown>).metadata as Record<string, unknown> | null
-                                                        const slideUrls = (meta?.slideUrls as string[]) ?? []
+                                                        const slideUrls = (asset.metadata?.slideUrls as string[]) ?? []
                                                         return slideUrls.length > 0 ? (
                                                             <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 4, width: "100%" }}>
                                                                 {slideUrls.map((u, i) => (
                                                                     <img
                                                                         key={i}
-                                                                        src={`/api/production/assets/proxy?url=${encodeURIComponent(u)}`}
+                                                                        src={buildAssetProxyUrl(u)}
                                                                         alt={`Slide ${i + 1}`}
                                                                         style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4, flexShrink: 0 }}
                                                                     />
@@ -916,16 +939,14 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                             </div>
                                                         ) : (
                                                             <img
-                                                                src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl!)}`}
+                                                                src={buildAssetProxyUrl(asset.storageUrl, asset.fileName)}
                                                                 alt={asset.assetType}
                                                                 style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 4, display: "block" }}
                                                             />
                                                         )
                                                     })()}
                                                     {(asset.assetType === "TEXT_POST" || asset.assetType === "EMAIL_HTML" || asset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
-                                                        // asset.metadata now exists on JobAsset with the updated API
-                                                        const meta = (asset as unknown as Record<string, unknown>).metadata as Record<string, unknown> | null
-                                                        const content = (meta?.content as string) ?? ""
+                                                        const content = (asset.metadata?.content as string) ?? ""
                                                         const preview = content.slice(0, 90) + (content.length > 90 ? "…" : "")
                                                         return content ? (
                                                             <div style={{ marginTop: 4 }}>

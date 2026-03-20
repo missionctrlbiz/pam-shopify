@@ -18,6 +18,6 @@ export default defineConfig({
     additionalFiles: ["./workers/video-renderer/build/**/*"],
     build: {
         extensions: [puppeteer()],
-        external: ["@remotion/renderer", "@remotion/bundler", "@resvg/resvg-js"]
+        external: ["@remotion/renderer", "@remotion/bundler"]
     }
 })
