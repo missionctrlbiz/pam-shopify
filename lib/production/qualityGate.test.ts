@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { evaluateQualityGateResponse, PASS_THRESHOLD_SCORE, PASS_THRESHOLD_COUNT } from './qualityGateUtils.ts';
+import { evaluateQualityGateResponse, PASS_THRESHOLD_SCORE, PASS_THRESHOLD_COUNT } from './qualityGateUtils';
 
 test('evaluateQualityGateResponse - Happy Path (Pass)', () => {
     const aiResponse = JSON.stringify({
@@ -26,7 +26,7 @@ test('evaluateQualityGateResponse - Minimum Pass Threshold', () => {
     const result = evaluateQualityGateResponse(aiResponse);
 
     assert.strictEqual(result.passed, true);
-    assert.strictEqual(result.overallScore, (3+3+3+3+2)/5); // 2.8
+    assert.strictEqual(result.overallScore, (3 + 3 + 3 + 3 + 2) / 5); // 2.8
 });
 
 test('evaluateQualityGateResponse - Failure (Not enough passing scores)', () => {

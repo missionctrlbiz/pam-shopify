@@ -710,13 +710,12 @@ async function runAudioInline(
         .maybeSingle()
 
     if (cachedAudio?.storage_url) {
-        console.log(`[runAudioInline] ✅ Cache hit (hash ${promptHash.slice(0, 8)}…) — skipping ElevenLabs call`)
-        supabaseAdmin
-            .from("audio_cache")
-            .update({ last_used_at: new Date().toISOString() })
-            .eq("prompt_hash", promptHash)
-            .then(() => { /* fire-and-forget */ })
-            .catch((err) => console.error("[runAudioInline] Failed to update last_used_at:", err))
+        Promise.resolve(
+            supabaseAdmin
+                .from("audio_cache")
+                .update({ last_used_at: new Date().toISOString() })
+                .eq("prompt_hash", promptHash)
+        ).catch((err: any) => console.error("[runAudioInline] Failed to update last_used_at:", err))
         return cachedAudio.storage_url
     }
 

@@ -134,12 +134,12 @@ export async function POST(req: NextRequest) {
 
     if (cached) {
         // Refresh last_used_at in the background (fire-and-forget)
-        supabaseAdmin
-            .from("audio_cache")
-            .update({ last_used_at: new Date().toISOString() })
-            .eq("prompt_hash", promptHash)
-            .then(() => { /* no-op */ })
-            .catch((err) => console.error("[audio/generate] Failed to update last_used_at:", err))
+        Promise.resolve(
+            supabaseAdmin
+                .from("audio_cache")
+                .update({ last_used_at: new Date().toISOString() })
+                .eq("prompt_hash", promptHash)
+        ).catch((err: any) => console.error("[audio/generate] Failed to update last_used_at:", err))
 
         return NextResponse.json({
             url: cached.storage_url,
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
     let storagePath: string
 
     try {
-        ;({ url, storagePath } = await uploadToStorage(promptHash, audioBuffer))
+        ; ({ url, storagePath } = await uploadToStorage(promptHash, audioBuffer))
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         console.error("[audio/generate] Storage upload error:", message)

@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert"
-import { validateContentIdeaOutput, buildContextBlock } from "../ai/prompts.ts"
+import { validateContentIdeaOutput, buildContextBlock } from "../ai/prompts"
 
 // ---------------------------------------------------------------------------
 // validateContentIdeaOutput
