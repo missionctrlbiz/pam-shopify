@@ -31,6 +31,7 @@ export const productionRepurposeTask = task({
 export const productionCarouselTask = task({
     id: "production-carousel",
     maxDuration: 900,
+    machine: "medium-1x",
     retry: {
         maxAttempts: 2,
     },
@@ -52,6 +53,7 @@ export const productionCarouselTask = task({
 export const productionVideoTask = task({
     id: "production-video",
     maxDuration: 1800,
+    machine: "large-1x",
     retry: {
         maxAttempts: 2,
     },
