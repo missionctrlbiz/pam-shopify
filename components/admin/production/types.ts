@@ -153,3 +153,160 @@ export interface GenerateCycleResponse {
     requestedDays?: number
     message?: string
 }
+
+// ── Publishing Pipeline Types ─────────────────────────────────────────────────
+
+/** Social channel supported by Buffer */
+export type BufferService = "linkedin" | "tiktok" | "instagram" | "facebook"
+
+/** Buffer free-tier profile summary */
+export interface BufferProfile {
+    id: string
+    service: BufferService
+    serviceUsername: string
+    serviceType: "profile" | "page"
+    avatarUrl: string | null
+    timezone: string
+    /** Number of posts currently buffered (free tier max = 10) */
+    bufferCount: number
+    /** Maximum queue size for this profile */
+    bufferMax: number
+}
+
+/** Media attachment for a Buffer post (image, video, or carousel) */
+export interface BufferMediaAttachment {
+    photo?: string      // Public CDN URL for image
+    video?: string      // Public CDN URL for video (mp4)
+    thumbnail?: string  // Video thumbnail (required for TikTok)
+    altText?: string    // Accessibility alt text
+    /** TikTok-specific: 9:16 vertical frame required */
+    tiktokViewport?: boolean
+}
+
+/** Typed payload for creating a Buffer update */
+export interface BufferPostPayload {
+    profile_ids: string[]
+    text: string
+    media?: BufferMediaAttachment
+    /** ISO 8601 scheduled publish time; omit to post at next buffer slot */
+    scheduled_at?: string
+    shorten?: boolean
+    now?: boolean
+    top?: boolean
+}
+
+/** A single update returned from Buffer after scheduling */
+export interface BufferScheduledUpdate {
+    id: string
+    created_at: number
+    day: string
+    due_at: number
+    due_time: string
+    media: BufferMediaAttachment | null
+    profile_id: string
+    profile_service: BufferService
+    shared_now: boolean
+    status: "buffer" | "sent" | "error"
+    text: string
+    text_formatted: string
+    type: string
+    updated_at: number
+    via: string
+}
+
+/** Response from POST /1/updates/create.json */
+export interface BufferPostResponse {
+    success: boolean
+    buffer_count: number
+    buffer_percentage: number
+    updates: BufferScheduledUpdate[]
+}
+
+// ── Email Blast Types ─────────────────────────────────────────────────────────
+
+/** Which Supabase audience table to pull recipients from */
+export type AudienceSource = "buyers" | "leads" | "both"
+
+/** Configuration for a single email blast job */
+export interface EmailBlastConfig {
+    audienceSource: AudienceSource
+    /** ID of the content_assets row with assetType === EMAIL_HTML */
+    assetId: string
+    /** Email subject line */
+    subject: string
+    /** Hard cap per dispatch; must stay ≤ daily quota (default 90) */
+    maxRecipients: number
+}
+
+/** Configuration for a Buffer multi-channel blast */
+export interface BufferBlastConfig {
+    profileIds: string[]
+    /** ID of the content_assets row used as media source */
+    assetId: string
+    text: string
+    /** Optional ISO 8601 scheduled time; defaults to next buffer slot */
+    scheduledAt?: string
+}
+
+/** Top-level publish request body */
+export interface PublishPayload {
+    mode: "email" | "buffer" | "all"
+    email?: EmailBlastConfig
+    buffer?: BufferBlastConfig
+}
+
+// ── Publish Job Tracking ──────────────────────────────────────────────────────
+
+export type PublishChannel = "EMAIL" | "LINKEDIN" | "TIKTOK" | "INSTAGRAM" | "FACEBOOK"
+export type PublishJobStatus = "PENDING" | "RUNNING" | "COMPLETE" | "FAILED" | "RATE_LIMITED"
+
+/** Row from the publish_jobs table */
+export interface PublishJob {
+    id: string
+    channel: PublishChannel
+    assetId: string | null
+    recipientCount: number | null
+    bufferPostId: string | null
+    scheduledAt: string | null
+    dispatchedAt: string | null
+    status: PublishJobStatus
+    errorMessage: string | null
+    createdAt: string
+}
+
+/** Row shown in the Scheduling Sync dashboard grid */
+export interface ScheduledPostRow {
+    id: string
+    channel: PublishChannel
+    scheduledAt: string
+    text: string
+    mediaUrl: string | null
+    status: "scheduled" | "sent" | "failed"
+    bufferPostId: string | null
+    assetId: string | null
+}
+
+/** Full state returned by GET /api/production/publish */
+export interface PublishState {
+    emailSentToday: number
+    emailDailyLimit: number
+    emailRemainingToday: number
+    bufferProfiles: BufferProfile[]
+    scheduledPosts: ScheduledPostRow[]
+    recentJobs: PublishJob[]
+    lastBlastAt: string | null
+}
+
+/** Response body for POST /api/production/publish */
+export interface PublishResponse {
+    /** Top-level single error message (returned when the entire request fails) */
+    error?: string
+    emailJobId?: string
+    bufferUpdateIds?: string[]
+    emailCount?: number
+    bufferCount?: number
+    rateLimitedChannels?: string[]
+    errors?: string[]
+    quotaWarning?: string
+    message?: string
+}
