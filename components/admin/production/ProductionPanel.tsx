@@ -7,7 +7,7 @@ import { MotionIcon } from "motion-icons-react"
 import {
     CalendarDays, LayoutList, Upload, Zap, RefreshCw, Loader2,
     Filter, ChevronLeft, ChevronRight, AlertCircle, X, Archive,
-    BarChart3, FileUp, Download, BookOpen, Layers, CheckCircle2,
+    BarChart3, FileUp, Download, BookOpen, Layers, CheckCircle2, Send,
 } from "lucide-react"
 import type {
     CalendarEntryRow, CalendarListResponse,
@@ -17,6 +17,7 @@ import { CalendarTable, STATUS_META, PLATFORM_META } from "./CalendarTable"
 import { DayPanel } from "./DayPanel"
 import { StoryBankTab } from "./StoryBankTab"
 import { RenderJobsTab } from "./RenderJobsTab"
+import { PublishTab } from "./PublishTab"
 
 // ─── Same BRAND as AdminDashboardClient ───────────────────────────────────────
 const BRAND = {
@@ -29,7 +30,7 @@ const BRAND = {
     glow: "0 8px 24px rgba(175, 92, 233, 0.25)",
 }
 
-type ProdView = "overview" | "table" | "grid" | "import" | "storybank" | "renderjobs"
+type ProdView = "overview" | "table" | "grid" | "import" | "storybank" | "renderjobs" | "publish"
 
 const VIEWS: { key: ProdView; label: string; iconName: string; Icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", iconName: "LayoutDashboard", Icon: BarChart3 },
@@ -38,6 +39,7 @@ const VIEWS: { key: ProdView; label: string; iconName: string; Icon: React.Eleme
     { key: "import", label: "Import & Generate", iconName: "Upload", Icon: Upload },
     { key: "storybank", label: "Story Bank", iconName: "BookOpen", Icon: BookOpen },
     { key: "renderjobs", label: "Render Queue", iconName: "Layers", Icon: Layers },
+    { key: "publish", label: "Publish", iconName: "Send", Icon: Send },
 ]
 
 // ─── Stat Card (exact same pattern as admin overview) ─────────────────────────
@@ -1089,6 +1091,13 @@ export function ProductionPanel() {
                 {view === "renderjobs" && (
                     <motion.div key="renderjobs" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
                         <RenderJobsTab />
+                    </motion.div>
+                )}
+
+                {/* ── PUBLISH PIPELINE ── */}
+                {view === "publish" && (
+                    <motion.div key="publish" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                        <PublishTab />
                     </motion.div>
                 )}
             </AnimatePresence>
