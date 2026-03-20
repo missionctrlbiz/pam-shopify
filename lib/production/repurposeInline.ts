@@ -655,6 +655,19 @@ async function runAudioInline(
     fileName: string,
     voiceId?: string
 ): Promise<string> {
+    // 1. Check if Audio asset already exists and is COMPLETE inside Supabase to preserve ElevenLabs credits
+    const { data: existingAsset } = await supabaseAdmin
+        .from("content_assets")
+        .select("storage_url, status")
+        .eq("content_idea_id", contentIdeaId)
+        .eq("asset_type", "AUDIO_MP3")
+        .maybeSingle()
+
+    if (existingAsset?.status === "COMPLETE" && existingAsset?.storage_url) {
+        console.log(`[runAudioInline] 🔄 Utilizing cached audio asset node for content idea: ${contentIdeaId}`)
+        return existingAsset.storage_url
+    }
+
     const apiKey = process.env.ELEVENLABS_API_KEY
     if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set")
     const voice = voiceId ?? process.env.ELEVENLABS_VOICE_ID ?? "EXAVITQu4vr4xnSDxMaL"
@@ -685,8 +698,7 @@ async function renderVideoInline(input: {
     audioUrl: string
     topic: string
 }): Promise<Buffer> {
-    const pkg = "@remotion/" + "renderer"
-    const { renderMedia, selectComposition } = await import(pkg)
+    const { renderMedia, selectComposition } = await import("@remotion/renderer")
     const { join } = await import("node:path")
     const { tmpdir } = await import("node:os")
     const { readFileSync, unlinkSync } = await import("node:fs")

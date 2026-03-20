@@ -1,11 +1,11 @@
 import { logger, task } from "@trigger.dev/sdk"
-import { runCalendarGenerationBatch } from "@/lib/production/calendarGeneration"
+import { runCalendarGenerationBatch } from "../lib/production/calendarGeneration"
 import {
     runCarouselInline,
     runRepurposeInline,
     runVideoScriptInline,
     type RepurposeInlineInput,
-} from "@/lib/production/repurposeInline"
+} from "../lib/production/repurposeInline"
 
 export const productionRepurposeTask = task({
     id: "production-repurpose",
