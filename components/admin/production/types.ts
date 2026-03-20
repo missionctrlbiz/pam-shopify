@@ -137,9 +137,10 @@ export interface ApproveResponse {
 }
 
 export interface GenerateAssetsResponse {
-    queued: number
-    jobs: { jobType: string; taskId: string; renderJobId: string }[]
+    queued?: number
+    jobs?: { jobType: string; taskId: string; renderJobId: string }[]
     errors?: string[]
+    message?: string
 }
 
 export interface GenerateCycleResponse {

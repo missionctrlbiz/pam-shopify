@@ -1,4 +1,4 @@
-(self["webpackChunkvideo_renderer"] = self["webpackChunkvideo_renderer"] || []).push([[45],{
+(self["webpackChunkvideo_renderer"] = self["webpackChunkvideo_renderer"] || []).push([[934],{
 
 /***/ 3638
 (__unused_webpack_module, exports) {
@@ -678,7 +678,7 @@ const fn = (src) => {
 /**
  * @description Gets the duration in seconds of an audio source by creating an invisible `<audio>` tag, loading the audio, and returning the duration.
  * @see [Documentation](https://remotion.dev/docs/get-audio-duration-in-seconds)
- * @deprecated Use `parseMedia()` instead: https://www.remotion.dev/docs/media-parser/parse-media
+ * @deprecated Use Mediabunny instead: https://www.remotion.dev/docs/mediabunny/metadata
  */
 const getAudioDurationInSeconds = (src) => {
     return limit(fn, src);
@@ -2155,13 +2155,13 @@ exports.packages = [
 exports.extraPackages = [
     {
         name: 'mediabunny',
-        version: '1.37.0',
+        version: '1.39.2',
         description: 'Multimedia library used by Remotion',
         docsUrl: 'https://www.remotion.dev/docs/mediabunny/version',
     },
     {
         name: '@mediabunny/ac3',
-        version: '1.37.0',
+        version: '1.39.2',
         description: 'AC-3 and E-AC-3 audio codec support for Mediabunny',
         docsUrl: 'https://www.remotion.dev/docs/mediabunny/formats#ac-3-and-e-ac-3',
     },
@@ -2525,7 +2525,7 @@ exports.stringifyDefaultProps = stringifyDefaultProps;
 
 /***/ },
 
-/***/ 4045
+/***/ 3934
 (module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -10372,9 +10372,14 @@ var MenuBuildIndicator = () => {
 
 function useBreakpoint(breakpoint2) {
   const [compactUI, setCompactUI] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(window.innerWidth < breakpoint2);
+  const compactUIRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)(compactUI);
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
     function handleResize() {
-      setCompactUI(window.innerWidth < breakpoint2);
+      const newValue = window.innerWidth < breakpoint2;
+      if (newValue !== compactUIRef.current) {
+        setCompactUI(newValue);
+      }
+      compactUIRef.current = newValue;
     }
     window.addEventListener("resize", handleResize);
     handleResize();
@@ -22522,7 +22527,7 @@ var useResponsiveSidebarStatus = () => {
   }, [sidebarCollapsedStateLeft, responsiveLeftStatus]);
   return actualStateLeft;
 };
-var TopPanel = ({ readOnlyStudio, onMounted, drawRef: drawRef2, bufferStateDelayInMilliseconds }) => {
+var TopPanelInner = ({ readOnlyStudio, onMounted, drawRef: drawRef2, bufferStateDelayInMilliseconds }) => {
   const { setSidebarCollapsedState, sidebarCollapsedStateRight } = (0,react__WEBPACK_IMPORTED_MODULE_0__.useContext)(SidebarContext);
   const rulersAreVisible = useIsRulerVisible();
   const actualStateLeft = useResponsiveSidebarStatus();
@@ -22628,6 +22633,7 @@ var TopPanel = ({ readOnlyStudio, onMounted, drawRef: drawRef2, bufferStateDelay
     ]
   });
 };
+var TopPanel = react__WEBPACK_IMPORTED_MODULE_0__.memo(TopPanelInner);
 
 // src/components/SidebarCollapserControls.tsx
 
@@ -23163,6 +23169,33 @@ var calculateTimeline = ({
     const sortKeyA = getTimelineSequenceSequenceSortKey(a, tracks, sameHashes, nonceRanks);
     const sortKeyB = getTimelineSequenceSequenceSortKey(b, tracks, sameHashes, nonceRanks);
     return sortKeyA.localeCompare(sortKeyB);
+  });
+};
+
+// src/components/ExpandedTracksProvider.tsx
+
+
+var ExpandedTracksContext = (0,react__WEBPACK_IMPORTED_MODULE_0__.createContext)({
+  expandedTracks: {},
+  toggleTrack: () => {
+    throw new Error("ExpandedTracksContext not initialized");
+  }
+});
+var ExpandedTracksProvider = ({ children }) => {
+  const [expandedTracks, setExpandedTracks] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)({});
+  const toggleTrack = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)((id) => {
+    setExpandedTracks((prev) => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  }, []);
+  const value = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => ({
+    expandedTracks,
+    toggleTrack
+  }), [expandedTracks, toggleTrack]);
+  return /* @__PURE__ */ (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(ExpandedTracksContext.Provider, {
+    value,
+    children
   });
 };
 
@@ -23744,33 +23777,6 @@ var Inner2 = () => {
 // src/components/Timeline/TimelineListItem.tsx
 
 
-
-// src/components/ExpandedTracksProvider.tsx
-
-
-var ExpandedTracksContext = (0,react__WEBPACK_IMPORTED_MODULE_0__.createContext)({
-  expandedTracks: {},
-  toggleTrack: () => {
-    throw new Error("ExpandedTracksContext not initialized");
-  }
-});
-var ExpandedTracksProvider = ({ children }) => {
-  const [expandedTracks, setExpandedTracks] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)({});
-  const toggleTrack = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)((id) => {
-    setExpandedTracks((prev) => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  }, []);
-  const value = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => ({
-    expandedTracks,
-    toggleTrack
-  }), [expandedTracks, toggleTrack]);
-  return /* @__PURE__ */ (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(ExpandedTracksContext.Provider, {
-    value,
-    children
-  });
-};
 
 // src/components/Timeline/TimelineExpandedSection.tsx
 
@@ -26349,8 +26355,11 @@ var container45 = {
 var noop3 = () => {
   return;
 };
-var Timeline = () => {
+var TimelineInner = () => {
   const { sequences } = (0,react__WEBPACK_IMPORTED_MODULE_0__.useContext)(remotion__WEBPACK_IMPORTED_MODULE_2__.Internals.SequenceManager);
+  const { expandedTracks } = (0,react__WEBPACK_IMPORTED_MODULE_0__.useContext)(ExpandedTracksContext);
+  const { previewServerState } = (0,react__WEBPACK_IMPORTED_MODULE_0__.useContext)(StudioServerConnectionCtx);
+  const visualModeEnabled = Boolean(false) && previewServerState.type === "connected";
   const videoConfig = remotion__WEBPACK_IMPORTED_MODULE_2__.Internals.useUnsafeVideoConfig();
   const timeline = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => {
     if (!videoConfig) {
@@ -26374,14 +26383,15 @@ var Timeline = () => {
   const inner2 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(() => {
     return {
       height: shown.reduce((acc, track) => {
-        return acc + getTimelineLayerHeight(track.sequence.type === "video" ? "video" : "other") + Number(TIMELINE_ITEM_BORDER_BOTTOM);
+        const isExpanded = visualModeEnabled && (expandedTracks[track.sequence.id] ?? false);
+        return acc + getTimelineLayerHeight(track.sequence.type === "video" ? "video" : "other") + Number(TIMELINE_ITEM_BORDER_BOTTOM) + (isExpanded ? getExpandedTrackHeight(track.sequence.controls) + TIMELINE_ITEM_BORDER_BOTTOM : 0);
       }, 0) + TIMELINE_ITEM_BORDER_BOTTOM + (hasBeenCut ? MAX_TIMELINE_TRACKS_NOTICE_HEIGHT : 0) + TIMELINE_TIME_INDICATOR_HEIGHT,
       display: "flex",
       flex: 1,
       minHeight: "100%",
       overflowX: "hidden"
     };
-  }, [hasBeenCut, shown]);
+  }, [hasBeenCut, shown, expandedTracks, visualModeEnabled]);
   return /* @__PURE__ */ (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)("div", {
     ref: timelineVerticalScroll,
     style: container45,
@@ -26430,6 +26440,7 @@ var Timeline = () => {
     })
   });
 };
+var Timeline = react__WEBPACK_IMPORTED_MODULE_0__.memo(TimelineInner);
 
 // src/components/Timeline/TimelineEmptyState.tsx
 
@@ -41450,6 +41461,111 @@ var Mediabunny = (() => {
       throw new TypeError(`${propertyPath}.height must be a non-negative integer.`);
     }
   };
+  var unthrottledTimerWorker;
+  var nextUnthrottledTimerId = 1;
+  var unthrottledTimeoutCallbacks = /* @__PURE__ */ new Map();
+  var unthrottledIntervalCallbacks = /* @__PURE__ */ new Map();
+  var shouldUseNativeTimers = () => {
+    return typeof window === "undefined";
+  };
+  var unthrottledTimerWorkerMain = () => {
+    const timeoutHandles = /* @__PURE__ */ new Map();
+    const intervalHandles = /* @__PURE__ */ new Map();
+    self.onmessage = (event) => {
+      const message = event.data;
+      switch (message.type) {
+        case "set-timeout":
+          {
+            const handle = setTimeout(() => {
+              timeoutHandles.delete(message.timerId);
+              self.postMessage({ type: "fire", timerId: message.timerId });
+            }, message.delay);
+            timeoutHandles.set(message.timerId, handle);
+          }
+          ;
+          break;
+        case "set-interval":
+          {
+            const handle = setInterval(() => {
+              self.postMessage({ type: "fire", timerId: message.timerId });
+            }, message.delay);
+            intervalHandles.set(message.timerId, handle);
+          }
+          ;
+          break;
+        case "clear-timeout":
+          {
+            const handle = timeoutHandles.get(message.timerId);
+            if (handle !== void 0) {
+              clearTimeout(handle);
+              timeoutHandles.delete(message.timerId);
+            }
+          }
+          ;
+          break;
+        case "clear-interval":
+          {
+            const handle = intervalHandles.get(message.timerId);
+            if (handle !== void 0) {
+              clearInterval(handle);
+              intervalHandles.delete(message.timerId);
+            }
+          }
+          ;
+          break;
+      }
+    };
+  };
+  var getUnthrottledTimerWorker = () => {
+    if (unthrottledTimerWorker) {
+      return unthrottledTimerWorker;
+    }
+    const workerSource = `(${unthrottledTimerWorkerMain.toString()})();`;
+    const workerURL = URL.createObjectURL(new Blob([workerSource], { type: "text/javascript" }));
+    unthrottledTimerWorker = new Worker(workerURL);
+    URL.revokeObjectURL(workerURL);
+    unthrottledTimerWorker.onmessage = (event) => {
+      const message = event.data;
+      const timeoutCallback = unthrottledTimeoutCallbacks.get(message.timerId);
+      if (timeoutCallback) {
+        unthrottledTimeoutCallbacks.delete(message.timerId);
+        timeoutCallback();
+        return;
+      }
+      const intervalCallback = unthrottledIntervalCallbacks.get(message.timerId);
+      if (intervalCallback) {
+        intervalCallback();
+      }
+    };
+    return unthrottledTimerWorker;
+  };
+  var setIntervalUnthrottled = (callback, delay) => {
+    if (shouldUseNativeTimers()) {
+      return { id: setInterval(callback, delay) };
+    }
+    const timerId = nextUnthrottledTimerId++;
+    unthrottledIntervalCallbacks.set(timerId, () => {
+      callback();
+    });
+    getUnthrottledTimerWorker().postMessage({
+      type: "set-interval",
+      timerId,
+      delay
+    });
+    return { id: timerId };
+  };
+  var clearIntervalUnthrottled = (timer) => {
+    if (shouldUseNativeTimers()) {
+      clearInterval(timer.id);
+      return;
+    }
+    assert(typeof timer.id === "number");
+    unthrottledIntervalCallbacks.delete(timer.id);
+    getUnthrottledTimerWorker().postMessage({
+      type: "clear-interval",
+      timerId: timer.id
+    });
+  };
 
   // src/metadata.ts
   var RichImageData = class {
@@ -46896,6 +47012,18 @@ var Mediabunny = (() => {
       }
       return maybeFixPacketType(this._track, this._track._backing.getFirstPacket(options), options);
     }
+    /** Retrieves the track's first key packet (in decode order), or null if it has no key packets. */
+    async getFirstKeyPacket(options = {}) {
+      validatePacketRetrievalOptions(options);
+      const firstPacket = await this.getFirstPacket(options);
+      if (!firstPacket) {
+        return null;
+      }
+      if (firstPacket.type === "key") {
+        return firstPacket;
+      }
+      return this.getNextKeyPacket(firstPacket, options);
+    }
     /**
      * Retrieves the packet corresponding to the given timestamp, in seconds. More specifically, returns the last packet
      * (in presentation order) with a start timestamp less than or equal to the given timestamp. This method can be
@@ -47133,7 +47261,7 @@ var Mediabunny = (() => {
           }
         });
         const packetSink = this._createPacketSink();
-        const keyPacket = await packetSink.getKeyPacket(startTimestamp, { verifyKeyPackets: true }) ?? await packetSink.getFirstPacket();
+        const keyPacket = await packetSink.getKeyPacket(startTimestamp, { verifyKeyPackets: true }) ?? await packetSink.getFirstKeyPacket({ verifyKeyPackets: true });
         let currentPacket = keyPacket;
         const endPacket = void 0;
         const packets = packetSink.packets(keyPacket ?? void 0, endPacket);
@@ -56210,9 +56338,9 @@ var Mediabunny = (() => {
         } else if (startingBytes[0] === 71 && startingBytes[TS_PACKET_SIZE + 16] === 71) {
           this.packetOffset = 0;
           this.packetStride = TS_PACKET_SIZE + 16;
-        } else if (startingBytes[4] === 71 && startingBytes[4 + TS_PACKET_SIZE] === 71) {
+        } else if (startingBytes[4] === 71 && startingBytes[4 + TS_PACKET_SIZE + 4] === 71) {
           this.packetOffset = 4;
-          this.packetStride = TS_PACKET_SIZE;
+          this.packetStride = TS_PACKET_SIZE + 4;
         } else {
           throw new Error("Unreachable.");
         }
@@ -58111,7 +58239,7 @@ var Mediabunny = (() => {
         return true;
       } else if (bytes2[0] === 71 && bytes2[TS_PACKET_SIZE + 16] === 71) {
         return true;
-      } else if (bytes2[4] === 71 && bytes2[4 + TS_PACKET_SIZE] === 71) {
+      } else if (bytes2[4] === 71 && bytes2[4 + TS_PACKET_SIZE + 4] === 71) {
         return true;
       }
       return false;
@@ -60547,6 +60675,9 @@ var Mediabunny = (() => {
     }
     validateAndNormalizeTimestamp(track, timestampInSeconds, isKeyPacket) {
       timestampInSeconds += track.source._timestampOffset;
+      if (timestampInSeconds < 0) {
+        throw new Error(`Timestamps must be non-negative (got ${timestampInSeconds}s).`);
+      }
       let timestampInfo = this.trackTimestampInfo.get(track);
       if (!timestampInfo) {
         if (!isKeyPacket) {
@@ -60554,22 +60685,20 @@ var Mediabunny = (() => {
         }
         timestampInfo = {
           maxTimestamp: timestampInSeconds,
-          maxTimestampBeforeLastKeyPacket: timestampInSeconds
+          maxTimestampBeforeLastKeyPacket: null
         };
         this.trackTimestampInfo.set(track, timestampInfo);
+      } else {
+        if (isKeyPacket) {
+          timestampInfo.maxTimestampBeforeLastKeyPacket = timestampInfo.maxTimestamp;
+        }
+        if (timestampInfo.maxTimestampBeforeLastKeyPacket !== null && timestampInSeconds < timestampInfo.maxTimestampBeforeLastKeyPacket) {
+          throw new Error(
+            `Timestamps cannot be smaller than the largest timestamp of the previous GOP (a GOP begins with a key packet and ends right before the next key packet). Got ${timestampInSeconds}s, but largest timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s.`
+          );
+        }
+        timestampInfo.maxTimestamp = Math.max(timestampInfo.maxTimestamp, timestampInSeconds);
       }
-      if (timestampInSeconds < 0) {
-        throw new Error(`Timestamps must be non-negative (got ${timestampInSeconds}s).`);
-      }
-      if (isKeyPacket) {
-        timestampInfo.maxTimestampBeforeLastKeyPacket = timestampInfo.maxTimestamp;
-      }
-      if (timestampInSeconds < timestampInfo.maxTimestampBeforeLastKeyPacket) {
-        throw new Error(
-          `Timestamps cannot be smaller than the largest timestamp of the previous GOP (a GOP begins with a key packet and ends right before the next key packet). Got ${timestampInSeconds}s, but largest timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s.`
-        );
-      }
-      timestampInfo.maxTimestamp = Math.max(timestampInfo.maxTimestamp, timestampInSeconds);
       return timestampInSeconds;
     }
   };
@@ -63797,11 +63926,12 @@ var Mediabunny = (() => {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     async onTrackClose(track) {
       const release = await this.mutex.acquire();
-      if (track.type === "subtitle" && track.source._codec === "webvtt") {
-        const trackData = this.trackDatas.find((x) => x.track === track);
-        if (trackData) {
+      const trackData = this.trackDatas.find((x) => x.track === track);
+      if (trackData) {
+        if (trackData.type === "subtitle" && track.source._codec === "webvtt") {
           await this.processWebVTTCues(trackData, Infinity);
         }
+        this.processTimestamps(trackData);
       }
       if (this.allTracksAreKnown()) {
         this.allTracksKnown.resolve();
@@ -63819,16 +63949,13 @@ var Mediabunny = (() => {
         if (trackData.type === "subtitle" && trackData.track.source._codec === "webvtt") {
           await this.processWebVTTCues(trackData, Infinity);
         }
+        this.processTimestamps(trackData);
       }
       if (this.isFragmented) {
         await this.interleaveSamples(true);
-        for (const trackData of this.trackDatas) {
-          this.processTimestamps(trackData);
-        }
         await this.finalizeFragment(false);
       } else {
         for (const trackData of this.trackDatas) {
-          this.processTimestamps(trackData);
           await this.finalizeCurrentChunk(trackData);
         }
       }
@@ -67935,11 +68062,17 @@ ${cue.notes ?? ""}`;
      * [`MediaStreamVideoTrack`](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack), which will pull
      * video samples from the stream in real time and encode them according to {@link VideoEncodingConfig}.
      */
-    constructor(track, encodingConfig) {
+    constructor(track, encodingConfig, options = {}) {
       if (!(track instanceof MediaStreamTrack) || track.kind !== "video") {
         throw new TypeError("track must be a video MediaStreamTrack.");
       }
       validateVideoEncodingConfig(encodingConfig);
+      if (typeof options !== "object" || !options) {
+        throw new TypeError("options must be an object.");
+      }
+      if (options.frameRate != null && (typeof options.frameRate !== "number" || options.frameRate <= 0)) {
+        throw new TypeError("options.frameRate, when provided, must be either a positive number or null.");
+      }
       encodingConfig = {
         ...encodingConfig,
         latencyMode: "realtime"
@@ -67958,9 +68091,12 @@ ${cue.notes ?? ""}`;
       /** @internal */
       this._paused = false;
       /** @internal */
-      this._lastSampleTimestamp = null;
+      this._lastVideoFrame = null;
       /** @internal */
-      this._pauseOffset = 0;
+      this._timerHandle = null;
+      /** @internal */
+      this._videoElement = null;
+      this._options = options;
       this._encoder = new VideoEncoderWrapper(this, encodingConfig);
       this._track = track;
     }
@@ -67980,23 +68116,66 @@ ${cue.notes ?? ""}`;
           "Make sure not to ignore the `errorPromise` field on MediaStreamVideoTrackSource, so that any internal errors get bubbled up properly."
         );
       }
+      const frameRate = this._options.frameRate !== void 0 ? this._options.frameRate : this._track.getSettings().frameRate ?? null;
       this._abortController = new AbortController();
       let firstVideoFrameTimestamp = null;
+      let lastFrameTime = null;
+      let frameCount = 0;
       let errored = false;
+      let lastSampleTimestamp = null;
+      let pauseOffset = 0;
+      const tick = () => {
+        assert(frameRate !== null);
+        if (!this._lastVideoFrame) {
+          return;
+        }
+        assert(lastFrameTime !== null);
+        assert(firstVideoFrameTimestamp !== null);
+        const now = performance.now();
+        while (now - lastFrameTime > 1e3 / frameRate) {
+          lastFrameTime += 1e3 / frameRate;
+          const timestamp = firstVideoFrameTimestamp + frameCount / frameRate;
+          const frame = new VideoFrame(this._videoElement ?? this._lastVideoFrame, {
+            timestamp: 1e6 * timestamp,
+            duration: 1e6 / frameRate
+          });
+          addVideoFrame(frame, now);
+        }
+      };
+      if (frameRate !== null) {
+        this._timerHandle = setIntervalUnthrottled(tick, 4);
+      }
       const onVideoFrame = (videoFrame) => {
+        if (frameRate === null) {
+          addVideoFrame(videoFrame);
+        } else {
+          const now = performance.now();
+          if (!this._lastVideoFrame) {
+            addVideoFrame(videoFrame.clone(), now);
+            lastFrameTime = now;
+            this._lastVideoFrame = videoFrame;
+          } else {
+            tick();
+            this._lastVideoFrame?.close();
+            this._lastVideoFrame = videoFrame;
+          }
+        }
+      };
+      const addVideoFrame = (videoFrame, now = performance.now()) => {
         if (errored) {
           videoFrame.close();
           return;
         }
+        frameCount++;
         const currentTimestamp = videoFrame.timestamp / 1e6;
         if (this._paused) {
           const frameSeen = firstVideoFrameTimestamp !== null;
           if (frameSeen) {
-            if (this._lastSampleTimestamp !== null) {
-              const timeDelta = currentTimestamp - this._lastSampleTimestamp;
-              this._pauseOffset -= timeDelta;
+            if (lastSampleTimestamp !== null) {
+              const timeDelta = currentTimestamp - lastSampleTimestamp;
+              pauseOffset -= timeDelta;
             }
-            this._lastSampleTimestamp = currentTimestamp;
+            lastSampleTimestamp = currentTimestamp;
           }
           videoFrame.close();
           return;
@@ -68005,19 +68184,19 @@ ${cue.notes ?? ""}`;
           firstVideoFrameTimestamp = currentTimestamp;
           const muxer = this._connectedTrack.output._muxer;
           if (muxer.firstMediaStreamTimestamp === null) {
-            muxer.firstMediaStreamTimestamp = performance.now() / 1e3;
+            muxer.firstMediaStreamTimestamp = now / 1e3;
             this._timestampOffset = -firstVideoFrameTimestamp;
           } else {
-            this._timestampOffset = performance.now() / 1e3 - muxer.firstMediaStreamTimestamp - firstVideoFrameTimestamp;
+            this._timestampOffset = now / 1e3 - muxer.firstMediaStreamTimestamp - firstVideoFrameTimestamp;
           }
         }
-        this._lastSampleTimestamp = currentTimestamp;
-        if (this._encoder.getQueueSize() >= 4) {
+        lastSampleTimestamp = currentTimestamp;
+        if (this._encoder.getQueueSize() >= 8) {
           videoFrame.close();
           return;
         }
         const sample = new VideoSample(videoFrame, {
-          timestamp: currentTimestamp + this._pauseOffset
+          timestamp: currentTimestamp + pauseOffset
         });
         void this._encoder.add(sample, true).catch((error) => {
           errored = true;
@@ -68058,8 +68237,37 @@ ${cue.notes ?? ""}`;
             }
           };
           mediaStreamTrackProcessorWorker.addEventListener("message", this._workerListener);
+        } else if (frameRate !== null) {
+          const video = document.createElement("video");
+          video.style.position = "fixed";
+          video.style.left = "-10000px";
+          video.style.top = "-10000px";
+          video.style.width = "1px";
+          video.style.height = "1px";
+          video.style.opacity = "0";
+          video.style.pointerEvents = "none";
+          video.muted = true;
+          video.srcObject = new MediaStream([this._track]);
+          document.body.appendChild(video);
+          this._videoElement = video;
+          video.addEventListener("loadeddata", () => {
+            if (errored || !this._videoElement) {
+              return;
+            }
+            const frame = new VideoFrame(video, {
+              timestamp: 1e3 * performance.now()
+            });
+            onVideoFrame(frame);
+            frame.close();
+          }, { once: true });
+          void video.play().catch((error) => {
+            errored = true;
+            this._promiseWithResolvers.reject(error);
+          });
         } else {
-          throw new Error("MediaStreamTrackProcessor is required but not supported by this browser.");
+          throw new Error(
+            "When no explicit frame rate is set, MediaStreamTrackProcessor is required; but it's not supported by this browser."
+          );
         }
       }
     }
@@ -68079,6 +68287,15 @@ ${cue.notes ?? ""}`;
       if (this._abortController) {
         this._abortController.abort();
         this._abortController = null;
+      }
+      if (this._timerHandle) {
+        clearIntervalUnthrottled(this._timerHandle);
+      }
+      this._lastVideoFrame?.close();
+      if (this._videoElement) {
+        this._videoElement.srcObject = null;
+        this._videoElement.remove();
+        this._videoElement = null;
       }
       if (this._workerTrackId !== null) {
         assert(this._workerListener);
@@ -68592,10 +68809,6 @@ ${cue.notes ?? ""}`;
       this._errorPromiseAccessed = false;
       /** @internal */
       this._paused = false;
-      /** @internal */
-      this._lastSampleTimestamp = null;
-      /** @internal */
-      this._pauseOffset = 0;
       this._encoder = new AudioEncoderWrapper(this, encodingConfig);
       this._track = track;
     }
@@ -68612,12 +68825,14 @@ ${cue.notes ?? ""}`;
     async _start() {
       if (!this._errorPromiseAccessed) {
         console.warn(
-          "Make sure not to ignore the `errorPromise` field on MediaStreamVideoTrackSource, so that any internal errors get bubbled up properly."
+          "Make sure not to ignore the `errorPromise` field on MediaStreamAudioTrackSource, so that any internal errors get bubbled up properly."
         );
       }
       this._abortController = new AbortController();
       let firstAudioDataTimestamp = null;
       let errored = false;
+      let lastSampleTimestamp = null;
+      let pauseOffset = 0;
       const onAudioSample = (audioSample) => {
         if (errored) {
           audioSample.close();
@@ -68627,11 +68842,11 @@ ${cue.notes ?? ""}`;
         if (this._paused) {
           const dataSeen = firstAudioDataTimestamp !== null;
           if (dataSeen) {
-            if (this._lastSampleTimestamp !== null) {
-              const timeDelta = currentTimestamp - this._lastSampleTimestamp;
-              this._pauseOffset -= timeDelta;
+            if (lastSampleTimestamp !== null) {
+              const timeDelta = currentTimestamp - lastSampleTimestamp;
+              pauseOffset -= timeDelta;
             }
-            this._lastSampleTimestamp = currentTimestamp;
+            lastSampleTimestamp = currentTimestamp;
           }
           audioSample.close();
           return;
@@ -68646,12 +68861,12 @@ ${cue.notes ?? ""}`;
             this._timestampOffset = performance.now() / 1e3 - muxer.firstMediaStreamTimestamp - firstAudioDataTimestamp;
           }
         }
-        this._lastSampleTimestamp = currentTimestamp;
-        if (this._encoder.getQueueSize() >= 4) {
+        lastSampleTimestamp = currentTimestamp;
+        if (this._encoder.getQueueSize() >= 8) {
           audioSample.close();
           return;
         }
-        audioSample.setTimestamp(currentTimestamp + this._pauseOffset);
+        audioSample.setTimestamp(currentTimestamp + pauseOffset);
         void this._encoder.add(audioSample, true).catch((error) => {
           errored = true;
           this._abortController?.abort();
@@ -69300,6 +69515,9 @@ ${cue.notes ?? ""}`;
       /**
        * Whether this conversion, as it has been configured, is valid and can be executed. If this field is `false`, check
        * the `discardedTracks` field for reasons.
+       *
+       * Note: a conversion having discarded tracks does not automatically mean it is invalid; if the remaining, utilized
+       * tracks make for a valid output file, the conversion is still allowed.
        */
       this.isValid = false;
       /** The list of tracks that are included in the output file. */
@@ -79853,6 +80071,9 @@ class Muxer {
     onTrackClose(track) { }
     validateAndNormalizeTimestamp(track, timestampInSeconds, isKeyPacket) {
         timestampInSeconds += track.source._timestampOffset;
+        if (timestampInSeconds < 0) {
+            throw new Error(`Timestamps must be non-negative (got ${timestampInSeconds}s).`);
+        }
         let timestampInfo = this.trackTimestampInfo.get(track);
         if (!timestampInfo) {
             if (!isKeyPacket) {
@@ -79860,22 +80081,22 @@ class Muxer {
             }
             timestampInfo = {
                 maxTimestamp: timestampInSeconds,
-                maxTimestampBeforeLastKeyPacket: timestampInSeconds,
+                maxTimestampBeforeLastKeyPacket: null,
             };
             this.trackTimestampInfo.set(track, timestampInfo);
         }
-        if (timestampInSeconds < 0) {
-            throw new Error(`Timestamps must be non-negative (got ${timestampInSeconds}s).`);
+        else {
+            if (isKeyPacket) {
+                timestampInfo.maxTimestampBeforeLastKeyPacket = timestampInfo.maxTimestamp;
+            }
+            if (timestampInfo.maxTimestampBeforeLastKeyPacket !== null
+                && timestampInSeconds < timestampInfo.maxTimestampBeforeLastKeyPacket) {
+                throw new Error(`Timestamps cannot be smaller than the largest timestamp of the previous GOP (a GOP begins with a`
+                    + ` key packet and ends right before the next key packet). Got ${timestampInSeconds}s, but largest`
+                    + ` timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s.`);
+            }
+            timestampInfo.maxTimestamp = Math.max(timestampInfo.maxTimestamp, timestampInSeconds);
         }
-        if (isKeyPacket) {
-            timestampInfo.maxTimestampBeforeLastKeyPacket = timestampInfo.maxTimestamp;
-        }
-        if (timestampInSeconds < timestampInfo.maxTimestampBeforeLastKeyPacket) {
-            throw new Error(`Timestamps cannot be smaller than the largest timestamp of the previous GOP (a GOP begins with a key`
-                + ` packet and ends right before the next key packet). Got ${timestampInSeconds}s, but largest`
-                + ` timestamp is ${timestampInfo.maxTimestampBeforeLastKeyPacket}s.`);
-        }
-        timestampInfo.maxTimestamp = Math.max(timestampInfo.maxTimestamp, timestampInSeconds);
         return timestampInSeconds;
     }
 }
@@ -83261,11 +83482,12 @@ class IsobmffMuxer extends Muxer {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     async onTrackClose(track) {
         const release = await this.mutex.acquire();
-        if (track.type === 'subtitle' && track.source._codec === 'webvtt') {
-            const trackData = this.trackDatas.find(x => x.track === track);
-            if (trackData) {
+        const trackData = this.trackDatas.find(x => x.track === track);
+        if (trackData) {
+            if (trackData.type === 'subtitle' && track.source._codec === 'webvtt') {
                 await this.processWebVTTCues(trackData, Infinity);
             }
+            this.processTimestamps(trackData);
         }
         if (this.allTracksAreKnown()) {
             this.allTracksKnown.resolve();
@@ -83284,17 +83506,14 @@ class IsobmffMuxer extends Muxer {
             if (trackData.type === 'subtitle' && trackData.track.source._codec === 'webvtt') {
                 await this.processWebVTTCues(trackData, Infinity);
             }
+            this.processTimestamps(trackData);
         }
         if (this.isFragmented) {
             await this.interleaveSamples(true);
-            for (const trackData of this.trackDatas) {
-                this.processTimestamps(trackData);
-            }
             await this.finalizeFragment(false); // Don't flush the last fragment as we will flush it with the mfra box
         }
         else {
             for (const trackData of this.trackDatas) {
-                this.processTimestamps(trackData);
                 await this.finalizeCurrentChunk(trackData);
             }
         }
@@ -87135,7 +87354,7 @@ const getFirstEncodableSubtitleCodec = async (checkedCodecs) => {
 var esm = __webpack_require__(3947);
 ;// ./node_modules/remotion/dist/esm/version.mjs
 // src/version.ts
-var VERSION = "4.0.435";
+var VERSION = "4.0.438";
 
 
 // EXTERNAL MODULE: ./node_modules/mediabunny/dist/modules/src/sample.js
@@ -87999,11 +88218,17 @@ class MediaStreamVideoTrackSource extends VideoSource {
      * [`MediaStreamVideoTrack`](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack), which will pull
      * video samples from the stream in real time and encode them according to {@link VideoEncodingConfig}.
      */
-    constructor(track, encodingConfig) {
+    constructor(track, encodingConfig, options = {}) {
         if (!(track instanceof MediaStreamTrack) || track.kind !== 'video') {
             throw new TypeError('track must be a video MediaStreamTrack.');
         }
         validateVideoEncodingConfig(encodingConfig);
+        if (typeof options !== 'object' || !options) {
+            throw new TypeError('options must be an object.');
+        }
+        if (options.frameRate != null && (typeof options.frameRate !== 'number' || options.frameRate <= 0)) {
+            throw new TypeError('options.frameRate, when provided, must be either a positive number or null.');
+        }
         encodingConfig = {
             ...encodingConfig,
             latencyMode: 'realtime',
@@ -88022,9 +88247,12 @@ class MediaStreamVideoTrackSource extends VideoSource {
         /** @internal */
         this._paused = false;
         /** @internal */
-        this._lastSampleTimestamp = null;
+        this._lastVideoFrame = null;
         /** @internal */
-        this._pauseOffset = 0;
+        this._timerHandle = null;
+        /** @internal */
+        this._videoElement = null;
+        this._options = options;
         this._encoder = new VideoEncoderWrapper(this, encodingConfig);
         this._track = track;
     }
@@ -88034,28 +88262,77 @@ class MediaStreamVideoTrackSource extends VideoSource {
             console.warn('Make sure not to ignore the `errorPromise` field on MediaStreamVideoTrackSource, so that any internal'
                 + ' errors get bubbled up properly.');
         }
+        const frameRate = this._options.frameRate !== undefined
+            ? this._options.frameRate
+            : (this._track.getSettings().frameRate ?? null);
         this._abortController = new AbortController();
         let firstVideoFrameTimestamp = null;
+        let lastFrameTime = null;
+        let frameCount = 0;
         let errored = false;
+        let lastSampleTimestamp = null;
+        let pauseOffset = 0;
+        const tick = () => {
+            (0,misc/* assert */.vA)(frameRate !== null);
+            if (!this._lastVideoFrame) {
+                return;
+            }
+            (0,misc/* assert */.vA)(lastFrameTime !== null);
+            (0,misc/* assert */.vA)(firstVideoFrameTimestamp !== null);
+            const now = performance.now();
+            // Add as many frames as warranted by the elapsed time.
+            // > instead of >= intentionally because tick() is called before the _lastVideoFrame is changed
+            while (now - lastFrameTime > 1000 / frameRate) {
+                lastFrameTime += 1000 / frameRate;
+                const timestamp = firstVideoFrameTimestamp + frameCount / frameRate;
+                const frame = new VideoFrame(this._videoElement ?? this._lastVideoFrame, {
+                    timestamp: 1e6 * timestamp,
+                    duration: 1e6 / frameRate,
+                });
+                addVideoFrame(frame, now);
+            }
+        };
+        if (frameRate !== null) {
+            this._timerHandle = (0,misc/* setIntervalUnthrottled */.Bt)(tick, 4); // Run it at 250 Hz
+        }
         const onVideoFrame = (videoFrame) => {
+            if (frameRate === null) {
+                addVideoFrame(videoFrame);
+            }
+            else {
+                const now = performance.now();
+                if (!this._lastVideoFrame) {
+                    addVideoFrame(videoFrame.clone(), now);
+                    lastFrameTime = now;
+                    this._lastVideoFrame = videoFrame;
+                }
+                else {
+                    tick();
+                    this._lastVideoFrame?.close();
+                    this._lastVideoFrame = videoFrame;
+                }
+            }
+        };
+        const addVideoFrame = (videoFrame, now = performance.now()) => {
             if (errored) {
                 videoFrame.close();
                 return;
             }
+            frameCount++;
             const currentTimestamp = videoFrame.timestamp / 1e6;
             if (this._paused) {
                 const frameSeen = firstVideoFrameTimestamp !== null;
                 if (frameSeen) {
-                    if (this._lastSampleTimestamp !== null) {
+                    if (lastSampleTimestamp !== null) {
                         // In addition to dropping this frame, let's also keep track of the time we have lost due to the
                         // pause. Doing it like this instead of simply keeping track of the paused time is better since
                         // it retains the frame rate of the underlying source.
-                        const timeDelta = currentTimestamp - this._lastSampleTimestamp;
+                        const timeDelta = currentTimestamp - lastSampleTimestamp;
                         // We modify this field instead of _timestampOffset since we still might have data in flight
                         // in the encoder, with which we don't want to mess.
-                        this._pauseOffset -= timeDelta;
+                        pauseOffset -= timeDelta;
                     }
-                    this._lastSampleTimestamp = currentTimestamp;
+                    lastSampleTimestamp = currentTimestamp;
                 }
                 videoFrame.close();
                 return;
@@ -88064,22 +88341,22 @@ class MediaStreamVideoTrackSource extends VideoSource {
                 firstVideoFrameTimestamp = currentTimestamp;
                 const muxer = this._connectedTrack.output._muxer;
                 if (muxer.firstMediaStreamTimestamp === null) {
-                    muxer.firstMediaStreamTimestamp = performance.now() / 1000;
+                    muxer.firstMediaStreamTimestamp = now / 1000;
                     this._timestampOffset = -firstVideoFrameTimestamp;
                 }
                 else {
-                    this._timestampOffset = (performance.now() / 1000 - muxer.firstMediaStreamTimestamp)
+                    this._timestampOffset = (now / 1000 - muxer.firstMediaStreamTimestamp)
                         - firstVideoFrameTimestamp;
                 }
             }
-            this._lastSampleTimestamp = currentTimestamp;
-            if (this._encoder.getQueueSize() >= 4) {
+            lastSampleTimestamp = currentTimestamp;
+            if (this._encoder.getQueueSize() >= 8) {
                 // Drop frames if the encoder is overloaded
                 videoFrame.close();
                 return;
             }
             const sample = new src_sample/* VideoSample */.U2(videoFrame, {
-                timestamp: currentTimestamp + this._pauseOffset,
+                timestamp: currentTimestamp + pauseOffset,
             });
             void this._encoder.add(sample, true)
                 .catch((error) => {
@@ -88129,8 +88406,40 @@ class MediaStreamVideoTrackSource extends VideoSource {
                 };
                 mediaStreamTrackProcessorWorker.addEventListener('message', this._workerListener);
             }
+            else if (frameRate !== null) {
+                // No MediaStreamTrackProcessor support at all (e.g. Firefox), but we have a frame rate, so we can
+                // manually sample from a hidden <video> element instead.
+                const video = document.createElement('video');
+                video.style.position = 'fixed';
+                video.style.left = '-10000px';
+                video.style.top = '-10000px';
+                video.style.width = '1px';
+                video.style.height = '1px';
+                video.style.opacity = '0';
+                video.style.pointerEvents = 'none';
+                video.muted = true;
+                video.srcObject = new MediaStream([this._track]);
+                document.body.appendChild(video);
+                this._videoElement = video;
+                video.addEventListener('loadeddata', () => {
+                    if (errored || !this._videoElement) {
+                        return;
+                    }
+                    // This will be the first frame
+                    const frame = new VideoFrame(video, {
+                        timestamp: 1000 * performance.now(),
+                    });
+                    onVideoFrame(frame);
+                    frame.close();
+                }, { once: true });
+                void video.play().catch((error) => {
+                    errored = true;
+                    this._promiseWithResolvers.reject(error);
+                });
+            }
             else {
-                throw new Error('MediaStreamTrackProcessor is required but not supported by this browser.');
+                throw new Error('When no explicit frame rate is set, MediaStreamTrackProcessor is required; but it\'s not supported'
+                    + ' by this browser.');
             }
         }
     }
@@ -88150,6 +88459,15 @@ class MediaStreamVideoTrackSource extends VideoSource {
         if (this._abortController) {
             this._abortController.abort();
             this._abortController = null;
+        }
+        if (this._timerHandle) {
+            (0,misc/* clearIntervalUnthrottled */.Md)(this._timerHandle);
+        }
+        this._lastVideoFrame?.close();
+        if (this._videoElement) {
+            this._videoElement.srcObject = null;
+            this._videoElement.remove();
+            this._videoElement = null;
         }
         if (this._workerTrackId !== null) {
             (0,misc/* assert */.vA)(this._workerListener);
@@ -88732,22 +89050,20 @@ class MediaStreamAudioTrackSource extends AudioSource {
         this._errorPromiseAccessed = false;
         /** @internal */
         this._paused = false;
-        /** @internal */
-        this._lastSampleTimestamp = null;
-        /** @internal */
-        this._pauseOffset = 0;
         this._encoder = new AudioEncoderWrapper(this, encodingConfig);
         this._track = track;
     }
     /** @internal */
     async _start() {
         if (!this._errorPromiseAccessed) {
-            console.warn('Make sure not to ignore the `errorPromise` field on MediaStreamVideoTrackSource, so that any internal'
+            console.warn('Make sure not to ignore the `errorPromise` field on MediaStreamAudioTrackSource, so that any internal'
                 + ' errors get bubbled up properly.');
         }
         this._abortController = new AbortController();
         let firstAudioDataTimestamp = null;
         let errored = false;
+        let lastSampleTimestamp = null;
+        let pauseOffset = 0;
         const onAudioSample = (audioSample) => {
             if (errored) {
                 audioSample.close();
@@ -88757,16 +89073,16 @@ class MediaStreamAudioTrackSource extends AudioSource {
             if (this._paused) {
                 const dataSeen = firstAudioDataTimestamp !== null;
                 if (dataSeen) {
-                    if (this._lastSampleTimestamp !== null) {
+                    if (lastSampleTimestamp !== null) {
                         // In addition to dropping this sample, let's also keep track of the time we have lost due to
                         // the pause. Doing it like this instead of simply keeping track of the paused time is better
                         // since it retains the sample rate of the underlying source.
-                        const timeDelta = currentTimestamp - this._lastSampleTimestamp;
+                        const timeDelta = currentTimestamp - lastSampleTimestamp;
                         // We modify this field instead of _timestampOffset since we still might have data in flight
                         // in the encoder, with which we don't want to mess.
-                        this._pauseOffset -= timeDelta;
+                        pauseOffset -= timeDelta;
                     }
-                    this._lastSampleTimestamp = currentTimestamp;
+                    lastSampleTimestamp = currentTimestamp;
                 }
                 audioSample.close();
                 return;
@@ -88783,13 +89099,13 @@ class MediaStreamAudioTrackSource extends AudioSource {
                         - firstAudioDataTimestamp;
                 }
             }
-            this._lastSampleTimestamp = currentTimestamp;
-            if (this._encoder.getQueueSize() >= 4) {
+            lastSampleTimestamp = currentTimestamp;
+            if (this._encoder.getQueueSize() >= 8) {
                 // Drop data if the encoder is overloaded
                 audioSample.close();
                 return;
             }
-            audioSample.setTimestamp(currentTimestamp + this._pauseOffset);
+            audioSample.setTimestamp(currentTimestamp + pauseOffset);
             void this._encoder.add(audioSample, true)
                 .catch((error) => {
                 errored = true;
@@ -92973,10 +93289,15 @@ var drawText = ({
       fontSize,
       fontWeight,
       fontStyle,
+      fontVariantCaps,
+      fontKerning,
+      fontStretch,
       direction,
       writingMode,
       letterSpacing,
+      wordSpacing,
       textTransform,
+      textRendering,
       webkitTextFillColor,
       webkitTextStrokeWidth,
       webkitTextStrokeColor,
@@ -92999,8 +93320,13 @@ var drawText = ({
     });
     const fontSizePx = parseFloat(fontSize);
     contextToDraw.font = `${fontStyle} ${fontWeight} ${fontSizePx}px ${fontFamily}`;
+    contextToDraw.fontVariantCaps = fontVariantCaps;
+    contextToDraw.fontKerning = fontKerning;
+    contextToDraw.fontStretch = fontStretch;
+    contextToDraw.textRendering = textRendering;
     contextToDraw.fillStyle = onlyBackgroundClipText ? "black" : webkitTextFillColor;
     contextToDraw.letterSpacing = letterSpacing;
+    contextToDraw.wordSpacing = wordSpacing;
     const strokeWidth = parseFloat(webkitTextStrokeWidth);
     const hasStroke = strokeWidth > 0;
     if (hasStroke) {
@@ -105769,10 +106095,10 @@ class MpegTsDemuxer extends demuxer/* Demuxer */.B {
                 this.packetOffset = 0;
                 this.packetStride = mpeg_ts_misc/* TS_PACKET_SIZE */.ZT + 16;
             }
-            else if (startingBytes[4] === 0x47 && startingBytes[4 + mpeg_ts_misc/* TS_PACKET_SIZE */.ZT] === 0x47) {
+            else if (startingBytes[4] === 0x47 && startingBytes[4 + mpeg_ts_misc/* TS_PACKET_SIZE */.ZT + 4] === 0x47) {
                 // MPEG-2-TS (DVHS)
                 this.packetOffset = 4;
-                this.packetStride = mpeg_ts_misc/* TS_PACKET_SIZE */.ZT;
+                this.packetStride = mpeg_ts_misc/* TS_PACKET_SIZE */.ZT + 4;
             }
             else {
                 throw new Error('Unreachable.');
@@ -107904,7 +108230,7 @@ class MpegTsInputFormat extends InputFormat {
             // MPEG-TS with Forward Error Correction
             return true;
         }
-        else if (bytes[4] === 0x47 && bytes[4 + mpeg_ts_misc/* TS_PACKET_SIZE */.ZT] === 0x47) {
+        else if (bytes[4] === 0x47 && bytes[4 + mpeg_ts_misc/* TS_PACKET_SIZE */.ZT + 4] === 0x47) {
             // MPEG-2-TS (DVHS)
             return true;
         }
@@ -109493,6 +109819,19 @@ class EncodedPacketSink {
         }
         return maybeFixPacketType(this._track, this._track._backing.getFirstPacket(options), options);
     }
+    /** Retrieves the track's first key packet (in decode order), or null if it has no key packets. */
+    async getFirstKeyPacket(options = {}) {
+        validatePacketRetrievalOptions(options);
+        const firstPacket = await this.getFirstPacket(options);
+        if (!firstPacket) {
+            return null;
+        }
+        if (firstPacket.type === 'key') {
+            // Great
+            return firstPacket;
+        }
+        return this.getNextKeyPacket(firstPacket, options);
+    }
     /**
      * Retrieves the packet corresponding to the given timestamp, in seconds. More specifically, returns the last packet
      * (in presentation order) with a start timestamp less than or equal to the given timestamp. This method can be
@@ -109757,7 +110096,7 @@ class BaseMediaSampleSink {
             });
             const packetSink = this._createPacketSink();
             const keyPacket = await packetSink.getKeyPacket(startTimestamp, { verifyKeyPackets: true })
-                ?? await packetSink.getFirstPacket();
+                ?? await packetSink.getFirstKeyPacket({ verifyKeyPackets: true });
             let currentPacket = keyPacket;
             // B-frames make it exceedingly difficult to properly define an upper bound for packet iteration if an end
             // timestamp is set, so we just don't do it. The case that makes it especially tricky is when the frames
@@ -111388,6 +111727,7 @@ const validateTrackDisposition = (disposition) => {
 /* harmony export */   Au: () => (/* binding */ MATRIX_COEFFICIENTS_MAP),
 /* harmony export */   BL: () => (/* binding */ COLOR_PRIMARIES_MAP_INVERSE),
 /* harmony export */   Br: () => (/* binding */ bytesToHexString),
+/* harmony export */   Bt: () => (/* binding */ setIntervalUnthrottled),
 /* harmony export */   D5: () => (/* binding */ validateAnyIterable),
 /* harmony export */   Et: () => (/* binding */ isNumber),
 /* harmony export */   F2: () => (/* binding */ isChromium),
@@ -111401,6 +111741,7 @@ const validateTrackDisposition = (disposition) => {
 /* harmony export */   Kp: () => (/* binding */ base64ToBytes),
 /* harmony export */   MF: () => (/* binding */ validateRectangle),
 /* harmony export */   MW: () => (/* binding */ SECOND_TO_MICROSECOND_FACTOR),
+/* harmony export */   Md: () => (/* binding */ clearIntervalUnthrottled),
 /* harmony export */   Nu: () => (/* binding */ isIso639Dash2LanguageCode),
 /* harmony export */   OO: () => (/* binding */ readSignedExpGolomb),
 /* harmony export */   P5: () => (/* binding */ reverseBitsU32),
@@ -111450,7 +111791,7 @@ const validateTrackDisposition = (disposition) => {
 /* harmony export */   xb: () => (/* binding */ assertNever),
 /* harmony export */   zp: () => (/* binding */ getChromiumVersion)
 /* harmony export */ });
-/* unused harmony exports removeItem, mapAsyncGenerator */
+/* unused harmony exports removeItem, mapAsyncGenerator, setTimeoutUnthrottled, clearTimeoutUnthrottled */
 /*!
  * Copyright (c) 2026-present, Vanilagy and contributors
  *
@@ -112081,6 +112422,142 @@ const validateRectangle = (rect, propertyPath) => {
     if (!Number.isInteger(rect.height) || rect.height < 0) {
         throw new TypeError(`${propertyPath}.height must be a non-negative integer.`);
     }
+};
+let unthrottledTimerWorker;
+let nextUnthrottledTimerId = 1;
+const unthrottledTimeoutCallbacks = new Map();
+const unthrottledIntervalCallbacks = new Map();
+const shouldUseNativeTimers = () => {
+    return typeof window === 'undefined';
+};
+const unthrottledTimerWorkerMain = () => {
+    const timeoutHandles = new Map();
+    const intervalHandles = new Map();
+    self.onmessage = (event) => {
+        const message = event.data;
+        switch (message.type) {
+            case 'set-timeout':
+                {
+                    const handle = setTimeout(() => {
+                        timeoutHandles.delete(message.timerId);
+                        self.postMessage({ type: 'fire', timerId: message.timerId });
+                    }, message.delay);
+                    timeoutHandles.set(message.timerId, handle);
+                }
+                ;
+                break;
+            case 'set-interval':
+                {
+                    const handle = setInterval(() => {
+                        self.postMessage({ type: 'fire', timerId: message.timerId });
+                    }, message.delay);
+                    intervalHandles.set(message.timerId, handle);
+                }
+                ;
+                break;
+            case 'clear-timeout':
+                {
+                    const handle = timeoutHandles.get(message.timerId);
+                    if (handle !== undefined) {
+                        clearTimeout(handle);
+                        timeoutHandles.delete(message.timerId);
+                    }
+                }
+                ;
+                break;
+            case 'clear-interval':
+                {
+                    const handle = intervalHandles.get(message.timerId);
+                    if (handle !== undefined) {
+                        clearInterval(handle);
+                        intervalHandles.delete(message.timerId);
+                    }
+                }
+                ;
+                break;
+        }
+    };
+};
+const getUnthrottledTimerWorker = () => {
+    if (unthrottledTimerWorker) {
+        return unthrottledTimerWorker;
+    }
+    const workerSource = `(${unthrottledTimerWorkerMain.toString()})();`;
+    const workerURL = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+    unthrottledTimerWorker = new Worker(workerURL);
+    URL.revokeObjectURL(workerURL);
+    unthrottledTimerWorker.onmessage = (event) => {
+        const message = event.data;
+        const timeoutCallback = unthrottledTimeoutCallbacks.get(message.timerId);
+        if (timeoutCallback) {
+            unthrottledTimeoutCallbacks.delete(message.timerId);
+            timeoutCallback();
+            return;
+        }
+        const intervalCallback = unthrottledIntervalCallbacks.get(message.timerId);
+        if (intervalCallback) {
+            intervalCallback();
+        }
+    };
+    return unthrottledTimerWorker;
+};
+const setTimeoutUnthrottled = (
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+callback, delay) => {
+    if (shouldUseNativeTimers()) {
+        return { id: setTimeout(callback, delay) };
+    }
+    const timerId = nextUnthrottledTimerId++;
+    unthrottledTimeoutCallbacks.set(timerId, () => {
+        callback();
+    });
+    getUnthrottledTimerWorker().postMessage({
+        type: 'set-timeout',
+        timerId,
+        delay,
+    });
+    return { id: timerId };
+};
+const clearTimeoutUnthrottled = (timer) => {
+    if (shouldUseNativeTimers()) {
+        clearTimeout(timer.id);
+        return;
+    }
+    assert(typeof timer.id === 'number');
+    unthrottledTimeoutCallbacks.delete(timer.id);
+    getUnthrottledTimerWorker().postMessage({
+        type: 'clear-timeout',
+        timerId: timer.id,
+    });
+};
+const setIntervalUnthrottled = (
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+callback, delay) => {
+    if (shouldUseNativeTimers()) {
+        return { id: setInterval(callback, delay) };
+    }
+    const timerId = nextUnthrottledTimerId++;
+    unthrottledIntervalCallbacks.set(timerId, () => {
+        callback();
+    });
+    getUnthrottledTimerWorker().postMessage({
+        type: 'set-interval',
+        timerId,
+        delay,
+    });
+    return { id: timerId };
+};
+const clearIntervalUnthrottled = (timer) => {
+    if (shouldUseNativeTimers()) {
+        clearInterval(timer.id);
+        return;
+    }
+    assert(typeof timer.id === 'number');
+    unthrottledIntervalCallbacks.delete(timer.id);
+    getUnthrottledTimerWorker().postMessage({
+        type: 'clear-interval',
+        timerId: timer.id,
+    });
 };
 
 
@@ -116067,4 +116544,4 @@ class WaveAudioTrackBacking {
 /***/ }
 
 }]);
-//# sourceMappingURL=45.bundle.js.map
+//# sourceMappingURL=934.bundle.js.map
