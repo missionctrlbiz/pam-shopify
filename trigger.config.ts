@@ -15,7 +15,10 @@ export default defineConfig({
             randomize: true,
         },
     },
-    additionalFiles: ["./workers/video-renderer/build/**/*"],
+    additionalFiles: [
+        "./workers/video-renderer/build/**/*",
+        "./node_modules/@resvg/resvg-js/**/*"
+    ],
     build: {
         extensions: [puppeteer()],
         external: ["@remotion/renderer", "@remotion/bundler"]
