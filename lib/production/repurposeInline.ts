@@ -12,7 +12,9 @@
 
 import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
 import { supabaseAdmin } from "@/lib/supabase"
+import { createHash } from "node:crypto"
 import { createRequire } from "node:module"
+import { callElevenLabsWithRetry, stripESLMarkers } from "@/lib/audio/elevenLabs"
 import satori from "satori"
 
 type ResvgRenderer = {
@@ -690,7 +692,35 @@ async function runAudioInline(
     fileName: string,
     voiceId?: string
 ): Promise<string> {
-    // 1. Check if Audio asset already exists and is COMPLETE inside Supabase to preserve ElevenLabs credits
+    const apiKey = process.env.ELEVENLABS_API_KEY
+    if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set")
+
+    const voice = voiceId ?? process.env.ELEVENLABS_VOICE_ID ?? "EXAVITQu4vr4xnSDxMaL"
+
+    // Strip ESL markers before hashing so the key is stable regardless of
+    // whether the caller already cleaned the text.
+    const cleanText = stripESLMarkers(voiceoverText)
+    const promptHash = createHash("sha256").update(`${voice}:${cleanText}`).digest("hex")
+
+    // 1. Hash-based cache lookup in audio_cache — prevents duplicate ElevenLabs billing
+    const { data: cachedAudio } = await supabaseAdmin
+        .from("audio_cache")
+        .select("storage_url")
+        .eq("prompt_hash", promptHash)
+        .maybeSingle()
+
+    if (cachedAudio?.storage_url) {
+        console.log(`[runAudioInline] ✅ Cache hit (hash ${promptHash.slice(0, 8)}…) — skipping ElevenLabs call`)
+        supabaseAdmin
+            .from("audio_cache")
+            .update({ last_used_at: new Date().toISOString() })
+            .eq("prompt_hash", promptHash)
+            .then(() => { /* fire-and-forget */ })
+            .catch((err) => console.error("[runAudioInline] Failed to update last_used_at:", err))
+        return cachedAudio.storage_url
+    }
+
+    // 2. Legacy content_assets lookup as a secondary fallback (preserves old behaviour)
     const { data: existingAsset } = await supabaseAdmin
         .from("content_assets")
         .select("storage_url, status")
@@ -699,27 +729,38 @@ async function runAudioInline(
         .maybeSingle()
 
     if (existingAsset?.status === "COMPLETE" && existingAsset?.storage_url) {
-        console.log(`[runAudioInline] 🔄 Utilizing cached audio asset node for content idea: ${contentIdeaId}`)
+        console.log(`[runAudioInline] 🔄 Utilizing cached audio asset for content idea: ${contentIdeaId}`)
         return existingAsset.storage_url
     }
 
-    const apiKey = process.env.ELEVENLABS_API_KEY
-    if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set")
-    const voice = voiceId ?? process.env.ELEVENLABS_VOICE_ID ?? "EXAVITQu4vr4xnSDxMaL"
+    // 3. Generate via ElevenLabs with exponential back-off retry (shared lib)
+    const audioBuffer = await callElevenLabsWithRetry(cleanText, voice, apiKey)
 
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`, {
-        method: "POST",
-        headers: { "xi-api-key": apiKey, "Content-Type": "application/json", "Accept": "audio/mpeg" },
-        body: JSON.stringify({ text: voiceoverText, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
-    })
+    // 4. Upload to Supabase Storage
+    const storageUrl = await storeBlob(
+        `production/${contentIdeaId}/AUDIO_MP3/${fileName}`,
+        audioBuffer,
+        "audio/mpeg"
+    )
 
-    if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(`ElevenLabs ${res.status}: ${errText}`)
-    }
+    // 5. Persist in audio_cache so subsequent identical scripts are served from cache
+    await supabaseAdmin
+        .from("audio_cache")
+        .upsert(
+            {
+                prompt_hash: promptHash,
+                storage_url: storageUrl,
+                storage_path: `production/${contentIdeaId}/AUDIO_MP3/${fileName}`,
+                duration_ms: 0, // duration not computed in inline path; updated by video renderer
+                voice_id: voice,
+                char_count: cleanText.length,
+                created_at: new Date().toISOString(),
+                last_used_at: new Date().toISOString(),
+            },
+            { onConflict: "prompt_hash" }
+        )
 
-    const buf = Buffer.from(await res.arrayBuffer())
-    return storeBlob(`production/${contentIdeaId}/AUDIO_MP3/${fileName}`, buf, "audio/mpeg")
+    return storageUrl
 }
 
 // ---------------------------------------------------------------------------

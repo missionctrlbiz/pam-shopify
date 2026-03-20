@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express"
-import { generateAudio } from "./elevenLabs"
+import { generateAudioWithDuration } from "./elevenLabs"
 import { renderVideo } from "./remotion"
 import { uploadAsset } from "./upload"
 import { RenderPayload, CallbackAsset, postCallback } from "./types"
@@ -41,7 +41,7 @@ app.post("/", async (req: Request, res: Response) => {
 
         // 1. Generate audio via ElevenLabs
         console.log(`[video-renderer] Generating audio for job ${renderJobId}`)
-        const audioBuffer = await generateAudio(voiceoverText, voiceId)
+        const { buffer: audioBuffer, durationMs: audioDurationMs } = await generateAudioWithDuration(voiceoverText, voiceId)
 
         const audioFilename = `PAM_${platform}_${date}_${topicSlug}_v1.mp3`
         const audioBlob = await uploadAsset(
@@ -49,7 +49,7 @@ app.post("/", async (req: Request, res: Response) => {
             `${blobFolder}/AUDIO_MP3/${audioFilename}`,
             "audio/mpeg"
         )
-        console.log(`[video-renderer] Audio uploaded: ${audioBlob.url}`)
+        console.log(`[video-renderer] Audio uploaded: ${audioBlob.url} (${audioDurationMs} ms)`)
 
         // 2. Render video via Remotion
         console.log(`[video-renderer] Rendering video for job ${renderJobId}`)
@@ -78,7 +78,7 @@ app.post("/", async (req: Request, res: Response) => {
                 storageUrl: audioBlob.url,
                 storagePath: audioBlob.pathname,
                 fileName: audioFilename,
-                metadata: { voiceoverChars: voiceoverText.length },
+                metadata: { voiceoverChars: voiceoverText.length, durationMs: audioDurationMs },
             },
             {
                 assetType: "VIDEO_MP4",
