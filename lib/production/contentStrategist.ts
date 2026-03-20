@@ -4,14 +4,21 @@
  * Accepts a ClinicalField record and content scheduling metadata, and returns a
  * fully-structured master JSON idea ready for storage in ContentIdea.masterJson.
  *
- * Uses Gemini structured output (responseMimeType: "application/json") so the
- * response is always a valid, parseable JSON object — never free-form text.
+ * Uses Gemini structured output (responseMimeType + responseSchema) so the
+ * response is always a valid, schema-validated JSON object — never free-form text.
+ * Zod validation with safe fallback placeholders prevents parsing crashes and
+ * protects continuous generation loops from missing-field timeouts.
  *
  * Model: gemini-2.5-flash (gemini-2.0-flash unavailable for new API keys as of March 2026)
- * JSON mode: prompt-enforced + code-fence stripping.
+ * JSON mode: native responseSchema (type: OBJECT) + Zod-backed guardrail validation.
  */
 
 import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
+import {
+    CONTENT_IDEA_RESPONSE_SCHEMA,
+    validateContentIdeaOutput,
+    buildContextBlock,
+} from "@/lib/ai/prompts"
 
 // PRODUCTION_MODEL re-exported so qualityGate / repurposingRouter / sceneDirector
 // can import it from this module without touching lib/ai directly.
@@ -248,6 +255,15 @@ function buildPrompt(field: ClinicalFieldInput, meta: ContentIdeaInput): string 
         normalizedExamples,
     } = normalizeFieldContext(field)
 
+    // Build the structured context block via the typed StructuredPromptContext
+    // node — day_number, clinical_field, and platform are injected as schema
+    // nodes rather than ad-hoc string interpolation.
+    const contextBlock = buildContextBlock({
+        day_number: meta.dayNumber,
+        clinical_field: normalizedDisplayName,
+        platform: meta.platform,
+    })
+
     return `
 You are the Content Strategist for Psychiatric Assessment Mastery™ (PAM), an educational brand
 created by Tonia Ojomo, PMHNP-BC. Your audience is psychiatric nurse practitioner (PMHNP) students
@@ -273,18 +289,16 @@ CLINICAL FIELD CONTEXT:
     Extended Clinical Context:${" "}${normalizedClinicalContext}
     ${normalizedExamples.length > 0 ? `Example Phrases:          ${normalizedExamples.map((value) => `"${value}"`).join(" | ")}` : `Example Phrases:          Use polished PMHNP clinical terminology only.`}
 
-CONTENT SCHEDULING CONTEXT:
-  Platform:        ${meta.platform}
+${contextBlock}
   Post Type:       ${meta.postType}
   Funnel Stage:    ${meta.funnelStage}
   Content Goal:    ${meta.contentGoal}
-  Day Number:      ${meta.dayNumber} of 30
 
 DELIVERABLES — return a single JSON object matching this exact structure:
 {
   "title": "A clear, compelling 5-8 word content title. Examples: 'The 3 Risks Behind Every Depressed Mood', 'Why Your MSE Thought Process Is Wrong', 'Bipolar vs MDD: The Assessment Trap'. Must be readable, specific, and professional — never abbreviated or cryptic.",
-  "hook": "One compelling sentence (10-20 words). Must create clinical tension, name a real diagnostic mistake, or challenge a common assumption. Write it as a complete, clear English sentence — NOT an abbreviation or code. Examples: 'Most PMHNPs miss these three critical risks hiding behind a depressed mood chief complaint.', 'Your MSE thought process documentation probably confuses content with process — here is why it matters.'",
-    "teachingPoints": ["3-5 bullet points — each a concrete, actionable clinical insight rooted in ${normalizedDisplayName}"],
+  "body": "One compelling sentence (10-20 words). Must create clinical tension, name a real diagnostic mistake, or challenge a common assumption. Write it as a complete, clear English sentence — NOT an abbreviation or code. Examples: 'Most PMHNPs miss these three critical risks hiding behind a depressed mood chief complaint.', 'Your MSE thought process documentation probably confuses content with process — here is why it matters.'",
+  "teachingPoints": ["3-5 bullet points — each a concrete, actionable clinical insight rooted in ${normalizedDisplayName}"],
   "cta": "One sentence driving the reader toward PAM workbook, the PAM Mastery Bundle, or saving/sharing.",
   "clinicalGrounding": "1-2 sentences explaining WHY this topic matters clinically, citing DSM-5-TR patterns or assessment evidence.",
   "platformAdaptations": {
@@ -294,18 +308,18 @@ DELIVERABLES — return a single JSON object matching this exact structure:
     "LINKEDIN": { "caption": "Professional 1300-char LinkedIn post. Lead with the clinical insight. Close with a question to drive comments.", "charEstimate": 0 },
     "EMAIL": { "subjectLine": "Subject line — curiosity-gap or clinical-stakes driven, max 50 chars", "previewText": "Preview text, max 90 chars", "bodyOutline": "3-paragraph outline: (1) hook/problem, (2) teaching point, (3) CTA to PAM bundle" }
   },
-  "slideTextBlocks": ["Slide 1 text (title/hook — max 12 words)", "Slide 2 teaching point", "Slide 3", "Slide 4", "Slide 5", "Slide 6", "Slide 7 (optional)", "Slide 8 (optional)", "Slide 9 (optional)", "Slide 10 CTA (optional)"],
+  "slideText": ["Slide 1 text (title/hook — max 12 words)", "Slide 2 teaching point", "Slide 3", "Slide 4", "Slide 5", "Slide 6", "Slide 7 (optional)", "Slide 8 (optional)", "Slide 9 (optional)", "Slide 10 CTA (optional)"],
   "estimatedReadTimeSecs": 60
 }
 
-CRITICAL — title and hook quality requirements:
+CRITICAL — title and body quality requirements:
 - The "title" must be a SHORT, READABLE phrase a human would use as a content title. NEVER use field codes, abbreviations, or technical variable names.
-- The "hook" must be a complete English sentence that creates curiosity. It must make sense when read aloud.
-- Both title and hook must reference the CLINICAL CONCEPT, not the field key or field code.
+- The "body" must be a complete English sentence that creates curiosity. It must make sense when read aloud.
+- Both title and body must reference the CLINICAL CONCEPT, not the field key or field code.
 - If the source data is abbreviated, silently translate it into polished clinical language before writing.
 - Do not include markdown characters such as **, *, _, #, backticks, or code fences anywhere in the JSON values.
 
-INSTRUCTIONS for slideTextBlocks:
+INSTRUCTIONS for slideText:
 - Minimum 6 slides, maximum 10 slides. Remove optional slots you do not use.
 - Each slide text must be 8-12 words maximum — designed for on-screen Canva layout.
 - estimatedReadTimeSecs should reflect actual slide count: 6 slides ≈ 45s, 8 slides ≈ 60s, 10 slides ≈ 80s.
@@ -323,25 +337,56 @@ export async function generateContentIdea(
     meta: ContentIdeaInput
 ): Promise<{ masterJson: ContentIdeaMasterJson; rawPrompt: string }> {
     const rawPrompt = buildPrompt(field, meta)
+
+    // Use native responseSchema (type: OBJECT) to guarantee structured output.
+    // The schema enforces the minimum required fields { title, body, slideText }
+    // and all extended ContentIdeaMasterJson fields at the API level.
     const response = await getAI().models.generateContent({
         model: PRODUCTION_MODEL,
-        config: { responseMimeType: "application/json" },
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: CONTENT_IDEA_RESPONSE_SCHEMA,
+        },
         contents: rawPrompt,
     })
-    const text = response.text ?? "{}"
 
-    let masterJson: ContentIdeaMasterJson
+    // Safe try/catch parser — defaults to empty object so validateContentIdeaOutput
+    // can apply Zod fallback placeholders rather than crashing the loop.
+    let rawParsed: unknown
     try {
-        masterJson = sanitizeMasterJson(JSON.parse(text) as ContentIdeaMasterJson)
+        rawParsed = JSON.parse(response.text ?? "{}")
     } catch {
-        throw new Error(
-            `Gemini returned non-parseable JSON for field "${field.fieldKey}": ${text.slice(0, 200)}`
-        )
+        rawParsed = {}
     }
 
-    masterJson.slideTextBlocks = masterJson.slideTextBlocks ?? []
+    // Zod-backed guardrail: validates all fields and fills in safe fallback
+    // placeholders for any missing or malformed values.
+    const validated = validateContentIdeaOutput(
+        sanitizeMasterJson(rawParsed as Record<string, unknown>),
+        field.fieldKey
+    )
 
-    // Ensure slideTextBlocks has 6–10 entries
+    // Map the structured output fields back to the ContentIdeaMasterJson shape
+    // used throughout the rest of the codebase.  Destructure to exclude the
+    // core-schema keys (body, slideText) so they don't silently sit alongside
+    // their legacy aliases in the final object.
+    const {
+        body,
+        slideText,
+        hook: _hookAlias,
+        slideTextBlocks: _sbAlias,
+        ...rest
+    } = validated
+
+    const masterJson: ContentIdeaMasterJson = {
+        ...rest,
+        // body → hook  (DB column and all downstream routes read `hook`)
+        hook: body,
+        // slideText → slideTextBlocks  (carousel renderer reads `slideTextBlocks`)
+        slideTextBlocks: slideText.length > 0 ? slideText : validated.slideTextBlocks,
+    }
+
+    // Enforce 6–10 slide constraint
     while (masterJson.slideTextBlocks.length < 6) {
         masterJson.slideTextBlocks.push("")
     }
