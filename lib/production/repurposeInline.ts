@@ -36,7 +36,8 @@ let cachedResvg: ResvgConstructor | null = null
 
 function getResvg(): ResvgConstructor {
     if (cachedResvg) return cachedResvg;
-    const { Resvg } = require("@resvg/resvg-js") as { Resvg: ResvgConstructor }
+    const requireModule = createRequire(import.meta.url)
+    const { Resvg } = requireModule("@resvg/resvg-js") as { Resvg: ResvgConstructor }
     cachedResvg = Resvg
     return Resvg
 }
@@ -453,52 +454,87 @@ function makeSlideElement(slide: CarouselSlide, totalSlides: number): object {
     const isCover = slide.slideNumber === 1
     const isCTA = slide.slideNumber === totalSlides
     const isDark = isCover || isCTA
-    const bgColor = isDark ? "#1F2A44" : "#FFFFFF"
-    const textColor = isDark ? "#FFFFFF" : "#1F2A44"
-    const bodyColor = isDark ? "#CBD5E1" : "#374151"
-    const mutedColor = isDark ? "rgba(255,255,255,0.35)" : "rgba(31,42,68,0.25)"
+
+    // Premium Aesthetics Update: Linear Gradient backdrops
+    const bgGradient = isDark
+        ? "linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%)" // Beautiful Night gradient
+        : "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)" // Sleek Slate Soft gradient
+
+    const textColor = isDark ? "#FFFFFF" : "#1E293B"
+    const bodyColor = isDark ? "#E2E8F0" : "#475569"
+    const accentColor = "#3B82F6" // Vibrant Blue accent
+    const mutedColor = isDark ? "rgba(255,255,255,0.45)" : "rgba(30,41,59,0.5)"
 
     const children: object[] = []
 
+    // Pagination top-left counter style
     if (!isCover) {
         children.push({
             type: "div",
             props: {
-                style: { fontSize: 15, fontWeight: 600, color: mutedColor, letterSpacing: 2, marginBottom: 24 },
-                children: `${slide.slideNumber} / ${totalSlides}`,
+                style: { position: "absolute", top: 40, left: 50, fontSize: 18, fontWeight: 700, color: accentColor, letterSpacing: 1 },
+                children: `${String(slide.slideNumber).padStart(2, '0')} / ${String(totalSlides).padStart(2, '0')}`,
             },
         })
     }
 
+    // Headline
     children.push({
         type: "div",
         props: {
-            style: { fontSize: isCover ? 60 : 44, fontWeight: 700, color: textColor, textAlign: "center", lineHeight: 1.2, marginBottom: slide.bodyText ? 28 : 0 },
+            style: {
+                fontSize: isCover ? 72 : 48,
+                fontWeight: 800,
+                color: textColor,
+                textAlign: "center",
+                lineHeight: 1.15,
+                letterSpacing: "-0.03em",
+                maxWidth: 920,
+                marginBottom: slide.bodyText ? 32 : 0
+            },
             children: slide.headline,
         },
     })
 
+    // Body Text
     if (slide.bodyText) {
         children.push({
             type: "div",
             props: {
-                style: { fontSize: 28, fontWeight: 400, color: bodyColor, textAlign: "center", lineHeight: 1.6, maxWidth: 860 },
+                style: {
+                    fontSize: 28,
+                    fontWeight: 400,
+                    color: bodyColor,
+                    textAlign: "center",
+                    lineHeight: 1.6,
+                    maxWidth: 820
+                },
                 children: slide.bodyText,
             },
         })
     }
 
+    // Divider Line accent
     if (isCover) {
         children.push({
             type: "div",
-            props: { style: { width: 80, height: 4, background: "#4F9CF9", borderRadius: 2, marginTop: 24 }, children: "" },
+            props: { style: { width: 120, height: 6, background: accentColor, borderRadius: 3, marginTop: 32 }, children: "" },
         })
     }
 
+    // Footer Watermark
     children.push({
         type: "div",
         props: {
-            style: { fontSize: 13, fontWeight: 700, color: mutedColor, letterSpacing: 4, marginTop: isCover ? 40 : 32 },
+            style: {
+                position: "absolute",
+                bottom: 40,
+                fontSize: 14,
+                fontWeight: 700,
+                color: mutedColor,
+                letterSpacing: 4,
+                textTransform: "uppercase"
+            },
             children: "PSYCHIATRIC ASSESSMENT MASTERY",
         },
     })
@@ -513,11 +549,10 @@ function makeSlideElement(slide: CarouselSlide, totalSlides: number): object {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: bgColor,
-                padding: "80px",
-                borderTopWidth: 8,
-                borderTopStyle: "solid",
-                borderTopColor: "#4F9CF9",
+                backgroundImage: bgGradient,
+                padding: "100px",
+                position: "relative",
+                borderTop: `10px solid ${accentColor}`,
             },
             children,
         },

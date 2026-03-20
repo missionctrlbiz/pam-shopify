@@ -1,5 +1,5 @@
 import React from "react"
-import { AbsoluteFill, Sequence, useVideoConfig } from "remotion"
+import { AbsoluteFill, Sequence, useVideoConfig, Audio } from "remotion"
 import {
     PAMVideoProps,
     buildScenes,
@@ -33,14 +33,16 @@ export const PAMVideo: React.FC<PAMVideoProps> = (props) => {
     const scenes = buildScenes(props)
 
     return (
-        <AbsoluteFill style={{ background: COLORS.white, fontSmoothing: "antialiased" }}>
+        <AbsoluteFill style={{ background: COLORS.white, fontSmooth: "antialiased" }}>
             {/* Google Fonts injection */}
             <style
-
                 dangerouslySetInnerHTML={{
                     __html: `@import url('${FONT_IMPORT_URL}'); * { -webkit-font-smoothing: antialiased; box-sizing: border-box; }`,
                 }}
             />
+
+            {/* Background Audio or Voiceover track */}
+            {props.audioUrl && <Audio src={props.audioUrl} />}
 
             {/* Render every scene inside its own Sequence */}
             {scenes.map((scene) => (

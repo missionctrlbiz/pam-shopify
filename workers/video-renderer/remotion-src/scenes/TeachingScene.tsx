@@ -80,15 +80,42 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
     })
     const gutterHeight = interpolate(gutterSpring, [0, 1], [0, 100])
 
-    // Detect if the text is a bullet list (separated by " • " or " — " or newline)
-    const bulletSeparators = [" • ", " — ", " – ", "\n"]
-    const isBulletList = bulletSeparators.some((sep) => text.includes(sep))
-    let bulletLines: string[] = []
+    // 1. Markdown Table Parsing
+    const hasTable = text.includes("|") && text.split("\n").some(l => l.includes("---"))
+    let tableHeaders: string[] = []
+    let tableRows: string[][] = []
     let mainText = text
 
+    if (hasTable) {
+        const lines = text.split("\n").map(l => l.trim())
+        const headerIndex = lines.findIndex(l => l.startsWith("|") && l.endsWith("|") && !l.includes("---"))
+        const dividerIndex = lines.findIndex(l => l.includes("|") && l.includes("---"))
+
+        if (headerIndex !== -1 && dividerIndex !== -1) {
+            tableHeaders = lines[headerIndex]
+                .split("|")
+                .map(s => s.trim())
+                .filter(Boolean)
+
+            tableRows = lines
+                .slice(dividerIndex + 1)
+                .filter(l => l.startsWith("|") && l.trim().length > 1)
+                .map(row => row.split("|").map(s => s.trim()).filter(Boolean))
+
+            // Text preceding the table
+            mainText = lines.slice(0, headerIndex).join("\n").trim()
+            if (!mainText) mainText = "Data Overview"
+        }
+    }
+
+    // 2. Detect if the text is a bullet list (separated by " • " or " — " or newline)
+    const bulletSeparators = [" • ", " — ", " – ", "\n"]
+    const isBulletList = !hasTable && bulletSeparators.some((sep) => mainText.includes(sep))
+    let bulletLines: string[] = []
+
     if (isBulletList) {
-        const sep = bulletSeparators.find((s) => text.includes(s))!
-        const parts = text.split(sep).map((s) => s.trim()).filter(Boolean)
+        const sep = bulletSeparators.find((s) => mainText.includes(s))!
+        const parts = mainText.split(sep).map((s) => s.trim()).filter(Boolean)
         mainText = parts[0]
         bulletLines = parts.slice(1)
     }
@@ -99,7 +126,7 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
     return (
         <AbsoluteFill
             style={{
-                background: COLORS.white,
+                background: `radial-gradient(circle at 10% 10%, #FFFFFF 0%, #F0F4F8 100%)`, // Enhanced Premium Background gradient
                 opacity,
             }}
         >
@@ -241,6 +268,54 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                                 textAlign="left"
                             />
                         ))}
+                    </div>
+                )}
+
+                {/* Table Layout block (Grid presentation) */}
+                {hasTable && tableHeaders.length > 0 && (
+                    <div
+                        style={{
+                            marginTop: 24,
+                            background: "rgba(255, 255, 255, 0.8)",
+                            borderRadius: 16,
+                            padding: 24,
+                            border: `1px solid ${COLORS.grayLight}`,
+                            boxShadow: "0 8px 32px rgba(0,0,0,0.03)",
+                            width: "100%",
+                            display: "flex",
+                            flexDirection: "column"
+                        }}
+                    >
+                        {/* Table Header Row */}
+                        <div style={{ display: "grid", gridTemplateColumns: `repeat(${tableHeaders.length}, 1fr)`, gap: 12, borderBottom: `2px solid ${COLORS.blue}`, paddingBottom: 12 }}>
+                            {tableHeaders.map((header, i) => (
+                                <div key={i} style={{ fontFamily: FONTS.heading, fontWeight: 700, fontSize: 24, color: COLORS.blue }}>
+                                    {header}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Table Body */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+                            {tableRows.map((row, rowIndex) => (
+                                <div
+                                    key={rowIndex}
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: `repeat(${tableHeaders.length}, 1fr)`,
+                                        gap: 12,
+                                        padding: "10px 0",
+                                        borderBottom: rowIndex === tableRows.length - 1 ? "none" : `1px solid ${COLORS.grayLight}`
+                                    }}
+                                >
+                                    {row.map((cell, cellIndex) => (
+                                        <div key={cellIndex} style={{ fontFamily: FONTS.body, fontWeight: 500, fontSize: 22, color: COLORS.navy }}>
+                                            {cell}
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
