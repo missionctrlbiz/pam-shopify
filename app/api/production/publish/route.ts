@@ -69,8 +69,8 @@ async function fetchBufferProfiles(accessToken: string): Promise<BufferProfile[]
         avatarUrl:       typeof p["avatar"] === "string" ? p["avatar"] : null,
         timezone:        String(p["timezone"] ?? "UTC"),
         bufferCount:     typeof p["buffer_count"] === "number" ? p["buffer_count"] : 0,
-        bufferMax:       typeof p["buffer_percentage"] === "number"
-            ? Math.round((p["buffer_count"] as number) / ((p["buffer_percentage"] as number) / 100 || 1))
+        bufferMax:       typeof p["buffer_percentage"] === "number" && (p["buffer_percentage"] as number) > 0
+            ? Math.round((p["buffer_count"] as number) / ((p["buffer_percentage"] as number) / 100))
             : BUFFER_QUEUE_MAX,
     }))
 }
@@ -337,7 +337,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                 .from("buyers")
                 .select("email")
                 .limit(maxRecipients)
-            ;(buyers ?? []).forEach((b: { email: string }) => recipientEmails.add(b.email))
+            for (const b of buyers ?? []) { recipientEmails.add((b as { email: string }).email) }
         }
 
         if (cfg.audienceSource === "leads" || cfg.audienceSource === "both") {
@@ -347,7 +347,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                     .from("leads")
                     .select("email")
                     .limit(remaining2)
-                ;(leads ?? []).forEach((l: { email: string }) => recipientEmails.add(l.email))
+                for (const l of leads ?? []) { recipientEmails.add((l as { email: string }).email) }
             }
         }
 

@@ -261,7 +261,7 @@ function RecentJobs({ jobs }: { jobs: PublishJob[] }) {
                 )
             })}
             {jobs.length > 5 && (
-                <button onClick={() => setExpanded(e => !e)}
+                <button onClick={() => setExpanded(prev => !prev)}
                     className="w-full text-xs text-slate-400 hover:text-slate-600 py-2 flex items-center justify-center gap-1 transition-colors">
                     <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
                     {expanded ? "Show less" : `Show ${jobs.length - 5} more`}
@@ -517,12 +517,12 @@ export function PublishTab() {
                                 )}
                                 {(dispatchResult.rateLimitedChannels ?? []).length > 0 && (
                                     <p className="pl-5 text-xs text-amber-600">
-                                        Rate-limited channels: {dispatchResult.rateLimitedChannels!.join(", ")}
+                                        Rate-limited channels: {dispatchResult.rateLimitedChannels?.join(", ")}
                                     </p>
                                 )}
                                 {(dispatchResult.errors ?? []).length > 0 && (
                                     <ul className="pl-5 text-xs text-red-600 list-disc">
-                                        {dispatchResult.errors!.map((e, i) => <li key={i}>{e}</li>)}
+                                        {dispatchResult.errors?.map((msg, i) => <li key={i}>{msg}</li>)}
                                     </ul>
                                 )}
                             </>
