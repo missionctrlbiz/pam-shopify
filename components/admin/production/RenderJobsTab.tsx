@@ -619,16 +619,27 @@ function ConfirmModal({ open, onClose, onConfirm, title, desc, actionLabel, load
     return (
         <AnimatePresence>
             {open && (
-                <>
-                    <motion.div key="bd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.4)", zIndex: 10000 }} onClick={onClose} />
-                    <motion.div key="modal"
+                <motion.div
+                    key="bd"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={{
+                        position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+                        background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        zIndex: 10000
+                    }}
+                    onClick={onClose}
+                >
+                    <motion.div
+                        key="modal"
                         initial={{ opacity: 0, scale: 0.95, y: 16 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 16 }}
                         transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                        onClick={e => e.stopPropagation()} // Prevent close on clicking inside modal
                         style={{
-                            position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
                             width: 420, maxWidth: "90vw", background: "#ffffff", borderRadius: 24, padding: 28,
                             boxShadow: "0 20px 50px rgba(0,0,0,0.15)", zIndex: 10001
                         }}
@@ -665,7 +676,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, desc, actionLabel, load
                             </button>
                         </div>
                     </motion.div>
-                </>
+                </motion.div>
             )}
         </AnimatePresence>
     )

@@ -74,8 +74,8 @@ export async function POST(
 
     const { data: contentIdea, error: ideaError } = await supabaseAdmin
         .from("content_ideas")
-        .select("id, masterJson")
-        .eq("calendarEntryId", id)
+        .select("id, masterJson:master_json")
+        .eq("calendar_entry_id", id)
         .maybeSingle()
 
     if (ideaError) {
@@ -95,8 +95,8 @@ export async function POST(
     // ── Cache hit ────────────────────────────────────────────────────────────
     const { data: existingScript } = await supabaseAdmin
         .from("video_scripts")
-        .select("scriptJson")
-        .eq("contentIdeaId", contentIdea.id)
+        .select("scriptJson:script_json")
+        .eq("content_idea_id", contentIdea.id)
         .maybeSingle()
 
     const existingScriptJson = existingScript?.scriptJson as Record<string, unknown> | null
@@ -131,10 +131,10 @@ export async function POST(
     const { error: scriptError } = await supabaseAdmin
         .from("video_scripts")
         .upsert({
-            contentIdeaId: contentIdea.id,
-            scriptJson: scriptJsonPayload as unknown as object,
-            totalDurationSecs: result.totalDurationSecs,
-        }, { onConflict: "contentIdeaId" })
+            content_idea_id: contentIdea.id,
+            script_json: scriptJsonPayload as unknown as object,
+            total_duration_secs: result.totalDurationSecs,
+        }, { onConflict: "content_idea_id" })
 
     if (scriptError) {
         console.error("[scenes] Video script upsert error:", scriptError)
@@ -153,7 +153,7 @@ export async function POST(
 
     const { error: ideaUpdateError } = await supabaseAdmin
         .from("content_ideas")
-        .update({ masterJson: updatedMasterJson as unknown as object })
+        .update({ master_json: updatedMasterJson as unknown as object })
         .eq("id", contentIdea.id)
 
     if (ideaUpdateError) {

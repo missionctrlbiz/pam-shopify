@@ -426,13 +426,6 @@ const CoverScene = ({
 }) => {
   const frame = (0,esm.useCurrentFrame)();
   const { fps } = (0,esm.useVideoConfig)();
-  const emojiBadgeSpring = (0,esm.spring)({
-    frame: Math.max(0, frame - 8),
-    fps,
-    config: { mass: 1, damping: 12, stiffness: 180 }
-  });
-  const emojiBadgeScale = (0,esm.interpolate)(emojiBadgeSpring, [0, 1], [0.4, 1]);
-  const emojiBadgeOpacity = (0,esm.interpolate)(emojiBadgeSpring, [0, 1], [0, 1]);
   const exitFade = (0,esm.interpolate)(
     frame,
     [sceneDuration - 12, sceneDuration - 1],
@@ -445,7 +438,7 @@ const CoverScene = ({
     config: { mass: 1, damping: 14, stiffness: 120 }
   });
   const dividerWidth = (0,esm.interpolate)(dividerSpring, [0, 1], [0, 100]);
-  const hookLines = splitIntoLines(hook, 32);
+  const hookLines = splitIntoLines(hook, 28);
   const pillSpring = (0,esm.spring)({
     frame: Math.max(0, frame - 3),
     fps,
@@ -453,14 +446,50 @@ const CoverScene = ({
   });
   const pillOpacity = (0,esm.interpolate)(pillSpring, [0, 1], [0, 1]);
   const pillTranslate = (0,esm.interpolate)(pillSpring, [0, 1], [20, 0]);
+  const emojiBadgeSpring = (0,esm.spring)({
+    frame: Math.max(0, frame - 8),
+    fps,
+    config: { mass: 1, damping: 12, stiffness: 180 }
+  });
+  const emojiBadgeScale = (0,esm.interpolate)(emojiBadgeSpring, [0, 1], [0.4, 1]);
+  const emojiBadgeOpacity = (0,esm.interpolate)(emojiBadgeSpring, [0, 1], [0, 1]);
+  const orbFloat = (0,esm.interpolate)(frame, [0, 120], [0, 360], { extrapolateRight: "extend" });
   return /* @__PURE__ */ react.createElement(
     esm.AbsoluteFill,
     {
       style: {
-        background: COLORS.white,
+        background: "linear-gradient(160deg, #0F172A 0%, #1E293B 40%, #1E3A5F 100%)",
         opacity: exitFade
       }
     },
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: 120,
+      right: 60,
+      width: 280,
+      height: 280,
+      borderRadius: "50%",
+      background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
+      transform: `translateY(${Math.sin(orbFloat * Math.PI / 180) * 8}px)`
+    } }),
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      bottom: 200,
+      left: -40,
+      width: 200,
+      height: 200,
+      borderRadius: "50%",
+      background: "radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)",
+      transform: `translateY(${Math.cos(orbFloat * Math.PI / 180) * 6}px)`
+    } }),
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 6,
+      background: "linear-gradient(90deg, #3B82F6, #7C3AED, #C026D3)"
+    } }),
     /* @__PURE__ */ react.createElement(PAMLogo, { variant: "watermark" }),
     /* @__PURE__ */ react.createElement(
       "div",
@@ -470,7 +499,7 @@ const CoverScene = ({
           top: "50%",
           left: 0,
           right: 0,
-          transform: "translateY(-58%)",
+          transform: "translateY(-54%)",
           padding: "0 72px",
           display: "flex",
           flexDirection: "column",
@@ -490,32 +519,21 @@ const CoverScene = ({
             marginBottom: 36
           }
         },
-        /* @__PURE__ */ react.createElement(
-          "div",
-          {
-            style: {
-              width: 4,
-              height: 40,
-              background: `linear-gradient(180deg, ${COLORS.blue}, ${COLORS.blueLight})`,
-              borderRadius: 3,
-              flexShrink: 0
-            }
-          }
-        ),
-        /* @__PURE__ */ react.createElement(
-          "div",
-          {
-            style: {
-              fontFamily: FONTS.body,
-              fontWeight: 600,
-              fontSize: 22,
-              color: COLORS.blue,
-              letterSpacing: "0.22em",
-              textTransform: "uppercase"
-            }
-          },
-          "Psychiatric Assessment Mastery"
-        )
+        /* @__PURE__ */ react.createElement("div", { style: {
+          width: 4,
+          height: 40,
+          background: "linear-gradient(180deg, #3B82F6, #7C3AED)",
+          borderRadius: 3,
+          flexShrink: 0
+        } }),
+        /* @__PURE__ */ react.createElement("div", { style: {
+          fontFamily: FONTS.body,
+          fontWeight: 600,
+          fontSize: 20,
+          color: "#60A5FA",
+          letterSpacing: "0.22em",
+          textTransform: "uppercase"
+        } }, "Psychiatric Assessment Mastery")
       ),
       /* @__PURE__ */ react.createElement(
         "div",
@@ -525,72 +543,56 @@ const CoverScene = ({
             transform: `translateY(${pillTranslate}px)`,
             display: "inline-flex",
             alignItems: "center",
-            background: COLORS.navy,
-            borderRadius: 8,
-            padding: "10px 24px",
-            marginBottom: 44
+            background: "linear-gradient(135deg, #3B82F6, #2563EB)",
+            borderRadius: 10,
+            padding: "12px 28px",
+            marginBottom: 44,
+            boxShadow: "0 4px 20px rgba(59,130,246,0.3)"
           }
         },
-        /* @__PURE__ */ react.createElement(
-          "span",
-          {
-            style: {
-              fontFamily: FONTS.body,
-              fontWeight: 700,
-              fontSize: 24,
-              color: COLORS.white,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase"
-            }
-          },
-          topic
-        )
+        /* @__PURE__ */ react.createElement("span", { style: {
+          fontFamily: FONTS.body,
+          fontWeight: 700,
+          fontSize: 22,
+          color: "#FFFFFF",
+          letterSpacing: "0.08em",
+          textTransform: "uppercase"
+        } }, topic)
       ),
-      /* @__PURE__ */ react.createElement(
-        "div",
+      /* @__PURE__ */ react.createElement("div", { style: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        marginBottom: 48
+      } }, hookLines.map((line, i) => /* @__PURE__ */ react.createElement(
+        AnimatedText,
         {
-          style: {
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            marginBottom: 48
-          }
-        },
-        hookLines.map((line, i) => /* @__PURE__ */ react.createElement(
-          AnimatedText,
-          {
-            key: i,
-            text: line,
-            fontSize: 76,
-            fontWeight: 900,
-            fontFamily: FONTS.heading,
-            color: COLORS.navy,
-            delayFrames: 10 + i * 9,
-            lineHeight: 1.1,
-            textAlign: "left"
-          }
-        ))
-      ),
-      /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            height: 4,
-            width: `${dividerWidth}%`,
-            background: `linear-gradient(90deg, ${COLORS.blue}, ${COLORS.blueLight}, transparent)`,
-            borderRadius: 2,
-            marginBottom: 36
-          }
+          key: i,
+          text: line,
+          fontSize: 72,
+          fontWeight: 900,
+          fontFamily: FONTS.heading,
+          color: "#FFFFFF",
+          delayFrames: 10 + i * 9,
+          lineHeight: 1.12,
+          textAlign: "left"
         }
-      ),
+      ))),
+      /* @__PURE__ */ react.createElement("div", { style: {
+        height: 4,
+        width: `${dividerWidth}%`,
+        background: "linear-gradient(90deg, #3B82F6, #7C3AED, transparent)",
+        borderRadius: 2,
+        marginBottom: 36
+      } }),
       textOverlay && textOverlay !== hook && /* @__PURE__ */ react.createElement(
         AnimatedText,
         {
           text: textOverlay,
-          fontSize: 34,
+          fontSize: 32,
           fontWeight: 600,
           fontFamily: FONTS.body,
-          color: COLORS.blue,
+          color: "#93C5FD",
           delayFrames: 36,
           lineHeight: 1.35,
           textAlign: "left",
@@ -600,48 +602,37 @@ const CoverScene = ({
       /* @__PURE__ */ react.createElement(
         AnimatedText,
         {
-          text: "Read on \u2192",
-          fontSize: 26,
+          text: "Swipe to learn \u2192",
+          fontSize: 24,
           fontWeight: 400,
           fontFamily: FONTS.body,
-          color: COLORS.gray,
+          color: "rgba(255,255,255,0.5)",
           delayFrames: 40,
           textAlign: "left",
           style: { letterSpacing: "0.08em" }
         }
       )
     ),
-    emojiAccent && /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          top: 90,
-          right: 72,
-          fontSize: 72,
-          lineHeight: 1,
-          opacity: emojiBadgeOpacity,
-          transform: `scale(${emojiBadgeScale})`,
-          transformOrigin: "top right"
-        }
-      },
-      emojiAccent
-    ),
-    /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          bottom: 28,
-          left: 72,
-          right: 72,
-          height: 2,
-          background: `linear-gradient(90deg, transparent, ${COLORS.blue}, transparent)`,
-          borderRadius: 2,
-          opacity: (0,esm.interpolate)(dividerSpring, [0, 1], [0, 0.4])
-        }
-      }
-    )
+    emojiAccent && /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: 100,
+      right: 72,
+      fontSize: 72,
+      lineHeight: 1,
+      opacity: emojiBadgeOpacity,
+      transform: `scale(${emojiBadgeScale})`,
+      transformOrigin: "top right"
+    } }, emojiAccent),
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      bottom: 28,
+      left: 72,
+      right: 72,
+      height: 2,
+      background: "linear-gradient(90deg, transparent, rgba(59,130,246,0.4), transparent)",
+      borderRadius: 2,
+      opacity: (0,esm.interpolate)(dividerSpring, [0, 1], [0, 0.6])
+    } })
   );
 };
 function splitIntoLines(text, maxChars) {
@@ -682,18 +673,12 @@ const TeachingScene = ({
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp"
   });
-  const exitFade = (0,esm.interpolate)(
-    frame,
-    [sceneDuration - 10, sceneDuration - 1],
-    [1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-  const opacity = Math.min(enterFade, exitFade);
-  const numSpring = (0,esm.spring)({
-    frame,
-    fps,
-    config: { mass: 1, damping: 14, stiffness: 120 }
+  const exitFade = (0,esm.interpolate)(frame, [sceneDuration - 10, sceneDuration - 1], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
   });
+  const opacity = Math.min(enterFade, exitFade);
+  const numSpring = (0,esm.spring)({ frame, fps, config: { mass: 1, damping: 14, stiffness: 120 } });
   const numTranslate = (0,esm.interpolate)(numSpring, [0, 1], [-60, 0]);
   const numOpacity = (0,esm.interpolate)(numSpring, [0, 1], [0, 1]);
   const gutterSpring = (0,esm.spring)({
@@ -702,7 +687,15 @@ const TeachingScene = ({
     config: { mass: 1, damping: 14, stiffness: 120 }
   });
   const gutterHeight = (0,esm.interpolate)(gutterSpring, [0, 1], [0, 100]);
-  const bulletSeparators = [" \u2022 ", " \u2014 ", " \u2013 ", "\n"];
+  const cardSpring = (0,esm.spring)({
+    frame: Math.max(0, frame - 6),
+    fps,
+    config: { mass: 1, damping: 16, stiffness: 100 }
+  });
+  const cardTranslate = (0,esm.interpolate)(cardSpring, [0, 1], [40, 0]);
+  const cardOpacity = (0,esm.interpolate)(cardSpring, [0, 1], [0, 1]);
+  const orbFloat = (0,esm.interpolate)(frame, [0, 120], [0, 360], { extrapolateRight: "extend" });
+  const bulletSeparators = [" \u2022 ", " \u2014 ", " \u2013 "];
   const isBulletList = bulletSeparators.some((sep) => text.includes(sep));
   let bulletLines = [];
   let mainText = text;
@@ -712,238 +705,199 @@ const TeachingScene = ({
     mainText = parts[0];
     bulletLines = parts.slice(1);
   }
-  const mainLines = TeachingScene_splitIntoLines(mainText, 28);
+  const mainLines = TeachingScene_splitIntoLines(mainText, 26);
+  const accentColors = [
+    { primary: "#3B82F6", glow: "rgba(59,130,246,0.15)" },
+    // Blue
+    { primary: "#7C3AED", glow: "rgba(124,58,237,0.15)" },
+    // Purple
+    { primary: "#06B6D4", glow: "rgba(6,182,212,0.15)" },
+    // Cyan
+    { primary: "#F59E0B", glow: "rgba(245,158,11,0.15)" },
+    // Amber
+    { primary: "#10B981", glow: "rgba(16,185,129,0.15)" },
+    // Emerald
+    { primary: "#EC4899", glow: "rgba(236,72,153,0.15)" }
+    // Pink
+  ];
+  const accent = accentColors[pointIndex % accentColors.length];
   return /* @__PURE__ */ react.createElement(
     esm.AbsoluteFill,
     {
       style: {
-        background: COLORS.white,
+        background: "linear-gradient(170deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)",
         opacity
       }
     },
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: 300,
+      right: 40,
+      width: 240,
+      height: 240,
+      borderRadius: "50%",
+      background: `radial-gradient(circle, ${accent.glow} 0%, transparent 70%)`,
+      transform: `translateY(${Math.sin(orbFloat * Math.PI / 180) * 10}px)`
+    } }),
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 4,
+      background: `linear-gradient(90deg, ${accent.primary}, transparent)`
+    } }),
     /* @__PURE__ */ react.createElement(PAMLogo, { variant: "watermark" }),
-    /* @__PURE__ */ react.createElement(
-      "div",
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      left: 0,
+      top: "20%",
+      width: 6,
+      height: `${gutterHeight * 0.6}%`,
+      background: `linear-gradient(180deg, ${accent.primary}, transparent)`,
+      borderRadius: "0 3px 3px 0"
+    } }),
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: "50%",
+      left: 0,
+      right: 0,
+      transform: "translateY(-52%)",
+      padding: "0 72px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 0
+    } }, /* @__PURE__ */ react.createElement("div", { style: {
+      display: "flex",
+      alignItems: "flex-end",
+      gap: 20,
+      marginBottom: 36,
+      opacity: numOpacity,
+      transform: `translateX(${numTranslate}px)`
+    } }, /* @__PURE__ */ react.createElement("div", { style: {
+      fontFamily: FONTS.heading,
+      fontWeight: 900,
+      fontSize: 110,
+      color: accent.primary,
+      lineHeight: 0.9,
+      letterSpacing: "-0.04em",
+      minWidth: 90,
+      textShadow: `0 0 40px ${accent.glow}`
+    } }, String(pointIndex + 1).padStart(2, "0")), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, paddingBottom: 8 } }, /* @__PURE__ */ react.createElement("div", { style: {
+      fontFamily: FONTS.body,
+      fontWeight: 600,
+      fontSize: 16,
+      color: "rgba(255,255,255,0.5)",
+      letterSpacing: "0.22em",
+      textTransform: "uppercase"
+    } }, "Clinical Point"), /* @__PURE__ */ react.createElement("div", { style: {
+      height: 2,
+      width: 120,
+      background: `linear-gradient(90deg, ${accent.primary}, transparent)`,
+      borderRadius: 2
+    } }))), /* @__PURE__ */ react.createElement("div", { style: {
+      background: "rgba(255,255,255,0.06)",
+      backdropFilter: "blur(12px)",
+      borderRadius: 20,
+      padding: "36px 40px",
+      border: `1px solid rgba(255,255,255,0.1)`,
+      boxShadow: `0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)`,
+      opacity: cardOpacity,
+      transform: `translateY(${cardTranslate}px)`
+    } }, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, mainLines.map((line, i) => /* @__PURE__ */ react.createElement(
+      AnimatedText,
       {
-        style: {
-          position: "absolute",
-          left: 0,
-          top: "20%",
-          width: 6,
-          height: `${gutterHeight * 0.6}%`,
-          background: `linear-gradient(180deg, ${COLORS.blue}, ${COLORS.blueLight})`,
-          borderRadius: "0 3px 3px 0"
-        }
+        key: i,
+        text: line,
+        fontSize: 56,
+        fontWeight: 800,
+        fontFamily: FONTS.heading,
+        color: "#FFFFFF",
+        delayFrames: 10 + i * 7,
+        lineHeight: 1.2,
+        textAlign: "left"
       }
-    ),
-    /* @__PURE__ */ react.createElement(
-      "div",
+    ))), isBulletList && bulletLines.length > 0 && /* @__PURE__ */ react.createElement("div", { style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 16,
+      borderLeft: `3px solid ${accent.primary}`,
+      paddingLeft: 28,
+      marginTop: 24
+    } }, bulletLines.map((bullet, i) => /* @__PURE__ */ react.createElement(
+      AnimatedText,
       {
-        style: {
-          position: "absolute",
-          top: "50%",
-          left: 0,
-          right: 0,
-          transform: "translateY(-52%)",
-          padding: "0 72px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 0
-        }
-      },
-      /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            alignItems: "flex-end",
-            gap: 20,
-            marginBottom: 36,
-            opacity: numOpacity,
-            transform: `translateX(${numTranslate}px)`
-          }
-        },
-        /* @__PURE__ */ react.createElement(
-          "div",
-          {
-            style: {
-              fontFamily: FONTS.heading,
-              fontWeight: 900,
-              fontSize: 120,
-              color: COLORS.blue,
-              lineHeight: 0.9,
-              letterSpacing: "-0.04em",
-              minWidth: 90
-            }
-          },
-          String(pointIndex + 1).padStart(2, "0")
-        ),
-        /* @__PURE__ */ react.createElement(
-          "div",
-          {
-            style: {
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              paddingBottom: 8
-            }
-          },
-          /* @__PURE__ */ react.createElement(
-            "div",
-            {
-              style: {
-                fontFamily: FONTS.body,
-                fontWeight: 600,
-                fontSize: 18,
-                color: COLORS.gray,
-                letterSpacing: "0.22em",
-                textTransform: "uppercase"
-              }
-            },
-            "Clinical Point"
-          ),
-          /* @__PURE__ */ react.createElement(
-            "div",
-            {
-              style: {
-                height: 2,
-                width: 120,
-                background: `linear-gradient(90deg, ${COLORS.blue}, transparent)`,
-                borderRadius: 2
-              }
-            }
-          )
-        )
-      ),
-      /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-            marginBottom: isBulletList ? 44 : 0
-          }
-        },
-        mainLines.map((line, i) => /* @__PURE__ */ react.createElement(
-          AnimatedText,
-          {
-            key: i,
-            text: line,
-            fontSize: 68,
-            fontWeight: 800,
-            fontFamily: FONTS.heading,
-            color: COLORS.navy,
-            delayFrames: 8 + i * 7,
-            lineHeight: 1.15,
-            textAlign: "left"
-          }
-        ))
-      ),
-      isBulletList && bulletLines.length > 0 && /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-            borderLeft: `4px solid ${COLORS.blue}`,
-            paddingLeft: 32,
-            marginTop: 12
-          }
-        },
-        bulletLines.map((bullet, i) => /* @__PURE__ */ react.createElement(
-          AnimatedText,
-          {
-            key: i,
-            text: bullet,
-            fontSize: 38,
-            fontWeight: 400,
-            fontFamily: FONTS.body,
-            color: COLORS.navy,
-            delayFrames: 20 + i * 9,
-            lineHeight: 1.45,
-            textAlign: "left"
-          }
-        ))
-      )
-    ),
-    /* @__PURE__ */ react.createElement(SceneCounter, { current: pointIndex + 1, total: totalPoints }),
-    emojiAccent && /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          bottom: 110,
-          left: 72,
-          fontSize: 56,
-          lineHeight: 1,
-          opacity: numOpacity,
-          transform: `translateX(${numTranslate}px)`
-        }
-      },
-      emojiAccent
-    ),
-    visualDirection && /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          bottom: 52,
-          left: 72,
-          right: 120,
-          fontFamily: FONTS.body,
-          fontSize: 18,
-          fontWeight: 400,
-          color: COLORS.gray,
-          letterSpacing: "0.04em",
-          opacity: 0.4
-        }
-      },
-      visualDirection
-    )
+        key: i,
+        text: bullet,
+        fontSize: 34,
+        fontWeight: 400,
+        fontFamily: FONTS.body,
+        color: "rgba(255,255,255,0.8)",
+        delayFrames: 22 + i * 9,
+        lineHeight: 1.45,
+        textAlign: "left"
+      }
+    ))))),
+    /* @__PURE__ */ react.createElement(SceneCounter, { current: pointIndex + 1, total: totalPoints, accent: accent.primary }),
+    emojiAccent && /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      bottom: 110,
+      left: 72,
+      fontSize: 56,
+      lineHeight: 1,
+      opacity: numOpacity,
+      transform: `translateX(${numTranslate}px)`
+    } }, emojiAccent),
+    visualDirection && /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      bottom: 52,
+      left: 72,
+      right: 120,
+      fontFamily: FONTS.body,
+      fontSize: 16,
+      fontWeight: 400,
+      color: "rgba(255,255,255,0.35)",
+      letterSpacing: "0.04em",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    } }, visualDirection)
   );
 };
-const SceneCounter = ({
-  current,
-  total
-}) => {
+const SceneCounter = ({ current, total, accent }) => {
   const frame = (0,esm.useCurrentFrame)();
   const { fps } = (0,esm.useVideoConfig)();
   const sp = (0,esm.spring)({
-    frame: Math.max(0, frame - 20),
+    frame: Math.max(0, frame - 12),
     fps,
     config: { mass: 1, damping: 14, stiffness: 120 }
   });
-  const opacity = (0,esm.interpolate)(sp, [0, 1], [0, 0.65]);
-  return /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        bottom: 52,
-        right: 60,
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        opacity
-      }
-    },
-    Array.from({ length: total }).map((_, i) => /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        key: i,
-        style: {
-          width: i + 1 === current ? 28 : 8,
-          height: 8,
-          borderRadius: 4,
-          background: i + 1 === current ? COLORS.blue : COLORS.gray,
-          transition: "width 0.3s",
-          opacity: i + 1 === current ? 1 : 0.35
-        }
-      }
-    ))
-  );
+  const opacity = (0,esm.interpolate)(sp, [0, 1], [0, 1]);
+  return /* @__PURE__ */ react.createElement("div", { style: {
+    position: "absolute",
+    bottom: 56,
+    right: 72,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    opacity
+  } }, /* @__PURE__ */ react.createElement("div", { style: {
+    fontFamily: FONTS.heading,
+    fontWeight: 800,
+    fontSize: 22,
+    color: accent,
+    letterSpacing: "0.08em"
+  } }, String(current).padStart(2, "0")), /* @__PURE__ */ react.createElement("div", { style: {
+    width: 24,
+    height: 2,
+    background: "rgba(255,255,255,0.3)",
+    borderRadius: 1
+  } }), /* @__PURE__ */ react.createElement("div", { style: {
+    fontFamily: FONTS.heading,
+    fontWeight: 600,
+    fontSize: 18,
+    color: "rgba(255,255,255,0.4)"
+  } }, String(total).padStart(2, "0")));
 };
 function TeachingScene_splitIntoLines(text, maxChars) {
   const words = text.split(" ");
@@ -989,144 +943,135 @@ const CTAScene = ({
     config: { mass: 1, damping: 14, stiffness: 120 }
   });
   const divWidth = (0,esm.interpolate)(divSpring, [0, 1], [0, 100]);
-  const ctaLines = CTAScene_splitIntoLines(ctaText, 30);
+  const ctaLines = CTAScene_splitIntoLines(ctaText, 26);
   const bottomBarSpring = (0,esm.spring)({
     frame: Math.max(0, frame - 30),
     fps,
     config: { mass: 1, damping: 14, stiffness: 120 }
   });
   const bottomBarOpacity = (0,esm.interpolate)(bottomBarSpring, [0, 1], [0, 1]);
+  const orbFloat = (0,esm.interpolate)(frame, [0, 120], [0, 360], { extrapolateRight: "extend" });
   return /* @__PURE__ */ react.createElement(
     esm.AbsoluteFill,
     {
       style: {
-        background: COLORS.white,
+        background: "linear-gradient(150deg, #1E1B4B 0%, #312E81 40%, #1E3A5F 100%)",
         opacity: enterFade
       }
     },
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: 200,
+      right: -60,
+      width: 350,
+      height: 350,
+      borderRadius: "50%",
+      background: "radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 70%)",
+      transform: `translateY(${Math.sin(orbFloat * Math.PI / 180) * 12}px)`
+    } }),
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      bottom: 300,
+      left: -80,
+      width: 280,
+      height: 280,
+      borderRadius: "50%",
+      background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
+      transform: `translateY(${Math.cos(orbFloat * Math.PI / 180) * 8}px)`
+    } }),
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 6,
+      background: "linear-gradient(90deg, #7C3AED, #EC4899, #F59E0B)"
+    } }),
     /* @__PURE__ */ react.createElement(PAMLogo, { variant: "watermark" }),
-    /* @__PURE__ */ react.createElement(
-      "div",
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: "50%",
+      left: 0,
+      right: 0,
+      transform: "translateY(-54%)",
+      padding: "0 72px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 0,
+      alignItems: "flex-start"
+    } }, /* @__PURE__ */ react.createElement("div", { style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 14,
+      marginBottom: 40
+    } }, /* @__PURE__ */ react.createElement("div", { style: {
+      width: 4,
+      height: 32,
+      background: "linear-gradient(180deg, #F59E0B, #EC4899)",
+      borderRadius: 3
+    } }), /* @__PURE__ */ react.createElement(
+      AnimatedText,
       {
-        style: {
-          position: "absolute",
-          top: "50%",
-          left: 0,
-          right: 0,
-          transform: "translateY(-54%)",
-          padding: "0 72px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 0,
-          alignItems: "flex-start"
-        }
-      },
-      /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            marginBottom: 40
-          }
-        },
-        /* @__PURE__ */ react.createElement(
-          AnimatedText,
-          {
-            text: "SAVE THIS",
-            fontSize: 26,
-            fontWeight: 700,
-            fontFamily: FONTS.body,
-            color: COLORS.blue,
-            delayFrames: 5,
-            style: { letterSpacing: "0.3em" }
-          }
-        )
-      ),
-      /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            height: 4,
-            width: `${divWidth}%`,
-            background: `linear-gradient(90deg, ${COLORS.blue}, ${COLORS.blueLight}, transparent)`,
-            borderRadius: 2,
-            marginBottom: 52
-          }
-        }
-      ),
-      /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            marginBottom: 56
-          }
-        },
-        ctaLines.map((line, i) => /* @__PURE__ */ react.createElement(
-          AnimatedText,
-          {
-            key: i,
-            text: line,
-            fontSize: 66,
-            fontWeight: 900,
-            fontFamily: FONTS.heading,
-            color: COLORS.navy,
-            delayFrames: 12 + i * 9,
-            lineHeight: 1.1,
-            textAlign: "left"
-          }
-        ))
-      ),
-      /* @__PURE__ */ react.createElement(ActionPills, { delayFrames: 30 + ctaLines.length * 9 })
-    ),
-    /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          bottom: 80,
-          left: 0,
-          right: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 0,
-          opacity: bottomBarOpacity
-        }
-      },
-      /* @__PURE__ */ react.createElement(PAMLogo, { variant: "footer", opacity: 0.85 })
-    ),
-    /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          top: 0,
-          right: 0,
-          width: 6,
-          height: "100%",
-          background: `linear-gradient(180deg, ${COLORS.blue}22, ${COLORS.blueLight}44, transparent)`
-        }
+        text: "TAKE ACTION",
+        fontSize: 24,
+        fontWeight: 700,
+        fontFamily: FONTS.body,
+        color: "#F59E0B",
+        delayFrames: 5,
+        style: { letterSpacing: "0.3em" }
       }
-    ),
-    emojiAccent && /* @__PURE__ */ react.createElement(
-      "div",
+    )), /* @__PURE__ */ react.createElement("div", { style: {
+      height: 4,
+      width: `${divWidth}%`,
+      background: "linear-gradient(90deg, #7C3AED, #EC4899, transparent)",
+      borderRadius: 2,
+      marginBottom: 52
+    } }), /* @__PURE__ */ react.createElement("div", { style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      marginBottom: 56
+    } }, ctaLines.map((line, i) => /* @__PURE__ */ react.createElement(
+      AnimatedText,
       {
-        style: {
-          position: "absolute",
-          bottom: 160,
-          right: 72,
-          fontSize: 64,
-          lineHeight: 1,
-          opacity: bottomBarOpacity
-        }
-      },
-      emojiAccent
-    )
+        key: i,
+        text: line,
+        fontSize: 60,
+        fontWeight: 900,
+        fontFamily: FONTS.heading,
+        color: "#FFFFFF",
+        delayFrames: 12 + i * 9,
+        lineHeight: 1.15,
+        textAlign: "left"
+      }
+    ))), /* @__PURE__ */ react.createElement(ActionPills, { delayFrames: 30 + ctaLines.length * 9 })),
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      bottom: 80,
+      left: 0,
+      right: 0,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 0,
+      opacity: bottomBarOpacity
+    } }, /* @__PURE__ */ react.createElement(PAMLogo, { variant: "footer", opacity: 0.7 })),
+    /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      width: 6,
+      height: "100%",
+      background: "linear-gradient(180deg, rgba(124,58,237,0.3), rgba(236,72,153,0.3), transparent)"
+    } }),
+    emojiAccent && /* @__PURE__ */ react.createElement("div", { style: {
+      position: "absolute",
+      bottom: 160,
+      right: 72,
+      fontSize: 64,
+      lineHeight: 1,
+      opacity: bottomBarOpacity
+    } }, emojiAccent)
   );
 };
 const ActionPills = ({ delayFrames }) => {
@@ -1139,48 +1084,41 @@ const ActionPills = ({ delayFrames }) => {
   });
   const translateY = (0,esm.interpolate)(sp, [0, 1], [30, 0]);
   const opacity = (0,esm.interpolate)(sp, [0, 1], [0, 1]);
-  const pills = ["Save This Post", "Share With a Colleague", "Apply Today"];
-  return /* @__PURE__ */ react.createElement(
+  const pills = [
+    { label: "\u{1F4BE}  Save This Post", primary: true },
+    { label: "\u{1F517}  Share With a Colleague", primary: false },
+    { label: "\u2705  Apply Today", primary: false }
+  ];
+  return /* @__PURE__ */ react.createElement("div", { style: {
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 14,
+    opacity,
+    transform: `translateY(${translateY}px)`
+  } }, pills.map((pill, i) => /* @__PURE__ */ react.createElement(
     "div",
     {
+      key: i,
       style: {
-        display: "flex",
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 16,
-        opacity,
-        transform: `translateY(${translateY}px)`
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 10,
+        border: pill.primary ? "none" : "1px solid rgba(255,255,255,0.2)",
+        borderRadius: 12,
+        padding: "14px 28px",
+        background: pill.primary ? "linear-gradient(135deg, #3B82F6, #7C3AED)" : "rgba(255,255,255,0.06)",
+        boxShadow: pill.primary ? "0 4px 20px rgba(59,130,246,0.3)" : "none"
       }
     },
-    pills.map((label, i) => /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        key: i,
-        style: {
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 10,
-          border: `2px solid ${i === 0 ? COLORS.blue : COLORS.grayLight}`,
-          borderRadius: 10,
-          padding: "12px 26px",
-          background: i === 0 ? `${COLORS.blue}18` : "transparent"
-        }
-      },
-      /* @__PURE__ */ react.createElement(
-        "span",
-        {
-          style: {
-            fontFamily: FONTS.body,
-            fontWeight: 600,
-            fontSize: 24,
-            color: i === 0 ? COLORS.blue : COLORS.navy,
-            letterSpacing: "0.04em"
-          }
-        },
-        label
-      )
-    ))
-  );
+    /* @__PURE__ */ react.createElement("span", { style: {
+      fontFamily: FONTS.body,
+      fontWeight: 700,
+      fontSize: 22,
+      color: "#FFFFFF",
+      letterSpacing: "0.02em"
+    } }, pill.label)
+  )));
 };
 function CTAScene_splitIntoLines(text, maxChars) {
   const words = text.split(" ");
@@ -1276,14 +1214,14 @@ const FONT_IMPORT_URL = "https://fonts.googleapis.com/css2?family=Montserrat:wgh
 const PAMVideo = (props) => {
   const { durationInFrames } = (0,esm.useVideoConfig)();
   const scenes = buildScenes(props);
-  return /* @__PURE__ */ react.createElement(esm.AbsoluteFill, { style: { background: COLORS.white, fontSmoothing: "antialiased" } }, /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ react.createElement(esm.AbsoluteFill, { style: { background: COLORS.white, fontSmooth: "antialiased" } }, /* @__PURE__ */ react.createElement(
     "style",
     {
       dangerouslySetInnerHTML: {
         __html: `@import url('${FONT_IMPORT_URL}'); * { -webkit-font-smoothing: antialiased; box-sizing: border-box; }`
       }
     }
-  ), scenes.map((scene) => /* @__PURE__ */ react.createElement(
+  ), props.audioUrl && /* @__PURE__ */ react.createElement(esm.Audio, { src: props.audioUrl }), scenes.map((scene) => /* @__PURE__ */ react.createElement(
     SceneSequence,
     {
       key: `${scene.type}-${scene.startFrame}`,

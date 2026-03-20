@@ -37,6 +37,22 @@ export async function GET(req: NextRequest) {
         ? (statusParam.split(",").filter((s) => VALID.includes(s as RenderJobStatus)) as RenderJobStatus[])
         : undefined
 
+    // 🧹 Auto-cleanup stuck jobs (Running tasks > 30 mins with no completes)
+    try {
+        const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+        await supabaseAdmin
+            .from("render_jobs")
+            .update({
+                status: "FAILED",
+                completed_at: new Date().toISOString(),
+                error_message: "Job Stalled/Crashed (Timeout > 30m)"
+            })
+            .eq("status", "RUNNING")
+            .lt("started_at", thirtyMinsAgo)
+    } catch (cleanupErr) {
+        console.error("[render-jobs] Stale cleanup failed:", cleanupErr)
+    }
+
     const selectClause = `*,
         contentIdea:content_ideas(
             id,

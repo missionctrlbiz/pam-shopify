@@ -14,25 +14,14 @@ interface CTASceneProps {
     cta: string
     topic: string
     sceneDuration: number
-    /** Scene-director CTA text (overrides cta when provided) */
     textOverlay?: string
-    /** Decorative emoji badge */
     emojiAccent?: string
 }
 
 /**
- * Final Scene — Summary + CTA
- *
- * Layout:
- *   • "SAVE THIS" header label — bold, blue accent
- *   • Full-width blue gradient divider
- *   • CTA text — large, Navy Montserrat, split to lines with spring
- *   • Action instruction (e.g. "Save • Share • Apply") — Open Sans
- *   • PAM footer brand mark
- *   • White background
- *
- * Scene-enter: fade in over 8 frames.
- * No exit fade — this is the final scene (video just ends).
+ * CTA Scene — PREMIUM DESIGN
+ * Vibrant gradient background with bold CTA, glowing action buttons,
+ * animated brand footer, floating accent orbs.
  */
 export const CTAScene: React.FC<CTASceneProps> = ({
     cta,
@@ -44,159 +33,148 @@ export const CTAScene: React.FC<CTASceneProps> = ({
     const frame = useCurrentFrame()
     const { fps } = useVideoConfig()
 
-    // Use scene-director textOverlay if available — it’s more specific and concise
     const ctaText = textOverlay ?? cta
 
-    // Scene enter: fade in
+    // Scene enter fade
     const enterFade = interpolate(frame, [0, 10], [0, 1], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
+        extrapolateLeft: "clamp", extrapolateRight: "clamp",
     })
 
-    // Top divider reveals width
+    // Divider spring
     const divSpring = spring({
-        frame: Math.max(0, frame - 4),
-        fps,
+        frame: Math.max(0, frame - 4), fps,
         config: { mass: 1, damping: 14, stiffness: 120 },
     })
     const divWidth = interpolate(divSpring, [0, 1], [0, 100])
 
-    // Split CTA into lines — prefer scene-director ctaText
-    const ctaLines = splitIntoLines(ctaText, 30)
+    const ctaLines = splitIntoLines(ctaText, 26)
 
-    // Bottom decorative fade
+    // Footer animation
     const bottomBarSpring = spring({
-        frame: Math.max(0, frame - 30),
-        fps,
+        frame: Math.max(0, frame - 30), fps,
         config: { mass: 1, damping: 14, stiffness: 120 },
     })
     const bottomBarOpacity = interpolate(bottomBarSpring, [0, 1], [0, 1])
 
+    // Floating orb
+    const orbFloat = interpolate(frame, [0, 120], [0, 360], { extrapolateRight: "extend" })
+
     return (
         <AbsoluteFill
             style={{
-                background: COLORS.white,
+                background: "linear-gradient(150deg, #1E1B4B 0%, #312E81 40%, #1E3A5F 100%)",
                 opacity: enterFade,
             }}
         >
+            {/* Decorative gradient orbs */}
+            <div style={{
+                position: "absolute", top: 200, right: -60,
+                width: 350, height: 350, borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 70%)",
+                transform: `translateY(${Math.sin(orbFloat * Math.PI / 180) * 12}px)`,
+            }} />
+            <div style={{
+                position: "absolute", bottom: 300, left: -80,
+                width: 280, height: 280, borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
+                transform: `translateY(${Math.cos(orbFloat * Math.PI / 180) * 8}px)`,
+            }} />
+
+            {/* Top accent line — gradient purple to pink */}
+            <div style={{
+                position: "absolute", top: 0, left: 0, right: 0,
+                height: 6,
+                background: "linear-gradient(90deg, #7C3AED, #EC4899, #F59E0B)",
+            }} />
+
             {/* PAM watermark */}
             <PAMLogo variant="watermark" />
 
-            {/* Main content block */}
-            <div
-                style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: 0,
-                    right: 0,
-                    transform: "translateY(-54%)",
-                    padding: "0 72px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 0,
-                    alignItems: "flex-start",
-                }}
-            >
-                {/* "SAVE THIS" header */}
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 14,
-                        marginBottom: 40,
-                    }}
-                >
+            {/* Main CTA content */}
+            <div style={{
+                position: "absolute", top: "50%", left: 0, right: 0,
+                transform: "translateY(-54%)",
+                padding: "0 72px",
+                display: "flex", flexDirection: "column",
+                gap: 0, alignItems: "flex-start",
+            }}>
+                {/* "TAKE ACTION" header */}
+                <div style={{
+                    display: "flex", alignItems: "center", gap: 14,
+                    marginBottom: 40,
+                }}>
+                    <div style={{
+                        width: 4, height: 32,
+                        background: "linear-gradient(180deg, #F59E0B, #EC4899)",
+                        borderRadius: 3,
+                    }} />
                     <AnimatedText
-                        text="SAVE THIS"
-                        fontSize={26}
+                        text="TAKE ACTION"
+                        fontSize={24}
                         fontWeight={700}
                         fontFamily={FONTS.body}
-                        color={COLORS.blue}
+                        color="#F59E0B"
                         delayFrames={5}
                         style={{ letterSpacing: "0.3em" }}
                     />
                 </div>
 
-                {/* Top divider */}
-                <div
-                    style={{
-                        height: 4,
-                        width: `${divWidth}%`,
-                        background: `linear-gradient(90deg, ${COLORS.blue}, ${COLORS.blueLight}, transparent)`,
-                        borderRadius: 2,
-                        marginBottom: 52,
-                    }}
-                />
+                {/* Gradient divider */}
+                <div style={{
+                    height: 4,
+                    width: `${divWidth}%`,
+                    background: "linear-gradient(90deg, #7C3AED, #EC4899, transparent)",
+                    borderRadius: 2, marginBottom: 52,
+                }} />
 
-                {/* CTA text — primary message */}
-                <div
-                    style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8,
-                        marginBottom: 56,
-                    }}
-                >
+                {/* CTA text */}
+                <div style={{
+                    display: "flex", flexDirection: "column", gap: 8,
+                    marginBottom: 56,
+                }}>
                     {ctaLines.map((line, i) => (
                         <AnimatedText
                             key={i}
                             text={line}
-                            fontSize={66}
+                            fontSize={60}
                             fontWeight={900}
                             fontFamily={FONTS.heading}
-                            color={COLORS.navy}
+                            color="#FFFFFF"
                             delayFrames={12 + i * 9}
-                            lineHeight={1.1}
+                            lineHeight={1.15}
                             textAlign="left"
                         />
                     ))}
                 </div>
 
-                {/* Action pills row */}
+                {/* Action pills */}
                 <ActionPills delayFrames={30 + ctaLines.length * 9} />
             </div>
 
-            {/* Footer area — PAM branding */}
-            <div
-                style={{
-                    position: "absolute",
-                    bottom: 80,
-                    left: 0,
-                    right: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 0,
-                    opacity: bottomBarOpacity,
-                }}
-            >
-                <PAMLogo variant="footer" opacity={0.85} />
+            {/* Footer PAM branding */}
+            <div style={{
+                position: "absolute", bottom: 80, left: 0, right: 0,
+                display: "flex", flexDirection: "column",
+                alignItems: "center", gap: 0,
+                opacity: bottomBarOpacity,
+            }}>
+                <PAMLogo variant="footer" opacity={0.7} />
             </div>
 
-            {/* Subtle background box behind CTA for depth */}
-            <div
-                style={{
-                    position: "absolute",
-                    top: 0,
-                    right: 0,
-                    width: 6,
-                    height: "100%",
-                    background: `linear-gradient(180deg, ${COLORS.blue}22, ${COLORS.blueLight}44, transparent)`,
-                }}
-            />
+            {/* Right accent strip */}
+            <div style={{
+                position: "absolute", top: 0, right: 0,
+                width: 6, height: "100%",
+                background: "linear-gradient(180deg, rgba(124,58,237,0.3), rgba(236,72,153,0.3), transparent)",
+            }} />
 
-            {/* Emoji accent badge — bottom-right, above PAM footer */}
+            {/* Emoji accent badge */}
             {emojiAccent && (
-                <div
-                    style={{
-                        position: "absolute",
-                        bottom: 160,
-                        right: 72,
-                        fontSize: 64,
-                        lineHeight: 1,
-                        opacity: bottomBarOpacity,
-                    }}
-                >
+                <div style={{
+                    position: "absolute", bottom: 160, right: 72,
+                    fontSize: 64, lineHeight: 1,
+                    opacity: bottomBarOpacity,
+                }}>
                     {emojiAccent}
                 </div>
             )}
@@ -204,57 +182,55 @@ export const CTAScene: React.FC<CTASceneProps> = ({
     )
 }
 
-// ──────────────────────────────────────────────────────────────
-// Action pills: "Save" | "Share" | "Apply"
-// ──────────────────────────────────────────────────────────────
+// ── Action Pills ──────────────────────────────────────────────
 const ActionPills: React.FC<{ delayFrames: number }> = ({ delayFrames }) => {
     const frame = useCurrentFrame()
     const { fps } = useVideoConfig()
 
     const sp = spring({
-        frame: Math.max(0, frame - delayFrames),
-        fps,
+        frame: Math.max(0, frame - delayFrames), fps,
         config: { mass: 1, damping: 14, stiffness: 120 },
     })
     const translateY = interpolate(sp, [0, 1], [30, 0])
     const opacity = interpolate(sp, [0, 1], [0, 1])
 
-    const pills = ["Save This Post", "Share With a Colleague", "Apply Today"]
+    const pills = [
+        { label: "💾  Save This Post", primary: true },
+        { label: "🔗  Share With a Colleague", primary: false },
+        { label: "✅  Apply Today", primary: false },
+    ]
 
     return (
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "row",
-                flexWrap: "wrap",
-                gap: 16,
-                opacity,
-                transform: `translateY(${translateY}px)`,
-            }}
-        >
-            {pills.map((label, i) => (
+        <div style={{
+            display: "flex", flexDirection: "row", flexWrap: "wrap",
+            gap: 14, opacity, transform: `translateY(${translateY}px)`,
+        }}>
+            {pills.map((pill, i) => (
                 <div
                     key={i}
                     style={{
                         display: "inline-flex",
-                        alignItems: "center",
-                        gap: 10,
-                        border: `2px solid ${i === 0 ? COLORS.blue : COLORS.grayLight}`,
-                        borderRadius: 10,
-                        padding: "12px 26px",
-                        background: i === 0 ? `${COLORS.blue}18` : "transparent",
+                        alignItems: "center", gap: 10,
+                        border: pill.primary
+                            ? "none"
+                            : "1px solid rgba(255,255,255,0.2)",
+                        borderRadius: 12,
+                        padding: "14px 28px",
+                        background: pill.primary
+                            ? "linear-gradient(135deg, #3B82F6, #7C3AED)"
+                            : "rgba(255,255,255,0.06)",
+                        boxShadow: pill.primary
+                            ? "0 4px 20px rgba(59,130,246,0.3)"
+                            : "none",
                     }}
                 >
-                    <span
-                        style={{
-                            fontFamily: FONTS.body,
-                            fontWeight: 600,
-                            fontSize: 24,
-                            color: i === 0 ? COLORS.blue : COLORS.navy,
-                            letterSpacing: "0.04em",
-                        }}
-                    >
-                        {label}
+                    <span style={{
+                        fontFamily: FONTS.body,
+                        fontWeight: 700, fontSize: 22,
+                        color: "#FFFFFF",
+                        letterSpacing: "0.02em",
+                    }}>
+                        {pill.label}
                     </span>
                 </div>
             ))}
@@ -262,9 +238,7 @@ const ActionPills: React.FC<{ delayFrames: number }> = ({ delayFrames }) => {
     )
 }
 
-// ──────────────────────────────────────────────────────────────
-// Helper
-// ──────────────────────────────────────────────────────────────
+// ── Helper ────────────────────────────────────────────────────
 function splitIntoLines(text: string, maxChars: number): string[] {
     const words = text.split(" ")
     const lines: string[] = []
