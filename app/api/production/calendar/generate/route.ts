@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         const triggerConfigured = Boolean(process.env.TRIGGER_SECRET_KEY)
 
         if (triggerConfigured && days > 1) {
-            const handle = await tasks.triggerAndWait<typeof productionCalendarBatchTask>("production-calendar-batch", {
+            const handle = await tasks.trigger<typeof productionCalendarBatchTask>("production-calendar-batch", {
                 days,
                 offset,
                 overwrite,
@@ -59,23 +59,12 @@ export async function POST(req: NextRequest) {
                 generatedById,
             })
 
-            if (!handle.ok) {
-                return NextResponse.json({
-                    error: `Trigger run failed: ${String(handle.error)}`,
-                }, { status: 500 })
-            }
-
-            const runData = handle.output as { generated?: number, failed?: number, entries?: unknown[], errors?: string[] } | undefined
-
             return NextResponse.json({
-                generated: runData?.generated ?? 0,
-                failed: runData?.failed ?? 0,
-                entries: runData?.entries ?? [],
-                queued: false,
+                queued: true,
                 batchId: handle.id,
                 requestedDays: days,
-                message: `Successfully generated ${runData?.generated ?? 0} entries.`,
-            }, { status: 200 })
+                message: `Queued ${days} calendar entries for background generation.`,
+            }, { status: 202 })
         }
         const result = await runCalendarGenerationBatch({
             days,

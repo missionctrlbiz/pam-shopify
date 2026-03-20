@@ -747,10 +747,9 @@ export function ProductionPanel() {
 
         const offset = generatedSoFar
 
-        // Smooth simulated progress for the parallel payload execution
-        const intervalId = setInterval(() => {
-            setGenerateProgress(p => (p < 95 ? p + Math.floor(Math.random() * 12) + 4 : p))
-        }, 1000)
+        // Flag set to true when polling takes over so the finally block
+        // does not prematurely clear the loading state.
+        let handedOffToPoller = false
 
         try {
             const res = await fetch("/api/production/calendar/generate", {
@@ -765,25 +764,30 @@ export function ProductionPanel() {
             })
 
             const data = await res.json() as GenerateCycleResponse
-            clearInterval(intervalId)
-            setGenerateProgress(100)
             setGenerateResult(data)
 
             if (data.queued) {
+                handedOffToPoller = true
                 setGeneratedSoFar(prev => prev + BATCH_SIZE)
                 showToast(data.message ?? `Queued ${BATCH_SIZE} entries in the background.`, "info")
-                setGenerating(false)
-                await fetchCalendar(1)
 
-                void (async () => {
-                    for (let i = 0; i < 6; i++) {
-                        await new Promise((resolve) => setTimeout(resolve, 10000))
-                        await fetchCalendar(1, true)
+                // Poll actual DB execution state every 10 s for up to 60 s,
+                // advancing progress proportionally as each tick completes.
+                const MAX_POLLS = 6
+                let polls = 0
+                const pollId = setInterval(() => {
+                    polls++
+                    void fetchCalendar(1, true)
+                    setGenerateProgress(Math.round((polls / MAX_POLLS) * 100))
+                    if (polls >= MAX_POLLS) {
+                        clearInterval(pollId)
+                        setGenerating(false)
                     }
-                })()
+                }, 10000)
                 return
             }
 
+            setGenerateProgress(100)
             setGeneratedSoFar(prev => prev + (data.generated ?? 0))
             if ((data.failed ?? 0) > 0) {
                 showToast(`Generated ${data.generated ?? 0} entries. ${data.failed ?? 0} failed.`, "error")
@@ -792,11 +796,11 @@ export function ProductionPanel() {
             }
             await fetchCalendar(1)
         } catch {
-            clearInterval(intervalId)
             showToast("Calendar generation failed.", "error")
         } finally {
-            clearInterval(intervalId)
-            setGenerating(false)
+            if (!handedOffToPoller) {
+                setGenerating(false)
+            }
         }
     }
 
