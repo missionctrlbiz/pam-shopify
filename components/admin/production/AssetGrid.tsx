@@ -322,6 +322,18 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                         </div>
                                     )}
 
+                                    {/* Video player controls for MP4 */}
+                                    {asset.assetType === "VIDEO_MP4" && asset.assetStatus === "COMPLETE" && asset.storageUrl && (
+                                        <div style={{ marginTop: 6 }}>
+                                            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                                            <video
+                                                controls
+                                                style={{ width: "100%", borderRadius: 6, maxHeight: 160 }}
+                                                src={asset.storageUrl}
+                                            />
+                                        </div>
+                                    )}
+
                                     {/* Carousel: all slide links */}
                                     {asset.assetType === "CAROUSEL_PNG" && asset.assetStatus === "COMPLETE" && (() => {
                                         const meta = asset.metadata as Record<string, unknown> | null
