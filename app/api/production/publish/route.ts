@@ -55,7 +55,18 @@ async function requireAdmin(): Promise<{ error: NextResponse } | { ok: true }> {
 
 /** Fetch all Buffer profiles linked to the access token */
 async function fetchBufferProfiles(accessToken: string): Promise<BufferProfile[]> {
-    const res = await fetch(`${BUFFER_API}/profiles.json?access_token=${encodeURIComponent(accessToken)}`)
+    const res = await fetch(`${BUFFER_API}/profiles.json`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+        }
+    })
+    
+    if (res.status >= 500) {
+        console.error(`[publish] Buffer API 500 Error during profile fetch. Token might be incompatible.`);
+        return [];
+    }
     if (!res.ok) return []
 
     const raw: unknown = await res.json()
@@ -99,12 +110,25 @@ async function createBufferUpdate(
     }
 
     const res = await fetch(
-        `${BUFFER_API}/updates/create.json?access_token=${encodeURIComponent(accessToken)}`,
-        { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body },
+        `${BUFFER_API}/updates/create.json`,
+        { 
+            method: "POST", 
+            headers: { 
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/x-www-form-urlencoded" 
+            }, 
+            body 
+        },
     )
 
     if (res.status === 429) {
         throw new RateLimitError("Buffer rate limit exceeded (429)")
+    }
+
+    if (res.status >= 500) {
+        const msg = await res.text().catch(() => "Unknown 500 error from Buffer");
+        console.error(`[publish] Buffer API 500 Error. Status ${res.status}: ${msg}`);
+        throw new Error(`Buffer API internal server error (Likely token version mismatch). Status ${res.status}: ${msg}`)
     }
 
     if (!res.ok) {
@@ -171,12 +195,22 @@ export async function GET(): Promise<NextResponse> {
 
     try {
         const accessToken = process.env.BUFFER_ACCESS_TOKEN ?? ""
+        const webhookUrl = process.env.MAKE_WEBHOOK_URL || process.env.ZAPIER_WEBHOOK_URL
         const emailSentToday = await getEmailsSentToday()
 
-        // Fetch Buffer profiles (graceful empty array if token not configured)
-        const bufferProfiles: BufferProfile[] = accessToken
-            ? await fetchBufferProfiles(accessToken).catch(() => [])
-            : []
+        // Use custom Webhook pseudo-profile, or fetch Buffer profiles dynamically
+        const bufferProfiles: BufferProfile[] = webhookUrl 
+            ? [{
+                id: "hook_default",
+                service: "linkedin", 
+                serviceUsername: webhookUrl.includes("zapier.com") ? "Zapier Webhook Target" : "Make.com Webhook Target",
+                serviceType: "profile",
+                avatarUrl: null,
+                timezone: "UTC",
+                bufferCount: 0,
+                bufferMax: 100
+              }]
+            : (accessToken ? await fetchBufferProfiles(accessToken).catch(() => []) : [])
 
         // Recent publish jobs (last 50)
         const { data: jobRows, error: jobErr } = await supabaseAdmin
@@ -432,41 +466,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: "buffer config required for mode 'buffer' or 'all'" }, { status: 400 })
         }
 
+        // Webhook Override (Make.com or Zapier)
+        const webhookUrl = process.env.MAKE_WEBHOOK_URL || process.env.ZAPIER_WEBHOOK_URL
         const accessToken = process.env.BUFFER_ACCESS_TOKEN
-        if (!accessToken) {
-            return NextResponse.json({ error: "BUFFER_ACCESS_TOKEN not configured" }, { status: 503 })
-        }
 
-        // Re-fetch profiles to get current queue depths (rate-limit guard)
-        let profiles: BufferProfile[] = []
-        try {
-            profiles = await fetchBufferProfiles(accessToken)
-        } catch (err) {
-            return NextResponse.json({ error: `Buffer profile fetch failed: ${(err as Error).message}` }, { status: 502 })
-        }
-
-        // Filter requested profile IDs to only those below queue threshold
-        const profileMap = new Map(profiles.map((p) => [p.id, p]))
-        const safeProfileIds = cfg.profileIds.filter((id) => {
-            const p = profileMap.get(id)
-            // Allow dispatch only when there is headroom in the queue
-            return p && p.bufferCount < p.bufferMax
-        })
-        const saturatedProfiles = cfg.profileIds.filter((id) => !safeProfileIds.includes(id))
-
-        if (saturatedProfiles.length > 0) {
-            saturatedProfiles.forEach((id) => {
-                const p = profileMap.get(id)
-                if (p) response.rateLimitedChannels!.push(p.service.toUpperCase() as PublishChannel)
-            })
-        }
-
-        if (safeProfileIds.length === 0) {
-            return NextResponse.json({
-                ...response,
-                error: "All selected Buffer profiles are at queue capacity",
-                message: `Saturated profiles: ${saturatedProfiles.join(", ")}`,
-            } satisfies PublishResponse, { status: 429 })
+        if (!webhookUrl && !accessToken) {
+            return NextResponse.json({ error: "No MAKE_WEBHOOK_URL or BUFFER_ACCESS_TOKEN configured" }, { status: 503 })
         }
 
         // Fetch the asset for media URL
@@ -480,69 +485,136 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: "Asset not found or not COMPLETE" }, { status: 404 })
         }
 
-        // Build typed Buffer media attachment
         const isVideo = assetRow.asset_type === "VIDEO_MP4"
         const isCarousel = assetRow.asset_type === "CAROUSEL_PNG"
 
-        // Determine per-channel profile groups for correct media specs
-        const bufferUpdateIds: string[] = []
-
-        for (const profileId of safeProfileIds) {
-            const profile = profileMap.get(profileId)
-            if (!profile) continue
-
-            // Build media payload — TikTok requires 9:16 video format
-            const mediaAttachment = assetRow.storage_url
-                ? (isVideo
-                    ? {
-                        video:         assetRow.storage_url,
-                        thumbnail:     (assetRow.metadata as Record<string, string> | null)?.thumbnailUrl ?? undefined,
-                        tiktokViewport: profile.service === "tiktok",
-                    }
-                    : isCarousel
-                    ? { photo: assetRow.storage_url }
-                    : { photo: assetRow.storage_url })
-                : undefined
-
-            const bufferPayload: BufferPostPayload = {
-                profile_ids:  [profileId],
-                text:         cfg.text,
-                media:        mediaAttachment,
-                scheduled_at: cfg.scheduledAt,
-                shorten:      true,
+        // ── Webhook Path (Zapier / Make.com) ──
+        if (webhookUrl) {
+            const payloadData = {
+                text: cfg.text,
+                mediaUrl: assetRow.storage_url,
+                isVideo: isVideo,
+                mediaThumbnail: isVideo ? ((assetRow.metadata as any)?.thumbnailUrl || null) : null,
+                scheduledAt: cfg.scheduledAt || null,
+                assetId: cfg.assetId
             }
 
-            let bufferResp: BufferPostResponse
             try {
-                bufferResp = await createBufferUpdate(accessToken, bufferPayload)
+                const whRes = await fetch(webhookUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payloadData)
+                })
+
+                if (!whRes.ok) {
+                    const errText = await whRes.text()
+                    response.errors!.push(`Webhook failed: ${whRes.status} ${errText}`)
+                } else {
+                    // Log success natively
+                    await supabaseAdmin
+                        .from("publish_jobs")
+                        .insert({
+                            channel: "LINKEDIN", // generic fallback icon in UI
+                            asset_id: cfg.assetId,
+                            dispatched_at: new Date().toISOString(),
+                            status: "COMPLETE",
+                        })
+
+                    response.bufferUpdateIds = ["webhook_dipatch_1"]
+                    response.bufferCount = 1
+                }
             } catch (err) {
-                if (err instanceof RateLimitError) {
-                    response.rateLimitedChannels!.push(profile.service.toUpperCase() as PublishChannel)
+                response.errors!.push(`Webhook connection error: ${(err as Error).message}`)
+            }
+        } 
+        // ── Legacy Buffer API Path ──
+        else {
+            let profiles: BufferProfile[] = []
+            try {
+                profiles = await fetchBufferProfiles(accessToken!)
+            } catch (err) {
+                return NextResponse.json({ error: `Buffer profile fetch failed: ${(err as Error).message}` }, { status: 502 })
+            }
+
+            const profileMap = new Map(profiles.map((p) => [p.id, p]))
+            const safeProfileIds = cfg.profileIds.filter((id) => {
+                const p = profileMap.get(id)
+                return p && p.bufferCount < p.bufferMax
+            })
+            const saturatedProfiles = cfg.profileIds.filter((id) => !safeProfileIds.includes(id))
+
+            if (saturatedProfiles.length > 0) {
+                saturatedProfiles.forEach((id) => {
+                    const p = profileMap.get(id)
+                    if (p) response.rateLimitedChannels!.push(p.service.toUpperCase() as PublishChannel)
+                })
+            }
+
+            if (safeProfileIds.length === 0) {
+                return NextResponse.json({
+                    ...response,
+                    error: "All selected Buffer profiles are at queue capacity",
+                    message: `Saturated profiles: ${saturatedProfiles.join(", ")}`,
+                } satisfies PublishResponse, { status: 429 })
+            }
+
+            const bufferUpdateIds: string[] = []
+
+            for (const profileId of safeProfileIds) {
+                const profile = profileMap.get(profileId)
+                if (!profile) continue
+
+                const mediaAttachment = assetRow.storage_url
+                    ? (isVideo
+                        ? {
+                            video:         assetRow.storage_url,
+                            thumbnail:     (assetRow.metadata as Record<string, string> | null)?.thumbnailUrl ?? undefined,
+                            tiktokViewport: profile.service === "tiktok",
+                        }
+                        : isCarousel
+                        ? { photo: assetRow.storage_url }
+                        : { photo: assetRow.storage_url })
+                    : undefined
+
+                const bufferPayload: BufferPostPayload = {
+                    profile_ids:  [profileId],
+                    text:         cfg.text,
+                    media:        mediaAttachment,
+                    scheduled_at: cfg.scheduledAt,
+                    shorten:      true,
+                }
+
+                let bufferResp: BufferPostResponse
+                try {
+                    bufferResp = await createBufferUpdate(accessToken!, bufferPayload)
+                } catch (err) {
+                    if (err instanceof RateLimitError) {
+                        response.rateLimitedChannels!.push(profile.service.toUpperCase() as PublishChannel)
+                        continue
+                    }
+                    response.errors!.push(`Buffer post failed for profile ${profileId}: ${(err as Error).message}`)
                     continue
                 }
-                response.errors!.push(`Buffer post failed for profile ${profileId}: ${(err as Error).message}`)
-                continue
+
+                for (const update of bufferResp.updates as BufferScheduledUpdate[]) {
+                    bufferUpdateIds.push(update.id)
+
+                    await supabaseAdmin
+                        .from("publish_jobs")
+                        .insert({
+                            channel:         profile.service.toUpperCase() as PublishChannel,
+                            asset_id:        cfg.assetId,
+                            buffer_post_id:  update.id,
+                            scheduled_at:    update.due_at ? new Date(update.due_at * 1000).toISOString() : null,
+                            dispatched_at:   new Date().toISOString(),
+                            status:          "COMPLETE",
+                        })
+                }
             }
 
-            // Record each scheduled update in publish_jobs
-            for (const update of bufferResp.updates as BufferScheduledUpdate[]) {
-                bufferUpdateIds.push(update.id)
-
-                await supabaseAdmin
-                    .from("publish_jobs")
-                    .insert({
-                        channel:         profile.service.toUpperCase() as PublishChannel,
-                        asset_id:        cfg.assetId,
-                        buffer_post_id:  update.id,
-                        scheduled_at:    update.due_at ? new Date(update.due_at * 1000).toISOString() : null,
-                        dispatched_at:   new Date().toISOString(),
-                        status:          "COMPLETE",
-                    })
-            }
+            response.bufferUpdateIds = bufferUpdateIds
+            response.bufferCount = bufferUpdateIds.length
         }
-
-        response.bufferUpdateIds = bufferUpdateIds
-        response.bufferCount = bufferUpdateIds.length
     }
 
     response.message = "Publish job(s) dispatched successfully"
