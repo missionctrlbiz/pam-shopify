@@ -5,7 +5,9 @@ export const metadata: Metadata = {
 	title: "Psychiatric Assessment Mastery",
 	description: "Production dashboard and content generation for Psychiatric Assessment Mastery.",
 	icons: {
-		icon: "/favicon-white.png",
+		icon: [
+			{ url: "/favicon.webp", type: "image/webp" }
+		],
 	},
 }
 

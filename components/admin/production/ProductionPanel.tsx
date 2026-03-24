@@ -30,12 +30,11 @@ const BRAND = {
     glow: "0 8px 24px rgba(175, 92, 233, 0.25)",
 }
 
-type ProdView = "overview" | "table" | "grid" | "import" | "storybank" | "renderjobs" | "publish"
+type ProdView = "overview" | "table" | "import" | "storybank" | "renderjobs" | "publish"
 
 const VIEWS: { key: ProdView; label: string; iconName: string; Icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", iconName: "LayoutDashboard", Icon: BarChart3 },
     { key: "table", label: "Data Table", iconName: "Table", Icon: LayoutList },
-    { key: "grid", label: "Calendar Grid", iconName: "CalendarDays", Icon: CalendarDays },
     { key: "import", label: "Import & Generate", iconName: "Upload", Icon: Upload },
     { key: "storybank", label: "Story Bank", iconName: "BookOpen", Icon: BookOpen },
     { key: "renderjobs", label: "Render Queue", iconName: "Layers", Icon: Layers },
@@ -103,168 +102,6 @@ const STATUS_CLASSES: Record<PublishStatus, string> = {
     ARCHIVED: "bg-slate-100 text-slate-400",
 }
 
-// ─── Monthly Grid View ────────────────────────────────────────────────────────
-function CalendarGridView() {
-    const [allEntries, setAllEntries] = useState<CalendarEntryRow[]>([])
-    const [gridLoading, setGridLoading] = useState(true)
-
-    const [viewDate, setViewDate] = useState<Date>(new Date())
-
-    // Fetch ALL entries for grid display (no filters, high limit)
-    useEffect(() => {
-        let isMounted = true
-        const load = async () => {
-            setGridLoading(true)
-            try {
-                const res = await fetch("/api/production/calendar?limit=500")
-                if (!res.ok) throw new Error(`Status ${res.status}`)
-                const data = await res.json() as CalendarListResponse
-                if (!isMounted) return
-                const safeEntries = Array.isArray(data.entries) ? data.entries : []
-                setAllEntries(safeEntries)
-                if (safeEntries.length > 0) {
-                    setViewDate(new Date(safeEntries[0].entryDate))
-                }
-            } catch (err) {
-                if (isMounted) {
-                    console.warn("[CalendarGrid] fetch failed", err)
-                    setAllEntries([])
-                }
-            } finally {
-                if (isMounted) setGridLoading(false)
-            }
-        }
-        load()
-        return () => { isMounted = false }
-    }, [])
-
-    const year = viewDate.getFullYear()
-    const month = viewDate.getMonth()
-
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const startPad = firstDay.getDay() // 0=Sun
-
-    const monthEntries = allEntries.filter(e => {
-        const d = new Date(e.entryDate)
-        return d.getFullYear() === year && d.getMonth() === month
-    })
-
-    const byDay: Record<number, CalendarEntryRow[]> = {}
-    monthEntries.forEach(e => {
-        const d = new Date(e.entryDate).getDate()
-        if (!byDay[d]) byDay[d] = []
-        byDay[d].push(e)
-    })
-
-    const cells: (number | null)[] = [
-        ...Array(startPad).fill(null),
-        ...Array.from({ length: lastDay.getDate() }, (_, i) => i + 1),
-    ]
-    // Pad to a 6-row grid (42 cells)
-    while (cells.length < 42) cells.push(null)
-
-    const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-    if (gridLoading) {
-        return (
-            <div className="bg-white rounded-3xl p-16 text-center shadow-xl shadow-slate-200/40 border border-slate-100">
-                <Loader2 size={32} className="mx-auto animate-spin" style={{ color: BRAND.purple }} />
-                <p className="text-slate-500 font-medium mt-4">Loading calendar data…</p>
-            </div>
-        )
-    }
-
-    if (allEntries.length === 0) {
-        return (
-            <div className="bg-white rounded-3xl p-16 text-center shadow-xl shadow-slate-200/40 border border-slate-100">
-                <CalendarDays size={48} className="mx-auto mb-4 text-slate-300" />
-                <p className="text-slate-500 font-medium">No calendar entries yet. Generate entries or import a CSV.</p>
-            </div>
-        )
-    }
-
-    return (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
-            {/* Month nav */}
-            <div className="p-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
-                <button
-                    aria-label="Previous month"
-                    onClick={() => setViewDate(new Date(year, month - 1, 1))}
-                    className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition"
-                >
-                    <ChevronLeft size={16} />
-                </button>
-                <h3 className="text-xl font-extrabold tracking-tight" style={{ color: BRAND.navy }}>
-                    {firstDay.toLocaleString("default", { month: "long", year: "numeric" })}
-                </h3>
-                <button
-                    aria-label="Next month"
-                    onClick={() => setViewDate(new Date(year, month + 1, 1))}
-                    className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition"
-                >
-                    <ChevronRight size={16} />
-                </button>
-            </div>
-
-            {/* Day-of-week header */}
-            <div className="grid grid-cols-7 border-b border-slate-100">
-                {DOW.map(d => (
-                    <div key={d} className="py-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        {d}
-                    </div>
-                ))}
-            </div>
-
-            {/* Days */}
-            <div className="grid grid-cols-7">
-                {cells.map((day, idx) => {
-                    const dayEntries = day ? (byDay[day] ?? []) : []
-                    const isToday = day !== null &&
-                        new Date().getDate() === day &&
-                        new Date().getMonth() === month &&
-                        new Date().getFullYear() === year
-
-                    return (
-                        <div
-                            key={idx}
-                            className={`min-h-[80px] border-b border-r border-slate-100 p-1.5 transition-colors ${day ? "hover:bg-slate-50/70" : "bg-slate-50/30"}`}
-                        >
-                            {day && (
-                                <>
-                                    <div className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full transition-colors ${isToday ? "text-white" : "text-slate-500"}`}
-                                        style={isToday ? { background: BRAND.gradient } : {}}>
-                                        {day}
-                                    </div>
-                                    <div className="flex flex-col gap-0.5">
-                                        {dayEntries.slice(0, 3).map(e => (
-                                            <div key={e.id} className={`text-[10px] font-semibold truncate px-1.5 py-0.5 rounded-md ${STATUS_CLASSES[e.publishStatus]}`}>
-                                                {e.platform} · {e.postType.replace("_", " ")}
-                                            </div>
-                                        ))}
-                                        {dayEntries.length > 3 && (
-                                            <div className="text-[10px] text-slate-400 font-bold px-1">+{dayEntries.length - 3} more</div>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )
-                })}
-            </div>
-
-            {/* Legend */}
-            <div className="p-4 border-t border-slate-100 flex flex-wrap gap-3">
-                {(Object.keys(STATUS_META) as PublishStatus[]).map(s => (
-                    <div key={s} className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_CLASSES[s]}`}>
-                        {STATUS_META[s].icon}
-                        {STATUS_META[s].label}
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
-}
 
 // ─── Generate Cycle Modal ─────────────────────────────────────────────────────
 function GenerateModal({ open, onClose, onConfirm, running, result, progress }: {

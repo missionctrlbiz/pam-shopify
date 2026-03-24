@@ -36,7 +36,7 @@ import type {
 
 const CHANNEL_META: Record<PublishChannel | string, { label: string; color: string; Icon: React.ElementType }> = {
     EMAIL:     { label: "Email",     color: "#3B82F6", Icon: Mail },
-    LINKEDIN:  { label: "LinkedIn",  color: "#0A66C2", Icon: Linkedin },
+    LINKEDIN:  { label: "Social Broadcast", color: "#af5ce9", Icon: Zap }, // Maps DB 'LINKEDIN' natively to Social Target 
     TIKTOK:    { label: "TikTok",    color: "#010101", Icon: Video },
     INSTAGRAM: { label: "Instagram", color: "#E1306C", Icon: Instagram },
     FACEBOOK:  { label: "Facebook",  color: "#1877F2", Icon: Globe },

@@ -509,15 +509,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                     const errText = await whRes.text()
                     response.errors!.push(`Webhook failed: ${whRes.status} ${errText}`)
                 } else {
-                    // Log success natively
+                    // Log success natively using legacy constant to pass strict database enum checks
                     await supabaseAdmin
                         .from("publish_jobs")
                         .insert({
-                            channel: "SOCIAL", // generic fallback icon in UI
+                            channel: "LINKEDIN", 
                             asset_id: cfg.assetId,
                             dispatched_at: new Date().toISOString(),
                             status: "COMPLETE",
                         })
+                        
+                    // Make sure the master Calendar grid actually sees this status update!
+                    await supabaseAdmin
+                        .from("content_calendar")
+                        .update({ 
+                            publish_status: cfg.scheduledAt ? "SCHEDULED" : "PUBLISHED" 
+                        })
+                        .eq("asset_id", cfg.assetId)
 
                     response.bufferUpdateIds = ["webhook_dipatch_1"]
                     response.bufferCount = 1
