@@ -198,12 +198,11 @@ export async function GET(): Promise<NextResponse> {
         const webhookUrl = process.env.MAKE_WEBHOOK_URL || process.env.ZAPIER_WEBHOOK_URL
         const emailSentToday = await getEmailsSentToday()
 
-        // Use custom Webhook pseudo-profile, or fetch Buffer profiles dynamically
         const bufferProfiles: BufferProfile[] = webhookUrl 
             ? [{
                 id: "hook_default",
-                service: "linkedin", 
-                serviceUsername: webhookUrl.includes("zapier.com") ? "Zapier Webhook Target" : "Make.com Webhook Target",
+                service: "SOCIAL" as any, 
+                serviceUsername: "All Connected Social Channels",
                 serviceType: "profile",
                 avatarUrl: null,
                 timezone: "UTC",
@@ -514,7 +513,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                     await supabaseAdmin
                         .from("publish_jobs")
                         .insert({
-                            channel: "LINKEDIN", // generic fallback icon in UI
+                            channel: "SOCIAL", // generic fallback icon in UI
                             asset_id: cfg.assetId,
                             dispatched_at: new Date().toISOString(),
                             status: "COMPLETE",

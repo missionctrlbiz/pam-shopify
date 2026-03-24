@@ -34,19 +34,18 @@ import type {
     ContentAsset,
 } from "./types"
 
-// ── Channel icons ─────────────────────────────────────────────────────────────
-
-const CHANNEL_META: Record<PublishChannel, { label: string; color: string; Icon: React.ElementType }> = {
+const CHANNEL_META: Record<PublishChannel | string, { label: string; color: string; Icon: React.ElementType }> = {
     EMAIL:     { label: "Email",     color: "#3B82F6", Icon: Mail },
     LINKEDIN:  { label: "LinkedIn",  color: "#0A66C2", Icon: Linkedin },
     TIKTOK:    { label: "TikTok",    color: "#010101", Icon: Video },
     INSTAGRAM: { label: "Instagram", color: "#E1306C", Icon: Instagram },
     FACEBOOK:  { label: "Facebook",  color: "#1877F2", Icon: Globe },
+    SOCIAL:    { label: "All Configured Channels", color: "#7C3AED", Icon: Zap },
 }
 
 // ── Status badge helper ───────────────────────────────────────────────────────
 
-function StatusPill({ status }: { status: PublishJob["status"] | ScheduledPostRow["status"] }) {
+export function StatusPill({ status }: { status: PublishJob["status"] | ScheduledPostRow["status"] }) {
     const map: Record<string, { label: string; bg: string; color: string }> = {
         PENDING:      { label: "Pending",      bg: PROD_BRAND.amberFaint,  color: PROD_BRAND.amber },
         RUNNING:      { label: "Running",      bg: PROD_BRAND.blueFaint,   color: PROD_BRAND.blue },
@@ -145,7 +144,7 @@ function QuotaBar({ used, limit }: { used: number; limit: number }) {
 
 // ── Scheduling Sync Grid ──────────────────────────────────────────────────────
 
-function SchedulingGrid({ posts, loading }: { posts: ScheduledPostRow[]; loading: boolean }) {
+export function SchedulingGrid({ posts, loading }: { posts: ScheduledPostRow[]; loading: boolean }) {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12 text-slate-400">
@@ -679,9 +678,9 @@ export function PublishTab() {
                             <Zap size={18} style={{ color: "#7C3AED" }} />
                         </div>
                         <div>
-                            <h3 className="font-extrabold text-slate-800">Buffer Multi-Channel</h3>
+                            <h3 className="font-extrabold text-slate-800">Social Media Distribution</h3>
                             <p className="text-xs text-slate-400">
-                                LinkedIn · TikTok · Instagram · Facebook (IG cross-post)
+                                Broadcast automatically across all your connected social pages.
                             </p>
                         </div>
                     </div>
@@ -689,7 +688,7 @@ export function PublishTab() {
                     {/* Profile selector */}
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Select Profiles
+                            Distribution Target
                         </label>
                         {stateLoading ? (
                             <div className="space-y-2">
@@ -804,37 +803,14 @@ export function PublishTab() {
                         }}
                     >
                         {dispatching ? (
-                            <><Loader2 size={16} className="animate-spin" /> Scheduling…</>
+                            <><Loader2 size={16} className="animate-spin" /> Publishing…</>
                         ) : (
-                            <><Calendar size={16} /> Schedule Buffer Posts</>
+                            <><Calendar size={16} /> Schedule & Publish Post</>
                         )}
                     </button>
                 </div>
             </div>
 
-            {/* ── Scheduling Sync Dashboard Grid ─────────────────────────────── */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/30 p-6">
-                <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-2xl flex items-center justify-center bg-violet-50">
-                            <Clock size={16} style={{ color: PROD_BRAND.purple }} />
-                        </div>
-                        <div>
-                            <h3 className="font-extrabold text-slate-800">Scheduling Sync Grid</h3>
-                            <p className="text-xs text-slate-400">
-                                Upcoming scheduled post releases — sorted by dispatch time
-                            </p>
-                        </div>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-100">
-                        {stateLoading ? "…" : `${state?.scheduledPosts.length ?? 0} queued`}
-                    </span>
-                </div>
-                <SchedulingGrid
-                    posts={state?.scheduledPosts ?? []}
-                    loading={stateLoading}
-                />
-            </div>
 
             {/* ── Recent Publish Jobs ─────────────────────────────────────────── */}
             <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/30 p-6">

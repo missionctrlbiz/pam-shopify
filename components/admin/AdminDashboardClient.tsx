@@ -15,6 +15,7 @@ import {
 import { ContentEditor } from "./ContentEditor"
 import Link from "next/link"
 import { ProductionPanel } from "./production/ProductionPanel"
+import { StandaloneCalendar } from "./production/StandaloneCalendar"
 
 interface DashboardStats {
     totalBuyers: number
@@ -25,7 +26,7 @@ interface DashboardStats {
 interface BuyerRow { id: string; email: string; createdAt: string }
 interface LeadRow { id: string; email: string; name: string | null; source: string; createdAt: string }
 
-type Tab = "overview" | "buyers" | "leads" | "analytics" | "content" | "production"
+type Tab = "overview" | "buyers" | "leads" | "analytics" | "content" | "production" | "calendar"
 
 const BRAND = {
     red: "#ed415b",
@@ -53,7 +54,7 @@ function AnimatedIcon({ iconName, color, size = 20, animation = "pulse" }: { ico
     )
 }
 
-const VALID_TABS: Tab[] = ["overview", "buyers", "leads", "analytics", "content", "production"]
+const VALID_TABS: Tab[] = ["overview", "buyers", "leads", "analytics", "content", "production", "calendar"]
 
 export function AdminDashboardClient({ session }: { session: any }) {
     const router = useRouter()
@@ -146,7 +147,8 @@ export function AdminDashboardClient({ session }: { session: any }) {
         { key: "leads", label: "Captured Leads", icon: Mail, iconName: "Mail" },
         { key: "analytics", label: "Platform Analytics", icon: Activity, iconName: "Activity" },
         { key: "content", label: "Site Content", icon: FileEdit, iconName: "FileEdit" },
-        { key: "production", label: "Production Calendar", icon: CalendarDays, iconName: "CalendarDays" },
+        { key: "production", label: "Production Pipeline", icon: CalendarDays, iconName: "KanbanSquare" },
+        { key: "calendar", label: "Production Calendar", icon: CalendarDays, iconName: "CalendarDays" },
     ]
 
     const statCards = [
@@ -342,7 +344,8 @@ export function AdminDashboardClient({ session }: { session: any }) {
                                             { tab: "leads" as Tab, iconName: "Mail", icon: Mail, label: "View Leads", desc: "Captured emails", color: BRAND.pink },
                                             { tab: "analytics" as Tab, iconName: "Activity", icon: Activity, label: "Analytics", desc: "Track usage", color: BRAND.purple },
                                             { tab: "content" as Tab, iconName: "FileEdit", icon: FileEdit, label: "Edit Site", desc: "Update copy", color: BRAND.red },
-                                            { tab: "production" as Tab, iconName: "CalendarDays", icon: CalendarDays, label: "Production", desc: "Content calendar", color: BRAND.purple },
+                                            { tab: "production" as Tab, iconName: "KanbanSquare", icon: CalendarDays, label: "Pipeline", desc: "Production", color: BRAND.purple },
+                                            { tab: "calendar" as Tab, iconName: "CalendarDays", icon: CalendarDays, label: "Calendar", desc: "Content calendar", color: BRAND.pink },
                                         ].map(action => (
                                             <button
                                                 key={action.tab}
@@ -531,10 +534,17 @@ export function AdminDashboardClient({ session }: { session: any }) {
                             </motion.div>
                         )}
 
-                        {/* Production Calendar Tab */}
+                        {/* Production Pipeline Tab */}
                         {activeTab === "production" && (
                             <motion.div key="production" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
                                 <ProductionPanel />
+                            </motion.div>
+                        )}
+
+                        {/* Production Calendar Tab */}
+                        {activeTab === "calendar" && (
+                            <motion.div key="calendar" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                                <StandaloneCalendar />
                             </motion.div>
                         )}
                     </AnimatePresence>
