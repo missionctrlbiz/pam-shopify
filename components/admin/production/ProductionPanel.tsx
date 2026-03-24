@@ -776,7 +776,7 @@ export function ProductionPanel() {
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 {[
                                     { view: "table" as ProdView, iconName: "Table", Icon: LayoutList, label: "View Table", desc: "Browse all entries", color: BRAND.red },
-                                    { view: "grid" as ProdView, iconName: "CalendarDays", Icon: CalendarDays, label: "Calendar Grid", desc: "Monthly visual view", color: BRAND.pink },
+                                    { view: "storybank" as ProdView, iconName: "BookOpen", Icon: BookOpen, label: "Story Bank", desc: "Manage story content", color: BRAND.pink },
                                     { view: "import" as ProdView, iconName: "Upload", Icon: Upload, label: "Import / Generate", desc: "Add new entries", color: BRAND.purple },
                                 ].map(action => (
                                     <button key={action.view} onClick={() => setView(action.view)}
@@ -896,12 +896,6 @@ export function ProductionPanel() {
                     </motion.div>
                 )}
 
-                {/* ── CALENDAR GRID ── */}
-                {view === "grid" && (
-                    <motion.div key="grid" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                        <CalendarGridView />
-                    </motion.div>
-                )}
 
                 {/* ── IMPORT / GENERATE ── */}
                 {view === "import" && (
