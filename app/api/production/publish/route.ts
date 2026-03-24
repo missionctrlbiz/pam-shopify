@@ -339,7 +339,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         // Fetch the EMAIL_HTML asset
         const { data: assetRow, error: assetErr } = await supabaseAdmin
             .from("content_assets")
-            .select("id, storage_url, metadata, asset_status")
+            .select("id, storage_url, metadata, status")
             .eq("id", cfg.assetId)
             .eq("asset_type", "EMAIL_HTML")
             .single()
@@ -347,7 +347,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         if (assetErr || !assetRow) {
             return NextResponse.json({ error: "EMAIL_HTML asset not found or not COMPLETE" }, { status: 404 })
         }
-        if (assetRow.asset_status !== "COMPLETE") {
+        if (assetRow.status !== "COMPLETE") {
             return NextResponse.json({ error: "Asset must be COMPLETE before publishing" }, { status: 422 })
         }
 
@@ -477,11 +477,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         // Fetch the asset for media URL
         const { data: assetRow } = await supabaseAdmin
             .from("content_assets")
-            .select("id, storage_url, asset_type, asset_status, metadata")
+            .select("id, storage_url, asset_type, status, metadata")
             .eq("id", cfg.assetId)
             .single()
 
-        if (!assetRow || assetRow.asset_status !== "COMPLETE") {
+        if (!assetRow || assetRow.status !== "COMPLETE") {
             return NextResponse.json({ error: "Asset not found or not COMPLETE" }, { status: 404 })
         }
 
