@@ -420,29 +420,13 @@ if ((session?.user as { role?: string })?.role !== "admin") {
 | `/api/production/calendar/[id]`         | GET    | Fetch entry + nested idea + assets + qualityGateResult                        |
 | `/api/production/calendar/[id]`         | PUT    | Update hook, cta, topic, scheduledAt                                          |
 | `/api/production/calendar/[id]/approve` | PUT    | Calls `runQualityGate()` → APPROVED or DRAFT                                  |
-| `/api/production/assets/generate`       | POST   | Creates RenderJob rows, enqueues to Cloud Tasks via `@google-cloud/tasks` SDK |
+| `/api/production/assets/generate`       | POST   | Creates RenderJob rows, dispatches to Trigger.dev tasks (`production-repurpose`, `production-carousel`, `production-video`) |
 | `/api/production/assets/[id]`           | GET    | Fetch single ContentAsset                                                     |
-| `/api/production/render-done`           | POST   | HMAC verify secret → update RenderJob + ContentAsset + calendarEntry          |
 | `/api/production/scripts/[id]`          | GET    | Fetch VideoScript                                                             |
-| `/api/production/scripts/[id]`          | PUT    | Update scriptJson, elevenLabsJobId, etc.                                      |
+| `/api/production/scripts/[id]`          | PUT    | Update scriptJson, job ID, etc.                                      |
 
-**Install Cloud Tasks SDK before building `assets/generate`:**
+**All background execution is handled by Trigger.dev.** The API route acts as a dispatcher. If `TRIGGER_SECRET_KEY` is not set, it falls back to a synchronous "inline" path for local development (which calls `lib/production/repurposeInline.ts` directly).
 
-```sh
-npm install @google-cloud/tasks
-```
-
-**`render-done` uses the same HMAC pattern as `app/api/webhooks/shopify/route.ts`:**
-
-```ts
-import { createHmac, timingSafeEqual } from "crypto";
-const sig = createHmac("sha256", process.env.RENDER_CALLBACK_SECRET!)
-  .update(rawBody)
-  .digest("hex");
-if (!timingSafeEqual(Buffer.from(sig), Buffer.from(body.secret))) {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
-```
 
 ---
 

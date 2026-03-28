@@ -2,17 +2,17 @@
  * POST /api/production/assets/generate
  *
  * Triggers asset generation for an APPROVED ProductionCalendarEntry.
- * GCP / Cloud Tasks dispatch is currently disabled during the Trigger.dev migration.
- * For now, assets run through the inline path only.
+ * Background execution is handled by Trigger.dev tasks, with an inline
+ * fallback when TRIGGER_SECRET_KEY is not configured.
  *
  * Body params:
  *   contentIdeaId — required. The ContentIdea of the approved entry.
  *
  * Worker dispatch logic (based on postType):
- *   CAROUSEL              → carousel-renderer + repurpose-worker
- *   VIDEO / REEL          → video-renderer + repurpose-worker
- *   TEXT_POST / STORY     → repurpose-worker only
- *   EMAIL_LESSON          → repurpose-worker only
+ *   CAROUSEL              → production-carousel task + production-repurpose task
+ *   VIDEO / REEL          → production-video task   + production-repurpose task
+ *   TEXT_POST / STORY     → production-repurpose task only
+ *   EMAIL_LESSON          → production-repurpose task only
  *
  * Protected: admin only.
  */
@@ -39,53 +39,7 @@ export const maxDuration = 60
 export const dynamic = "force-dynamic"
 
 // ---------------------------------------------------------------------------
-// GCP / Cloud Tasks integration is intentionally commented out while we move
-// background execution over to Trigger.dev.
-// ---------------------------------------------------------------------------
-// async function getTasksClient() {
-//     const { CloudTasksClient } = await import("@google-cloud/tasks")
-//     const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
-//     if (b64) {
-//         const credentials = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"))
-//         return new CloudTasksClient({ credentials })
-//     }
-//     return new CloudTasksClient()
-// }
-//
-// async function enqueueTask(workerUrl: string, payload: Record<string, unknown>): Promise<string> {
-//     const client = await getTasksClient()
-//     const projectId = process.env.GCP_PROJECT_ID!.trim()
-//     const location = (process.env.GCP_LOCATION ?? "us-central1").trim()
-//     const queue = (process.env.CLOUD_TASKS_QUEUE ?? "pam-render-queue").trim()
-//     const saEmail = process.env.WORKER_SA_EMAIL!.trim()
-//     const parent = client.queuePath(projectId, location, queue)
-//     const [task] = await client.createTask({
-//         parent,
-//         task: {
-//             httpRequest: {
-//                 httpMethod: "POST",
-//                 url: workerUrl,
-//                 body: Buffer.from(JSON.stringify(payload)),
-//                 headers: { "Content-Type": "application/json" },
-//                 oidcToken: { serviceAccountEmail: saEmail, audience: workerUrl },
-//             },
-//         },
-//     })
-//     return task.name ?? ""
-// }
-
-// TODO (Railway): uncomment and use instead of gcpConfigured=false:
-// async function dispatchToWorker(payload: Record<string, unknown>): Promise<void> {
-//     const res = await fetch(process.env.WORKER_SERVER_URL!, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json", "X-Worker-Secret": process.env.WORKER_AUTH_SECRET! },
-//         body: JSON.stringify(payload),
-//     })
-//     if (!res.ok) throw new Error(`Worker rejected job: ${res.status}`)
-// }
-
-// ---------------------------------------------------------------------------
-// Asset type map per worker
+// Asset type map per task
 // ---------------------------------------------------------------------------
 
 const REPURPOSE_ASSET_TYPES: Array<{ assetType: AssetType; platform: Platform }> = [
@@ -95,16 +49,6 @@ const REPURPOSE_ASSET_TYPES: Array<{ assetType: AssetType; platform: Platform }>
     { assetType: "TEXT_POST", platform: "LINKEDIN" },
     { assetType: "EMAIL_HTML", platform: "EMAIL" },
 ]
-
-// ---------------------------------------------------------------------------
-// Worker URL env mappings are commented out while external GCP workers remain
-// disabled for the Trigger.dev migration.
-// ---------------------------------------------------------------------------
-// const WORKER_URLS: Record<string, string | undefined> = {
-//     CAROUSEL_RENDERER_URL: process.env.CAROUSEL_RENDERER_URL,
-//     REPURPOSE_WORKER_URL: process.env.REPURPOSE_WORKER_URL,
-//     VIDEO_RENDERER_URL: process.env.VIDEO_RENDERER_URL,
-// }
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -183,12 +127,6 @@ export async function POST(req: NextRequest) {
 
         const master = idea.masterJson as Record<string, unknown>
         const entryDateIso = new Date(entry.entryDate).toISOString()
-
-        const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "localhost:3000"
-        const protocol = host.includes("localhost") ? "http" : "https"
-        const baseUrl = `${protocol}://${host}`
-        // const callbackUrl = `${baseUrl}/api/production/render-done`
-        // const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
         const triggerConfigured = Boolean(process.env.TRIGGER_SECRET_KEY)
         const jobs: Array<{ jobType: RenderJobType; taskId: string; renderJobId: string }> = []

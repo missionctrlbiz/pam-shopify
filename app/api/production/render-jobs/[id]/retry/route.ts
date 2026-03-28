@@ -2,7 +2,7 @@
  * POST /api/production/render-jobs/[id]/retry
  *
  * Re-queues a FAILED RenderJob using its stored inputPayload.
- * GCP re-dispatch is currently disabled during the Trigger.dev migration.
+ * Dispatches via Trigger.dev tasks, with an inline fallback.
  * Marks any FAILED ContentAsset rows linked to the old job back to PENDING.
  *
  * Protected: admin only.
@@ -35,18 +35,6 @@ type ExistingAsset = {
 // Inline Gemini call can take up to ~20 s; match the generate route timeout
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
-// GCP / Cloud Tasks integration is intentionally commented out while we move
-// retries over to Trigger.dev.
-// ---------------------------------------------------------------------------
-// async function getTasksClient() {
-//     const { CloudTasksClient } = await import("@google-cloud/tasks")
-//     const b64 = process.env.GCP_SERVICE_ACCOUNT_JSON_B64?.trim()
-//     if (b64) {
-//         const credentials = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"))
-//         return new CloudTasksClient({ credentials })
-//     }
-//     return new CloudTasksClient()
-// }
 
 export async function POST(
     _req: NextRequest,
@@ -58,14 +46,6 @@ export async function POST(
     }
 
     const { id: jobId } = await params
-
-    // External worker URL mappings are disabled while GCP workers are parked.
-    // const WORKER_URLS: Record<string, string | undefined> = {
-    //     CAROUSEL: process.env.CAROUSEL_RENDERER_URL?.trim(),
-    //     VIDEO: process.env.VIDEO_RENDERER_URL?.trim(),
-    //     AUDIO: process.env.VIDEO_RENDERER_URL?.trim(),
-    //     REPURPOSE: process.env.REPURPOSE_WORKER_URL?.trim(),
-    // }
 
     // ------------------------------------------------------------------
     // Fetch original job
@@ -107,16 +87,9 @@ export async function POST(
     }
 
 
-
     // Trigger.dev when configured, otherwise inline fallback.
     const storedPayload = (original.inputPayload ?? {}) as Record<string, unknown>
     const triggerConfigured = Boolean(process.env.TRIGGER_SECRET_KEY)
-
-    const host = _req.headers.get("x-forwarded-host") || _req.headers.get("host") || "localhost:3000"
-    const protocol = host.includes("localhost") ? "http" : "https"
-    const baseUrl = `${protocol}://${host}`
-    // const callbackUrl = `${baseUrl}/api/production/render-done`
-    // const callbackSecret = (process.env.RENDER_CALLBACK_SECRET ?? "").trim()
 
     // ------------------------------------------------------------------
     // Create new RenderJob + asset placeholders (both paths need this)

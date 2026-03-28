@@ -1046,13 +1046,9 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                 </div>
                             )}
 
-                            {/*
-                              GCP Cloud Run diagnostics are parked during the Trigger.dev migration.
-                              Restore the external log link if we bring Cloud Run back later.
-                            */}
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                                <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0 }}>Worker Log:</span>
-                                <span style={{ fontSize: 10, color: PROD_BRAND.gray }}>External worker logs temporarily disabled</span>
+                                <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0 }}>Worker:</span>
+                                <span style={{ fontSize: 10, color: PROD_BRAND.gray }}>Trigger.dev background task</span>
                             </div>
                         </div>
                     </div>

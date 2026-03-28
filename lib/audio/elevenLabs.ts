@@ -1,9 +1,5 @@
 /**
- * Shared ElevenLabs TTS utilities for Next.js app routes and inline workers.
- *
- * The video-renderer Cloud Run worker has its own copy of these utilities
- * (workers/video-renderer/src/elevenLabs.ts) because that build is a
- * separate Node.js service excluded from the Next.js TypeScript project.
+ * Shared ElevenLabs TTS utilities for Next.js app routes and Trigger.dev tasks.
  */
 
 const ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/text-to-speech"

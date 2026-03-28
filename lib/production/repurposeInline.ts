@@ -1,6 +1,6 @@
 /**
  * Inline generation — runs all Gemini jobs directly inside the
- * Next.js serverless function. No Cloud Tasks or Cloud Run required.
+ * Runs as Trigger.dev background tasks, with an inline fallback for local dev.
  *
  * Covers:
  *   REPURPOSE  → IG / FB / TikTok / LinkedIn / Email captions

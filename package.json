@@ -12,7 +12,6 @@
     "trigger:deploy:staging": "trigger.dev deploy --env staging"
   },
   "dependencies": {
-    "@google-cloud/tasks": "^6.2.1",
     "@google/genai": "^1.45.0",
     "@remotion/renderer": "4.0.438",
     "@resvg/resvg-js": "^2.6.2",
