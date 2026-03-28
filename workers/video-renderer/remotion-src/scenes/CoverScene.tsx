@@ -76,29 +76,17 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
     return (
         <AbsoluteFill
             style={{
-                background: "linear-gradient(160deg, #0F172A 0%, #1E293B 40%, #1E3A5F 100%)",
+                background: COLORS.navy,
                 opacity: exitFade,
             }}
         >
-            {/* Decorative floating orbs for depth */}
-            <div style={{
-                position: "absolute", top: 120, right: 60,
-                width: 280, height: 280, borderRadius: "50%",
-                background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
-                transform: `translateY(${Math.sin(orbFloat * Math.PI / 180) * 8}px)`,
-            }} />
-            <div style={{
-                position: "absolute", bottom: 200, left: -40,
-                width: 200, height: 200, borderRadius: "50%",
-                background: "radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)",
-                transform: `translateY(${Math.cos(orbFloat * Math.PI / 180) * 6}px)`,
-            }} />
+            {/* Removed generic decorative orbs for stricter clinical whiteboard aesthetic */}
 
             {/* Top accent line */}
             <div style={{
                 position: "absolute", top: 0, left: 0, right: 0,
                 height: 6,
-                background: "linear-gradient(90deg, #3B82F6, #7C3AED, #C026D3)",
+                background: `linear-gradient(90deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo})`,
             }} />
 
             {/* PAM watermark */}
@@ -131,13 +119,13 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                 >
                     <div style={{
                         width: 4, height: 40,
-                        background: "linear-gradient(180deg, #3B82F6, #7C3AED)",
+                        background: `linear-gradient(180deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo})`,
                         borderRadius: 3, flexShrink: 0,
                     }} />
                     <div style={{
                         fontFamily: FONTS.body,
                         fontWeight: 600, fontSize: 20,
-                        color: "#60A5FA",
+                        color: COLORS.white,
                         letterSpacing: "0.22em",
                         textTransform: "uppercase",
                     }}>
@@ -152,17 +140,17 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                         transform: `translateY(${pillTranslate}px)`,
                         display: "inline-flex",
                         alignItems: "center",
-                        background: "linear-gradient(135deg, #3B82F6, #2563EB)",
+                        background: COLORS.white,
                         borderRadius: 10,
                         padding: "12px 28px",
                         marginBottom: 44,
-                        boxShadow: "0 4px 20px rgba(59,130,246,0.3)",
+                        boxShadow: `0 4px 20px rgba(168,85,247,0.3)`,
                     }}
                 >
                     <span style={{
                         fontFamily: FONTS.body,
                         fontWeight: 700, fontSize: 22,
-                        color: "#FFFFFF",
+                        color: COLORS.navy,
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
                     }}>
@@ -179,12 +167,12 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                         <AnimatedText
                             key={i}
                             text={line}
-                            fontSize={72}
+                            fontSize={88}
                             fontWeight={900}
                             fontFamily={FONTS.heading}
                             color="#FFFFFF"
                             delayFrames={10 + i * 9}
-                            lineHeight={1.12}
+                            lineHeight={1.1}
                             textAlign="left"
                         />
                     ))}
@@ -194,7 +182,7 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                 <div style={{
                     height: 4,
                     width: `${dividerWidth}%`,
-                    background: "linear-gradient(90deg, #3B82F6, #7C3AED, transparent)",
+                    background: `linear-gradient(90deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo}, transparent)`,
                     borderRadius: 2,
                     marginBottom: 36,
                 }} />
@@ -204,9 +192,9 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                     <AnimatedText
                         text={textOverlay}
                         fontSize={32}
-                        fontWeight={600}
+                        fontWeight={700}
                         fontFamily={FONTS.body}
-                        color="#93C5FD"
+                        color={COLORS.white}
                         delayFrames={36}
                         lineHeight={1.35}
                         textAlign="left"
@@ -244,7 +232,7 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
             <div style={{
                 position: "absolute", bottom: 28, left: 72, right: 72,
                 height: 2,
-                background: "linear-gradient(90deg, transparent, rgba(59,130,246,0.4), transparent)",
+                background: `linear-gradient(90deg, transparent, ${COLORS.purpleTo}, transparent)`,
                 borderRadius: 2,
                 opacity: interpolate(dividerSpring, [0, 1], [0, 0.6]),
             }} />

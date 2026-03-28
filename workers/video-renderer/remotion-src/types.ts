@@ -89,13 +89,13 @@ export const VIDEO_HEIGHT = 1920
 
 export const COLORS = {
     white: "#FFFFFF",
-    navy: "#1F2A44",
+    navy: "#0F172A",
     blue: "#3B82F6",
     blueLight: "#60A5FA",
-    purpleFrom: "#7C3AED",
-    purpleTo: "#C026D3",
-    gray: "#6B7280",
-    grayLight: "#F3F4F6",
+    purpleFrom: "#A855F7",
+    purpleTo: "#6D28D9",
+    gray: "#475569",
+    grayLight: "#F8FAFC",
 } as const
 
 export const FONTS = {

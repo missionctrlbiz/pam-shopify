@@ -83,49 +83,52 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
 
     const mainLines = splitIntoLines(mainText, 26)
 
-    // Alternate accent colors per point for visual variety
+    // Alternate accent colors
     const accentColors = [
-        { primary: "#3B82F6", glow: "rgba(59,130,246,0.15)" },   // Blue
-        { primary: "#7C3AED", glow: "rgba(124,58,237,0.15)" },   // Purple
-        { primary: "#06B6D4", glow: "rgba(6,182,212,0.15)" },    // Cyan
-        { primary: "#F59E0B", glow: "rgba(245,158,11,0.15)" },   // Amber
-        { primary: "#10B981", glow: "rgba(16,185,129,0.15)" },   // Emerald
-        { primary: "#EC4899", glow: "rgba(236,72,153,0.15)" },   // Pink
+        { primary: COLORS.purpleFrom, glow: "rgba(168,85,247,0.15)" },
+        { primary: COLORS.purpleTo, glow: "rgba(109,40,217,0.15)" },
     ]
     const accent = accentColors[pointIndex % accentColors.length]
+
+    // LAYOUT variations
+    const layoutVariant = pointIndex % 3; // 0: Spotlight Card, 1: Flush Edge + Arrow, 2: Split Screen SVG
 
     return (
         <AbsoluteFill
             style={{
-                background: "linear-gradient(170deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)",
+                background: COLORS.white,
                 opacity,
             }}
         >
-            {/* Decorative floating orb */}
-            <div style={{
-                position: "absolute", top: 300, right: 40,
-                width: 240, height: 240, borderRadius: "50%",
-                background: `radial-gradient(circle, ${accent.glow} 0%, transparent 70%)`,
-                transform: `translateY(${Math.sin(orbFloat * Math.PI / 180) * 10}px)`,
-            }} />
+            {/* Layout 2: Massive Split Screen Icon Background */}
+            {layoutVariant === 2 && (
+                <div style={{
+                    position: "absolute", top: "15%", right: -120,
+                    opacity: 0.04, transform: `scale(5) rotate(-15deg)`
+                }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 24 24" fill="none" stroke={COLORS.navy} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
+                </div>
+            )}
 
             {/* Top accent line */}
             <div style={{
                 position: "absolute", top: 0, left: 0, right: 0,
                 height: 4,
-                background: `linear-gradient(90deg, ${accent.primary}, transparent)`,
+                background: `linear-gradient(90deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo}, transparent)`,
             }} />
 
             {/* PAM watermark */}
             <PAMLogo variant="watermark" />
 
-            {/* LEFT GUTTER — accent bar */}
-            <div style={{
-                position: "absolute", left: 0, top: "20%",
-                width: 6, height: `${gutterHeight * 0.6}%`,
-                background: `linear-gradient(180deg, ${accent.primary}, transparent)`,
-                borderRadius: "0 3px 3px 0",
-            }} />
+            {/* LEFT GUTTER — accent bar (Only for Layout 0 and 2) */}
+            {layoutVariant !== 1 && (
+                <div style={{
+                    position: "absolute", left: 0, top: "20%",
+                    width: 6, height: `${gutterHeight * 0.6}%`,
+                    background: `linear-gradient(180deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo})`,
+                    borderRadius: "0 3px 3px 0",
+                }} />
+            )}
 
             {/* Main content area */}
             <div style={{
@@ -140,14 +143,13 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                     opacity: numOpacity,
                     transform: `translateX(${numTranslate}px)`,
                 }}>
-                    {/* Large numeral with glow */}
+                    {/* Large numeral */}
                     <div style={{
                         fontFamily: FONTS.heading,
-                        fontWeight: 900, fontSize: 110,
-                        color: accent.primary,
+                        fontWeight: 900, fontSize: layoutVariant === 1 ? 140 : 110,
+                        color: COLORS.purpleFrom,
                         lineHeight: 0.9, letterSpacing: "-0.04em",
-                        minWidth: 90,
-                        textShadow: `0 0 40px ${accent.glow}`,
+                        minWidth: layoutVariant === 1 ? 110 : 90,
                     }}>
                         {String(pointIndex + 1).padStart(2, "0")}
                     </div>
@@ -157,7 +159,7 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                         <div style={{
                             fontFamily: FONTS.body,
                             fontWeight: 600, fontSize: 16,
-                            color: "rgba(255,255,255,0.5)",
+                            color: COLORS.gray,
                             letterSpacing: "0.22em",
                             textTransform: "uppercase",
                         }}>
@@ -165,25 +167,30 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                         </div>
                         <div style={{
                             height: 2, width: 120,
-                            background: `linear-gradient(90deg, ${accent.primary}, transparent)`,
+                            background: `linear-gradient(90deg, ${COLORS.purpleFrom}, transparent)`,
                             borderRadius: 2,
                         }} />
                     </div>
                 </div>
 
-                {/* Content Card — frosted glass effect */}
+                {/* Content Container (Card vs Flush edge) */}
                 <div style={{
-                    background: "rgba(255,255,255,0.06)",
-                    backdropFilter: "blur(12px)",
-                    borderRadius: 20,
-                    padding: "36px 40px",
-                    border: `1px solid rgba(255,255,255,0.1)`,
-                    boxShadow: `0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)`,
+                    background: layoutVariant === 0 ? COLORS.white : "transparent",
+                    borderRadius: layoutVariant === 0 ? 20 : 0,
+                    padding: layoutVariant === 0 ? "36px 40px" : layoutVariant === 1 ? "20px 0 20px 40px" : "10px 0",
+                    border: layoutVariant === 0 ? `1px solid ${COLORS.grayLight}` : "none",
+                    borderLeft: layoutVariant === 1 ? `12px solid ${COLORS.purpleTo}` : "none",
+                    boxShadow: layoutVariant === 0 ? `0 8px 32px rgba(15, 23, 42, 0.08)` : "none",
                     opacity: cardOpacity,
                     transform: `translateY(${cardTranslate}px)`,
                 }}>
                     {/* Main teaching text */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, position: "relative" }}>
+                        {layoutVariant === 1 && (
+                            <div style={{ position: "absolute", left: -90, top: 10, animation: "bounce 2s infinite" }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={COLORS.purpleTo} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                            </div>
+                        )}
                         {mainLines.map((line, i) => (
                             <AnimatedText
                                 key={i}
@@ -191,7 +198,7 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                                 fontSize={56}
                                 fontWeight={800}
                                 fontFamily={FONTS.heading}
-                                color="#FFFFFF"
+                                color={COLORS.navy}
                                 delayFrames={10 + i * 7}
                                 lineHeight={1.2}
                                 textAlign="left"
@@ -203,7 +210,7 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                     {isBulletList && bulletLines.length > 0 && (
                         <div style={{
                             display: "flex", flexDirection: "column", gap: 16,
-                            borderLeft: `3px solid ${accent.primary}`,
+                            borderLeft: `3px solid ${COLORS.purpleTo}`,
                             paddingLeft: 28, marginTop: 24,
                         }}>
                             {bulletLines.map((bullet, i) => (
@@ -213,7 +220,7 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                                     fontSize={34}
                                     fontWeight={400}
                                     fontFamily={FONTS.body}
-                                    color="rgba(255,255,255,0.8)"
+                                    color={COLORS.gray}
                                     delayFrames={22 + i * 9}
                                     lineHeight={1.45}
                                     textAlign="left"
@@ -245,7 +252,7 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                     position: "absolute", bottom: 52, left: 72, right: 120,
                     fontFamily: FONTS.body,
                     fontSize: 16, fontWeight: 400,
-                    color: "rgba(255,255,255,0.35)",
+                    color: COLORS.gray,
                     letterSpacing: "0.04em",
                     overflow: "hidden", textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -281,11 +288,11 @@ const SceneCounter: React.FC<{ current: number; total: number; accent: string }>
             </div>
             <div style={{
                 width: 24, height: 2,
-                background: "rgba(255,255,255,0.3)", borderRadius: 1,
+                background: COLORS.grayLight, borderRadius: 1,
             }} />
             <div style={{
                 fontFamily: FONTS.heading, fontWeight: 600, fontSize: 18,
-                color: "rgba(255,255,255,0.4)",
+                color: COLORS.gray,
             }}>
                 {String(total).padStart(2, "0")}
             </div>

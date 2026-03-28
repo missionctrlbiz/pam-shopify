@@ -30,13 +30,13 @@ const VIDEO_WIDTH = 1080;
 const VIDEO_HEIGHT = 1920;
 const COLORS = {
   white: "#FFFFFF",
-  navy: "#1F2A44",
+  navy: "#0F172A",
   blue: "#3B82F6",
   blueLight: "#60A5FA",
-  purpleFrom: "#7C3AED",
-  purpleTo: "#C026D3",
-  gray: "#6B7280",
-  grayLight: "#F3F4F6"
+  purpleFrom: "#A855F7",
+  purpleTo: "#6D28D9",
+  gray: "#475569",
+  grayLight: "#F8FAFC"
 };
 const FONTS = {
   heading: "'Montserrat', sans-serif",
@@ -231,7 +231,6 @@ const AnimatedLines = ({
 
 
 
-
 const PAMLogo = ({
   variant = "watermark",
   opacity
@@ -262,44 +261,13 @@ const PAMLogo = ({
         }
       },
       /* @__PURE__ */ react.createElement(
-        "div",
+        esm.Img,
         {
+          src: (0,esm.staticFile)("favicon.webp"),
           style: {
-            fontFamily: FONTS.heading,
-            fontWeight: 900,
-            fontSize: 52,
-            color: COLORS.navy,
-            letterSpacing: "0.08em",
-            lineHeight: 1
-          }
-        },
-        "PAM\u2122"
-      ),
-      /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            fontFamily: FONTS.body,
-            fontWeight: 600,
-            fontSize: 14,
-            color: COLORS.navy,
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            marginTop: 4,
-            lineHeight: 1
-          }
-        },
-        "Psychiatric Assessment Mastery"
-      ),
-      /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            width: "100%",
-            height: 2,
-            background: `linear-gradient(90deg, transparent, ${COLORS.blue})`,
-            marginTop: 6,
-            borderRadius: 2
+            width: 72,
+            height: 72,
+            objectFit: "contain"
           }
         }
       )
@@ -317,44 +285,15 @@ const PAMLogo = ({
         }
       },
       /* @__PURE__ */ react.createElement(
-        "div",
+        esm.Img,
         {
+          src: (0,esm.staticFile)("logo.webp"),
           style: {
-            width: 5,
-            height: 44,
-            background: `linear-gradient(180deg, ${COLORS.blue}, ${COLORS.blueLight})`,
-            borderRadius: 3,
-            flexShrink: 0
+            height: 48,
+            objectFit: "contain"
           }
         }
-      ),
-      /* @__PURE__ */ react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 2 } }, /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            fontFamily: FONTS.heading,
-            fontWeight: 900,
-            fontSize: 26,
-            color: COLORS.navy,
-            letterSpacing: "0.06em",
-            lineHeight: 1
-          }
-        },
-        "PAM\u2122"
-      ), /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            fontFamily: FONTS.body,
-            fontWeight: 600,
-            fontSize: 11,
-            color: COLORS.gray,
-            letterSpacing: "0.2em",
-            textTransform: "uppercase"
-          }
-        },
-        "Psychiatric Assessment Mastery"
-      ))
+      )
     );
   }
   return /* @__PURE__ */ react.createElement(
@@ -369,43 +308,14 @@ const PAMLogo = ({
       }
     },
     /* @__PURE__ */ react.createElement(
-      "div",
+      esm.Img,
       {
+        src: (0,esm.staticFile)("logo.webp"),
         style: {
-          width: 60,
-          height: 2,
-          background: `linear-gradient(90deg, ${COLORS.blue}, ${COLORS.blueLight})`,
-          borderRadius: 2,
-          marginBottom: 10
+          height: 80,
+          objectFit: "contain"
         }
       }
-    ),
-    /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          fontFamily: FONTS.heading,
-          fontWeight: 900,
-          fontSize: 36,
-          color: COLORS.navy,
-          letterSpacing: "0.1em"
-        }
-      },
-      "PAM\u2122"
-    ),
-    /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          fontFamily: FONTS.body,
-          fontWeight: 400,
-          fontSize: 16,
-          color: COLORS.gray,
-          letterSpacing: "0.2em",
-          textTransform: "uppercase"
-        }
-      },
-      "Psychiatric Assessment Mastery"
     )
   );
 };
@@ -458,37 +368,17 @@ const CoverScene = ({
     esm.AbsoluteFill,
     {
       style: {
-        background: "linear-gradient(160deg, #0F172A 0%, #1E293B 40%, #1E3A5F 100%)",
+        background: COLORS.navy,
         opacity: exitFade
       }
     },
-    /* @__PURE__ */ react.createElement("div", { style: {
-      position: "absolute",
-      top: 120,
-      right: 60,
-      width: 280,
-      height: 280,
-      borderRadius: "50%",
-      background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
-      transform: `translateY(${Math.sin(orbFloat * Math.PI / 180) * 8}px)`
-    } }),
-    /* @__PURE__ */ react.createElement("div", { style: {
-      position: "absolute",
-      bottom: 200,
-      left: -40,
-      width: 200,
-      height: 200,
-      borderRadius: "50%",
-      background: "radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)",
-      transform: `translateY(${Math.cos(orbFloat * Math.PI / 180) * 6}px)`
-    } }),
     /* @__PURE__ */ react.createElement("div", { style: {
       position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       height: 6,
-      background: "linear-gradient(90deg, #3B82F6, #7C3AED, #C026D3)"
+      background: `linear-gradient(90deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo})`
     } }),
     /* @__PURE__ */ react.createElement(PAMLogo, { variant: "watermark" }),
     /* @__PURE__ */ react.createElement(
@@ -522,7 +412,7 @@ const CoverScene = ({
         /* @__PURE__ */ react.createElement("div", { style: {
           width: 4,
           height: 40,
-          background: "linear-gradient(180deg, #3B82F6, #7C3AED)",
+          background: `linear-gradient(180deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo})`,
           borderRadius: 3,
           flexShrink: 0
         } }),
@@ -530,7 +420,7 @@ const CoverScene = ({
           fontFamily: FONTS.body,
           fontWeight: 600,
           fontSize: 20,
-          color: "#60A5FA",
+          color: COLORS.white,
           letterSpacing: "0.22em",
           textTransform: "uppercase"
         } }, "Psychiatric Assessment Mastery")
@@ -543,18 +433,18 @@ const CoverScene = ({
             transform: `translateY(${pillTranslate}px)`,
             display: "inline-flex",
             alignItems: "center",
-            background: "linear-gradient(135deg, #3B82F6, #2563EB)",
+            background: COLORS.white,
             borderRadius: 10,
             padding: "12px 28px",
             marginBottom: 44,
-            boxShadow: "0 4px 20px rgba(59,130,246,0.3)"
+            boxShadow: `0 4px 20px rgba(168,85,247,0.3)`
           }
         },
         /* @__PURE__ */ react.createElement("span", { style: {
           fontFamily: FONTS.body,
           fontWeight: 700,
           fontSize: 22,
-          color: "#FFFFFF",
+          color: COLORS.navy,
           letterSpacing: "0.08em",
           textTransform: "uppercase"
         } }, topic)
@@ -569,19 +459,19 @@ const CoverScene = ({
         {
           key: i,
           text: line,
-          fontSize: 72,
+          fontSize: 88,
           fontWeight: 900,
           fontFamily: FONTS.heading,
           color: "#FFFFFF",
           delayFrames: 10 + i * 9,
-          lineHeight: 1.12,
+          lineHeight: 1.1,
           textAlign: "left"
         }
       ))),
       /* @__PURE__ */ react.createElement("div", { style: {
         height: 4,
         width: `${dividerWidth}%`,
-        background: "linear-gradient(90deg, #3B82F6, #7C3AED, transparent)",
+        background: `linear-gradient(90deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo}, transparent)`,
         borderRadius: 2,
         marginBottom: 36
       } }),
@@ -590,9 +480,9 @@ const CoverScene = ({
         {
           text: textOverlay,
           fontSize: 32,
-          fontWeight: 600,
+          fontWeight: 700,
           fontFamily: FONTS.body,
-          color: "#93C5FD",
+          color: COLORS.white,
           delayFrames: 36,
           lineHeight: 1.35,
           textAlign: "left",
@@ -629,7 +519,7 @@ const CoverScene = ({
       left: 72,
       right: 72,
       height: 2,
-      background: "linear-gradient(90deg, transparent, rgba(59,130,246,0.4), transparent)",
+      background: `linear-gradient(90deg, transparent, ${COLORS.purpleTo}, transparent)`,
       borderRadius: 2,
       opacity: (0,esm.interpolate)(dividerSpring, [0, 1], [0, 0.6])
     } })
@@ -707,54 +597,42 @@ const TeachingScene = ({
   }
   const mainLines = TeachingScene_splitIntoLines(mainText, 26);
   const accentColors = [
-    { primary: "#3B82F6", glow: "rgba(59,130,246,0.15)" },
-    // Blue
-    { primary: "#7C3AED", glow: "rgba(124,58,237,0.15)" },
-    // Purple
-    { primary: "#06B6D4", glow: "rgba(6,182,212,0.15)" },
-    // Cyan
-    { primary: "#F59E0B", glow: "rgba(245,158,11,0.15)" },
-    // Amber
-    { primary: "#10B981", glow: "rgba(16,185,129,0.15)" },
-    // Emerald
-    { primary: "#EC4899", glow: "rgba(236,72,153,0.15)" }
-    // Pink
+    { primary: COLORS.purpleFrom, glow: "rgba(168,85,247,0.15)" },
+    { primary: COLORS.purpleTo, glow: "rgba(109,40,217,0.15)" }
   ];
   const accent = accentColors[pointIndex % accentColors.length];
+  const layoutVariant = pointIndex % 3;
   return /* @__PURE__ */ react.createElement(
     esm.AbsoluteFill,
     {
       style: {
-        background: "linear-gradient(170deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)",
+        background: COLORS.white,
         opacity
       }
     },
-    /* @__PURE__ */ react.createElement("div", { style: {
+    layoutVariant === 2 && /* @__PURE__ */ react.createElement("div", { style: {
       position: "absolute",
-      top: 300,
-      right: 40,
-      width: 240,
-      height: 240,
-      borderRadius: "50%",
-      background: `radial-gradient(circle, ${accent.glow} 0%, transparent 70%)`,
-      transform: `translateY(${Math.sin(orbFloat * Math.PI / 180) * 10}px)`
-    } }),
+      top: "15%",
+      right: -120,
+      opacity: 0.04,
+      transform: `scale(5) rotate(-15deg)`
+    } }, /* @__PURE__ */ react.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "240", height: "240", viewBox: "0 0 24 24", fill: "none", stroke: COLORS.navy, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ react.createElement("path", { d: "M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" }), /* @__PURE__ */ react.createElement("path", { d: "M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" }), /* @__PURE__ */ react.createElement("circle", { cx: "20", cy: "10", r: "2" }))),
     /* @__PURE__ */ react.createElement("div", { style: {
       position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       height: 4,
-      background: `linear-gradient(90deg, ${accent.primary}, transparent)`
+      background: `linear-gradient(90deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo}, transparent)`
     } }),
     /* @__PURE__ */ react.createElement(PAMLogo, { variant: "watermark" }),
-    /* @__PURE__ */ react.createElement("div", { style: {
+    layoutVariant !== 1 && /* @__PURE__ */ react.createElement("div", { style: {
       position: "absolute",
       left: 0,
       top: "20%",
       width: 6,
       height: `${gutterHeight * 0.6}%`,
-      background: `linear-gradient(180deg, ${accent.primary}, transparent)`,
+      background: `linear-gradient(180deg, ${COLORS.purpleFrom}, ${COLORS.purpleTo})`,
       borderRadius: "0 3px 3px 0"
     } }),
     /* @__PURE__ */ react.createElement("div", { style: {
@@ -777,34 +655,33 @@ const TeachingScene = ({
     } }, /* @__PURE__ */ react.createElement("div", { style: {
       fontFamily: FONTS.heading,
       fontWeight: 900,
-      fontSize: 110,
-      color: accent.primary,
+      fontSize: layoutVariant === 1 ? 140 : 110,
+      color: COLORS.purpleFrom,
       lineHeight: 0.9,
       letterSpacing: "-0.04em",
-      minWidth: 90,
-      textShadow: `0 0 40px ${accent.glow}`
+      minWidth: layoutVariant === 1 ? 110 : 90
     } }, String(pointIndex + 1).padStart(2, "0")), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, paddingBottom: 8 } }, /* @__PURE__ */ react.createElement("div", { style: {
       fontFamily: FONTS.body,
       fontWeight: 600,
       fontSize: 16,
-      color: "rgba(255,255,255,0.5)",
+      color: COLORS.gray,
       letterSpacing: "0.22em",
       textTransform: "uppercase"
     } }, "Clinical Point"), /* @__PURE__ */ react.createElement("div", { style: {
       height: 2,
       width: 120,
-      background: `linear-gradient(90deg, ${accent.primary}, transparent)`,
+      background: `linear-gradient(90deg, ${COLORS.purpleFrom}, transparent)`,
       borderRadius: 2
     } }))), /* @__PURE__ */ react.createElement("div", { style: {
-      background: "rgba(255,255,255,0.06)",
-      backdropFilter: "blur(12px)",
-      borderRadius: 20,
-      padding: "36px 40px",
-      border: `1px solid rgba(255,255,255,0.1)`,
-      boxShadow: `0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)`,
+      background: layoutVariant === 0 ? COLORS.white : "transparent",
+      borderRadius: layoutVariant === 0 ? 20 : 0,
+      padding: layoutVariant === 0 ? "36px 40px" : layoutVariant === 1 ? "20px 0 20px 40px" : "10px 0",
+      border: layoutVariant === 0 ? `1px solid ${COLORS.grayLight}` : "none",
+      borderLeft: layoutVariant === 1 ? `12px solid ${COLORS.purpleTo}` : "none",
+      boxShadow: layoutVariant === 0 ? `0 8px 32px rgba(15, 23, 42, 0.08)` : "none",
       opacity: cardOpacity,
       transform: `translateY(${cardTranslate}px)`
-    } }, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, mainLines.map((line, i) => /* @__PURE__ */ react.createElement(
+    } }, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, position: "relative" } }, layoutVariant === 1 && /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: -90, top: 10, animation: "bounce 2s infinite" } }, /* @__PURE__ */ react.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "48", height: "48", viewBox: "0 0 24 24", fill: "none", stroke: COLORS.purpleTo, strokeWidth: "3", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ react.createElement("path", { d: "M5 12h14" }), /* @__PURE__ */ react.createElement("path", { d: "m12 5 7 7-7 7" }))), mainLines.map((line, i) => /* @__PURE__ */ react.createElement(
       AnimatedText,
       {
         key: i,
@@ -812,7 +689,7 @@ const TeachingScene = ({
         fontSize: 56,
         fontWeight: 800,
         fontFamily: FONTS.heading,
-        color: "#FFFFFF",
+        color: COLORS.navy,
         delayFrames: 10 + i * 7,
         lineHeight: 1.2,
         textAlign: "left"
@@ -821,7 +698,7 @@ const TeachingScene = ({
       display: "flex",
       flexDirection: "column",
       gap: 16,
-      borderLeft: `3px solid ${accent.primary}`,
+      borderLeft: `3px solid ${COLORS.purpleTo}`,
       paddingLeft: 28,
       marginTop: 24
     } }, bulletLines.map((bullet, i) => /* @__PURE__ */ react.createElement(
@@ -832,7 +709,7 @@ const TeachingScene = ({
         fontSize: 34,
         fontWeight: 400,
         fontFamily: FONTS.body,
-        color: "rgba(255,255,255,0.8)",
+        color: COLORS.gray,
         delayFrames: 22 + i * 9,
         lineHeight: 1.45,
         textAlign: "left"
@@ -856,7 +733,7 @@ const TeachingScene = ({
       fontFamily: FONTS.body,
       fontSize: 16,
       fontWeight: 400,
-      color: "rgba(255,255,255,0.35)",
+      color: COLORS.gray,
       letterSpacing: "0.04em",
       overflow: "hidden",
       textOverflow: "ellipsis",
@@ -890,13 +767,13 @@ const SceneCounter = ({ current, total, accent }) => {
   } }, String(current).padStart(2, "0")), /* @__PURE__ */ react.createElement("div", { style: {
     width: 24,
     height: 2,
-    background: "rgba(255,255,255,0.3)",
+    background: COLORS.grayLight,
     borderRadius: 1
   } }), /* @__PURE__ */ react.createElement("div", { style: {
     fontFamily: FONTS.heading,
     fontWeight: 600,
     fontSize: 18,
-    color: "rgba(255,255,255,0.4)"
+    color: COLORS.gray
   } }, String(total).padStart(2, "0")));
 };
 function TeachingScene_splitIntoLines(text, maxChars) {

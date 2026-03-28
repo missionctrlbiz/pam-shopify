@@ -8,7 +8,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY")
 }
 
-import { createBrowserClient, createServerClient } from "@supabase/ssr"
+import { createBrowserClient } from "@supabase/ssr"
 
 export const supabaseBrowser = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
@@ -24,26 +24,3 @@ export const supabaseAdmin = supabaseServiceRoleKey
         }
     })
     : createClient(supabaseUrl, supabaseAnonKey) // Fallback to anon if not set, but operations requiring admin will fail
-
-// ---------------------------------------------------------------------------
-// Server-Side Auth Helper (for API routes / Server Components)
-// ---------------------------------------------------------------------------
-export async function getServerAuth() {
-    const { cookies } = require("next/headers")
-    const cookieStore = await cookies()
-
-    return createServerClient(
-        supabaseUrl,
-        supabaseAnonKey,
-        {
-            cookies: {
-                getAll() {
-                    return cookieStore.getAll()
-                },
-                setAll() {
-                    // API routes typically don't set cookies, but can implement if needed
-                }
-            }
-        }
-    )
-}

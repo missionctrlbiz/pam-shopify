@@ -1,4 +1,7 @@
-import { getServerAuth, supabaseAdmin } from "./supabase"
+import "server-only"
+
+import { supabaseAdmin } from "./supabase"
+import { getServerAuth } from "./supabase.server"
 
 /**
  * Custom auth() wrapper replacing NextAuth for backward compatibility.

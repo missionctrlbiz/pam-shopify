@@ -452,26 +452,22 @@ async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuff
     return (await fetch(fontUrl)).arrayBuffer()
 }
 
-function makeSlideElement(slide: CarouselSlide, totalSlides: number): object {
+function makeSlideElement(slide: CarouselSlide, totalSlides: number, logoBase64: string): object {
     const isCover = slide.slideNumber === 1
     const isCTA = slide.slideNumber === totalSlides
-    const isDark = isCover || isCTA
+    const isDark = isCover
 
-    // Premium Aesthetics Update: Linear Gradient backdrops
-    const bgGradient = isDark
-        ? "linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%)" // Beautiful Night gradient
-        : "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)" // Sleek Slate Soft gradient
-
-    const textColor = isDark ? "#FFFFFF" : "#1E293B"
+    const innerBg = isDark ? "#0F172A" : "#FFFFFF"
+    const textColor = isDark ? "#FFFFFF" : "#0F172A"
     const bodyColor = isDark ? "#E2E8F0" : "#475569"
-    const accentColor = "#3B82F6" // Vibrant Blue accent
-    const mutedColor = isDark ? "rgba(255,255,255,0.45)" : "rgba(30,41,59,0.5)"
+    const accentColor = "#A855F7"
+    const mutedColor = isDark ? "rgba(255,255,255,0.45)" : "rgba(15,23,42,0.5)"
 
-    const children: object[] = []
+    const innerChildren: object[] = []
 
     // Pagination top-left counter style
-    if (!isCover) {
-        children.push({
+    if (!isCover && !isCTA) {
+        innerChildren.push({
             type: "div",
             props: {
                 style: { position: "absolute", top: 40, left: 50, fontSize: 18, fontWeight: 700, color: accentColor, letterSpacing: 1 },
@@ -480,67 +476,160 @@ function makeSlideElement(slide: CarouselSlide, totalSlides: number): object {
         })
     }
 
+    // Determine layout variations based on slideIndex
+    const isBulletList = slide.bodyText ? slide.bodyText.includes("•") || slide.bodyText.includes("- ") || slide.bodyText.includes("1. ") : false;
+    const contentAlign = (slide.slideNumber % 2 === 0 || isBulletList) && !isCover ? "flex-start" : "center";
+    const textAlign = (slide.slideNumber % 2 === 0 || isBulletList) && !isCover ? "left" : "center";
+    
+    // Label above headline
+    if (!isCover && slide.slideNumber % 2 !== 0 && !isCTA) {
+        innerChildren.push({
+            type: "div",
+            props: {
+                style: { fontSize: 16, fontWeight: 700, color: accentColor, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 },
+                children: "CLINICAL PEARL"
+            }
+        });
+    }
+
     // Headline
-    children.push({
+    innerChildren.push({
         type: "div",
         props: {
             style: {
-                fontSize: isCover ? 72 : 48,
+                fontSize: isCover ? 88 : 48,
                 fontWeight: 800,
                 color: textColor,
-                textAlign: "center",
+                textAlign: textAlign,
                 lineHeight: 1.15,
                 letterSpacing: "-0.03em",
                 maxWidth: 920,
-                marginBottom: slide.bodyText ? 32 : 0
+                marginBottom: slide.bodyText ? 32 : 0,
+                borderBottom: (contentAlign === "flex-start" && !isCover) ? `6px solid ${accentColor}` : "none",
+                paddingBottom: (contentAlign === "flex-start" && !isCover) ? 16 : 0,
             },
             children: slide.headline,
         },
     })
 
+    // Divider Line accent (only for centered covers)
+    if (isCover) {
+        innerChildren.push({
+            type: "div",
+            props: { style: { width: 120, height: 6, background: "linear-gradient(90deg, #A855F7, #6D28D9)", borderRadius: 3, marginTop: 32 }, children: "" },
+        })
+    }
+
     // Body Text
     if (slide.bodyText) {
-        children.push({
+        // Bullet list renderer
+        if (isBulletList && !isCover && !isCTA) {
+            const bullets = slide.bodyText.split(/\n|•/).map(b => b.trim().replace(/^- /,"")).filter(Boolean);
+            const listItems = bullets.map(b => ({
+                type: "div",
+                props: {
+                    style: { display: "flex", alignItems: "flex-start", marginBottom: 16 },
+                    children: [
+                        {
+                            type: "div",
+                            props: { style: { width: 12, height: 12, background: accentColor, borderRadius: "50%", marginTop: 14, marginRight: 24, flexShrink: 0 }, children: "" }
+                        },
+                        {
+                            type: "div",
+                            props: { style: { fontSize: 28, fontWeight: 400, color: bodyColor, lineHeight: 1.5, maxWidth: 840 }, children: b }
+                        }
+                    ]
+                }
+            }));
+
+            innerChildren.push({
+                type: "div",
+                props: {
+                    style: { display: "flex", flexDirection: "column", width: "100%", marginTop: 12 },
+                    children: listItems
+                }
+            });
+        } else {
+            // Standard body paragraph
+            innerChildren.push({
+                type: "div",
+                props: {
+                    style: {
+                        fontSize: 28,
+                        fontWeight: 400,
+                        color: bodyColor,
+                        textAlign: textAlign,
+                        lineHeight: 1.6,
+                        maxWidth: 820
+                    },
+                    children: slide.bodyText,
+                },
+            })
+        }
+    }
+
+    // "Swipe" lucide icon edge widget for body slides (bottom right corner)
+    if (!isCover && !isCTA) {
+        innerChildren.push({
             type: "div",
             props: {
-                style: {
-                    fontSize: 28,
-                    fontWeight: 400,
-                    color: bodyColor,
-                    textAlign: "center",
-                    lineHeight: 1.6,
-                    maxWidth: 820
-                },
-                children: slide.bodyText,
+                style: { position: "absolute", bottom: 40, right: 50, display: "flex", alignItems: "center", color: mutedColor, fontSize: 16, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" },
+                children: [
+                    { type: "span", props: { style: { marginRight: 8 }, children: "Swipe" } },
+                    { type: "svg", props: {
+                        xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round",
+                        children: [
+                            { type: "path", props: { d: "M5 12h14" } },
+                            { type: "path", props: { d: "m12 5 7 7-7 7" } }
+                        ]
+                    }}
+                ]
+            }
+        });
+    }
+
+    // Footer Watermark (Logo + 'psychassessmentguide.com')
+    const footerContent = logoBase64 
+        ? [
+            {
+                type: "img",
+                props: {
+                    src: logoBase64,
+                    style: { height: 32, opacity: isDark ? 0.9 : 0.6, marginBottom: 8 }
+                }
             },
-        })
-    }
-
-    // Divider Line accent
-    if (isCover) {
-        children.push({
+            {
+                type: "div",
+                props: {
+                    style: { fontSize: 13, fontWeight: 600, color: mutedColor, letterSpacing: 1 },
+                    children: "psychassessmentguide.com"
+                }
+            }
+        ]
+        : {
             type: "div",
-            props: { style: { width: 120, height: 6, background: accentColor, borderRadius: 3, marginTop: 32 }, children: "" },
-        })
-    }
+            props: {
+                style: { fontSize: 16, fontWeight: 700, letterSpacing: 4, textTransform: "uppercase" },
+                children: "psychassessmentguide.com"
+            }
+        };
 
-    // Footer Watermark
-    children.push({
+    innerChildren.push({
         type: "div",
         props: {
             style: {
                 position: "absolute",
                 bottom: 40,
-                fontSize: 14,
-                fontWeight: 700,
                 color: mutedColor,
-                letterSpacing: 4,
-                textTransform: "uppercase"
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
             },
-            children: "PSYCHIATRIC ASSESSMENT MASTERY",
+            children: footerContent,
         },
     })
 
+    // Outer Wrapper creates the V2 CapCut Gradient Border
     return {
         type: "div",
         props: {
@@ -548,15 +637,27 @@ function makeSlideElement(slide: CarouselSlide, totalSlides: number): object {
                 width: "100%",
                 height: "100%",
                 display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundImage: bgGradient,
-                padding: "100px",
-                position: "relative",
-                borderTop: `10px solid ${accentColor}`,
+                backgroundImage: "linear-gradient(135deg, #A855F7 0%, #6D28D9 100%)",
+                padding: "8px",
             },
-            children,
+            children: {
+                type: "div",
+                props: {
+                    style: {
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: contentAlign,
+                        justifyContent: "center",
+                        background: innerBg,
+                        position: "relative",
+                        borderRadius: "12px",
+                        padding: "100px",
+                    },
+                    children: innerChildren
+                }
+            }
         },
     }
 }
@@ -565,10 +666,11 @@ async function renderSlideToPng(
     slide: CarouselSlide,
     totalSlides: number,
     boldFont: ArrayBuffer,
-    regularFont: ArrayBuffer
+    regularFont: ArrayBuffer,
+    logoBase64: string
 ): Promise<Buffer> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svg = await satori(makeSlideElement(slide, totalSlides) as any, {
+    const svg = await satori(makeSlideElement(slide, totalSlides, logoBase64) as any, {
         width: 1080,
         height: 1080,
         fonts: [
@@ -612,11 +714,15 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
             loadGoogleFont("Montserrat", 400),
         ])
 
+        const logoPath = await import("node:path").then((p) => p.join(process.cwd(), "public", "logo.webp"));
+        const logoBuffer = await import("node:fs").then((f) => f.promises.readFile(logoPath)).catch(() => Buffer.from(""));
+        const logoBase64 = logoBuffer.length ? `data:image/webp;base64,${logoBuffer.toString("base64")}` : "";
+
         const { date, slug } = makeSlug(entryDate, topic)
         const slideUrls: string[] = []
 
         for (const slide of script.slides) {
-            const png = await renderSlideToPng(slide, script.slides.length, boldFont, regularFont)
+            const png = await renderSlideToPng(slide, script.slides.length, boldFont, regularFont, logoBase64)
             const fileName = `PAM_CAROUSEL_${date}_${slug}_slide${slide.slideNumber}_v1.png`
             const url = await storeBlob(`production/${contentIdeaId}/CAROUSEL_PNG/${fileName}`, png, "image/png")
             slideUrls.push(url)
@@ -733,7 +839,13 @@ async function runAudioInline(
     }
 
     // 3. Generate via ElevenLabs with exponential back-off retry (shared lib)
-    const audioBuffer = await callElevenLabsWithRetry(cleanText, voice, apiKey)
+    let audioBuffer: Buffer | null = null;
+    try {
+        audioBuffer = await callElevenLabsWithRetry(cleanText, voice, apiKey)
+    } catch (err) {
+        console.warn("[runAudioInline] ElevenLabs API generation failed (exhausted/error). Degrading gracefully to silent video.", err);
+        return ""; // Empty string instructs the renderer to produce a silent pass.
+    }
 
     // 4. Upload to Supabase Storage
     const storageUrl = await storeBlob(

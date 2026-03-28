@@ -1,5 +1,5 @@
 import React from "react"
-import { useCurrentFrame, spring, useVideoConfig, interpolate } from "remotion"
+import { useCurrentFrame, spring, useVideoConfig, interpolate, Img, staticFile } from "remotion"
 import { COLORS, FONTS } from "../types"
 
 interface PAMLogoProps {
@@ -53,42 +53,12 @@ export const PAMLogo: React.FC<PAMLogoProps> = ({
                     pointerEvents: "none",
                 }}
             >
-                {/* Large PAM monogram */}
-                <div
+                <Img
+                    src={staticFile("favicon.webp")}
                     style={{
-                        fontFamily: FONTS.heading,
-                        fontWeight: 900,
-                        fontSize: 52,
-                        color: COLORS.navy,
-                        letterSpacing: "0.08em",
-                        lineHeight: 1,
-                    }}
-                >
-                    PAM™
-                </div>
-                {/* Subtitle */}
-                <div
-                    style={{
-                        fontFamily: FONTS.body,
-                        fontWeight: 600,
-                        fontSize: 14,
-                        color: COLORS.navy,
-                        letterSpacing: "0.18em",
-                        textTransform: "uppercase",
-                        marginTop: 4,
-                        lineHeight: 1,
-                    }}
-                >
-                    Psychiatric Assessment Mastery
-                </div>
-                {/* Thin blue accent underline */}
-                <div
-                    style={{
-                        width: "100%",
-                        height: 2,
-                        background: `linear-gradient(90deg, transparent, ${COLORS.blue})`,
-                        marginTop: 6,
-                        borderRadius: 2,
+                        width: 72,
+                        height: 72,
+                        objectFit: "contain",
                     }}
                 />
             </div>
@@ -105,42 +75,13 @@ export const PAMLogo: React.FC<PAMLogoProps> = ({
                     opacity: finalOpacity,
                 }}
             >
-                {/* Blue accent bar */}
-                <div
+                <Img
+                    src={staticFile("logo.webp")}
                     style={{
-                        width: 5,
-                        height: 44,
-                        background: `linear-gradient(180deg, ${COLORS.blue}, ${COLORS.blueLight})`,
-                        borderRadius: 3,
-                        flexShrink: 0,
+                        height: 48,
+                        objectFit: "contain",
                     }}
                 />
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <div
-                        style={{
-                            fontFamily: FONTS.heading,
-                            fontWeight: 900,
-                            fontSize: 26,
-                            color: COLORS.navy,
-                            letterSpacing: "0.06em",
-                            lineHeight: 1,
-                        }}
-                    >
-                        PAM™
-                    </div>
-                    <div
-                        style={{
-                            fontFamily: FONTS.body,
-                            fontWeight: 600,
-                            fontSize: 11,
-                            color: COLORS.gray,
-                            letterSpacing: "0.2em",
-                            textTransform: "uppercase",
-                        }}
-                    >
-                        Psychiatric Assessment Mastery
-                    </div>
-                </div>
             </div>
         )
     }
@@ -156,38 +97,13 @@ export const PAMLogo: React.FC<PAMLogoProps> = ({
                 opacity: finalOpacity,
             }}
         >
-            <div
+            <Img
+                src={staticFile("logo.webp")}
                 style={{
-                    width: 60,
-                    height: 2,
-                    background: `linear-gradient(90deg, ${COLORS.blue}, ${COLORS.blueLight})`,
-                    borderRadius: 2,
-                    marginBottom: 10,
+                    height: 80,
+                    objectFit: "contain",
                 }}
             />
-            <div
-                style={{
-                    fontFamily: FONTS.heading,
-                    fontWeight: 900,
-                    fontSize: 36,
-                    color: COLORS.navy,
-                    letterSpacing: "0.1em",
-                }}
-            >
-                PAM™
-            </div>
-            <div
-                style={{
-                    fontFamily: FONTS.body,
-                    fontWeight: 400,
-                    fontSize: 16,
-                    color: COLORS.gray,
-                    letterSpacing: "0.2em",
-                    textTransform: "uppercase",
-                }}
-            >
-                Psychiatric Assessment Mastery
-            </div>
         </div>
     )
 }
