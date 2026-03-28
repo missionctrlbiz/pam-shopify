@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     // "google-gax",
     // "google-auth-library",
     "@remotion/renderer",
+    "@remotion/bundler",
     "@resvg/resvg-js-darwin-arm64",
     "@resvg/resvg-js-darwin-x64",
     "@resvg/resvg-js-linux-arm64-gnu",
@@ -38,7 +39,8 @@ const nextConfig: NextConfig = {
       // without any further bouncing back to the custom domain.
       {
         source: "/a/downloads/:path*",
-        destination: "https://psychassessmentguide-com.myshopify.com/a/downloads/:path*",
+        destination:
+          "https://psychassessmentguide-com.myshopify.com/a/downloads/:path*",
         permanent: false,
       },
     ];
