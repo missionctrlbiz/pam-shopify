@@ -158,7 +158,7 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 8 }}>
                         <div style={{
                             fontFamily: FONTS.body,
-                            fontWeight: 600, fontSize: 16,
+                            fontWeight: 800, fontSize: 16,
                             color: COLORS.gray,
                             letterSpacing: "0.22em",
                             textTransform: "uppercase",
@@ -218,7 +218,7 @@ export const TeachingScene: React.FC<TeachingSceneProps> = ({
                                     key={i}
                                     text={bullet}
                                     fontSize={34}
-                                    fontWeight={400}
+                                    fontWeight={700}
                                     fontFamily={FONTS.body}
                                     color={COLORS.gray}
                                     delayFrames={22 + i * 9}

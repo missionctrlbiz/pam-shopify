@@ -23,14 +23,19 @@ export class ElevenLabsQuotaError extends Error {
 }
 
 /**
- * Strip ESL gesture markers that are meaningful for on-screen display
- * but should not be spoken aloud.
+ * Strip ESL gesture markers and emotive tags [like this] that are meaningful 
+ * for visual direction but should not be spoken aloud.
+ * 
+ * Supports SSML-style <break time="..." /> by NOT stripping it if the model 
+ * supports it (v2/v2.5 do).
  */
 export function stripESLMarkers(text: string): string {
     return text
         .replace(/\[pause\]/g, ". ")
         .replace(/\[breath\]/g, ", ")
         .replace(/\[emphasize:([^\]]+)\]/g, "$1")
+        // Strip other [instruction] or [emotive] tags entirely
+        .replace(/\[[^\]]+\]/g, "")
         .replace(/\s{2,}/g, " ")
         .trim()
 }

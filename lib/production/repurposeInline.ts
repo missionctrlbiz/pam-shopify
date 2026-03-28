@@ -7,7 +7,7 @@
  *   CAROUSEL   → 6 PNG slides rendered via satori + @resvg/resvg-js
  *   VIDEO      → shot-by-shot script (Gemini) + MP3 voiceover (ElevenLabs)
  *
- * All assets are uploaded to Vercel Blob (real public URLs).
+ * All assets are uploaded to Supabase Storage (real public URLs).
  */
 
 import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
@@ -191,10 +191,9 @@ function buildVideoPrompt(input: RepurposeInlineInput): string {
         estimatedReadTimeSecs?: number;
     }
 
-    // Fallback to 45s if undefined
     const duration = m.estimatedDurationSecs ?? m.estimatedReadTimeSecs ?? 45
 
-    return `You are the Video Production Specialist for Psychiatric Assessment Mastery(tm) (PAM).
+    return `You are the Lead Producer for Psychiatric Assessment Mastery(tm).
 Write a short, targeted ${duration}-second Instagram Reel / TikTok video script based on the content below.
 
 TOPIC: ${input.topic}
@@ -202,10 +201,15 @@ HOOK: ${m.hook ?? ""}
 TEACHING POINTS: ${(m.teachingPoints ?? []).join(" | ")}
 CTA: ${m.cta ?? ""}
 
+STYLE TEMPLATE (USE THIS TONE AND TAGGING):
+"This is why your psychiatric notes feel difficult. <break time="0.5s" /> [thoughtful] The interview feels scattered. <break time="0.5s" /> Your MSE feels incomplete. <break time="0.5s" /> The diagnostic reasoning is unclear. <break time="0.5s" /> And you freeze at a blank SOAP note. <break time="0.5s" /> That is where many learners get stuck. <break time="0.7s" /> [emphatic] The problem isn't knowledge. It's structure. <break time="0.7s" /> This is exactly what Psychiatric Assessment Mastery was built to solve."
+
 RULES:
+- Use <break time="X.Xs" /> tags for natural pacing.
+- Use [bracketed] emotive markers like [thoughtful], [emphatic], [gentle] to guide the voice actor.
 - Hook in first 3 seconds. 4-5 segments. CTA at end: PAM Mastery Bundle.
-- STRICTLY limit the total voiceover spoken word count to approximately ${Math.round(duration * 2.3)} words total so it comfortably fits a ${duration}-second playback.
-- PLAIN TEXT ONLY. No asterisks, no markdown.
+- STRICTLY limit word count to ~${Math.round(duration * 2.1)} words total for ${duration}s.
+- PLAIN TEXT ONLY. No markdown.
 
 Return ONLY a JSON object:
 {
@@ -601,7 +605,7 @@ function makeSlideElement(slide: CarouselSlide, totalSlides: number, logoBase64:
             {
                 type: "div",
                 props: {
-                    style: { fontSize: 13, fontWeight: 600, color: mutedColor, letterSpacing: 1 },
+                    style: { fontSize: 13, fontWeight: 800, color: mutedColor, letterSpacing: 1 },
                     children: "psychassessmentguide.com"
                 }
             }
@@ -674,7 +678,7 @@ async function renderSlideToPng(
         width: 1080,
         height: 1080,
         fonts: [
-            { name: "Montserrat", data: boldFont, weight: 700, style: "normal" },
+            { name: "Montserrat", data: boldFont, weight: 800, style: "normal" },
             { name: "Montserrat", data: regularFont, weight: 400, style: "normal" },
         ],
     })
@@ -710,13 +714,20 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
         }))
 
         const [boldFont, regularFont] = await Promise.all([
-            loadGoogleFont("Montserrat", 700),
+            loadGoogleFont("Montserrat", 800),
             loadGoogleFont("Montserrat", 400),
         ])
 
-        const logoPath = await import("node:path").then((p) => p.join(process.cwd(), "public", "logo.webp"));
-        const logoBuffer = await import("node:fs").then((f) => f.promises.readFile(logoPath)).catch(() => Buffer.from(""));
-        const logoBase64 = logoBuffer.length ? `data:image/webp;base64,${logoBuffer.toString("base64")}` : "";
+        let logoBase64 = "";
+        try {
+            const logoRes = await fetch("https://pam-shopify.vercel.app/logo.webp");
+            if (logoRes.ok) {
+                const arr = await logoRes.arrayBuffer();
+                logoBase64 = `data:image/webp;base64,${Buffer.from(arr).toString("base64")}`;
+            }
+        } catch (e) {
+            console.error("[Carousel] Could not fetch remote logo, using text fallback:", e);
+        }
 
         const { date, slug } = makeSlug(entryDate, topic)
         const slideUrls: string[] = []
@@ -931,17 +942,32 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
     }
 
     try {
-        const raw = await callGemini(buildVideoPrompt(input))
-        const script = JSON.parse(raw) as VideoScript
+        // 1. Check for existing COMPLETE script to avoid Gemini re-generation & audio cache miss
+        let script: VideoScript | null = null;
+        const { data: existingScriptAsset } = await supabaseAdmin
+            .from("content_assets")
+            .select("status, storage_url, metadata")
+            .eq("content_idea_id", contentIdeaId)
+            .eq("asset_type", "VIDEO_SCRIPT_JSON")
+            .eq("status", "COMPLETE")
+            .maybeSingle()
 
-        script.title = cleanText(script.title)
-        script.hook = cleanText(script.hook)
-        script.ctaOutro = cleanText(script.ctaOutro)
-        script.captionVersion = cleanText(script.captionVersion)
-        script.segments = (script.segments || []).map(s => ({ ...s, visual: cleanText(s.visual), voiceover: cleanText(s.voiceover) }))
+        if (existingScriptAsset?.metadata && (existingScriptAsset.metadata as any).script) {
+            console.log(`[videoScriptInline] 🔄 Reusing existing video script for content idea: ${contentIdeaId}`)
+            script = (existingScriptAsset.metadata as any).script as VideoScript
+        } else {
+            const raw = await callGemini(buildVideoPrompt(input))
+            script = JSON.parse(raw) as VideoScript
+            script.title = cleanText(script.title)
+            script.hook = cleanText(script.hook)
+            script.ctaOutro = cleanText(script.ctaOutro)
+            script.captionVersion = cleanText(script.captionVersion)
+            script.segments = (script.segments || []).map(s => ({ ...s, visual: cleanText(s.visual), voiceover: cleanText(s.voiceover) }))
+        }
+
+        if (!script) throw new Error("Could not obtain video script.")
 
         const { date, slug } = makeSlug(entryDate, topic)
-
         const readable = [
             `VIDEO SCRIPT: ${script.title}`,
             `Duration: ~${script.durationEstimateSecs}s`,
@@ -954,27 +980,35 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
             `CAPTION:\n${script.captionVersion}`,
         ].join("\n")
 
-        const scriptUrl = await storeBlob(
+        // Store script if we just generated it or need to update the job's asset row
+        const scriptUrl = existingScriptAsset?.storage_url || await storeBlob(
             `production/${contentIdeaId}/VIDEO_SCRIPT_JSON/PAM_VIDEO_SCRIPT_${date}_${slug}_v1.txt`,
             readable,
             "text/plain"
         )
 
         const scriptMeta = JSON.parse(JSON.stringify({ content: readable, script }))
-        const { error: scriptAssetError } = await supabaseAdmin
+        await supabaseAdmin
             .from("content_assets")
             .update({ status: "COMPLETE", storage_url: scriptUrl, metadata: scriptMeta })
             .eq("render_job_id", renderJobId)
             .eq("asset_type", "VIDEO_SCRIPT_JSON")
 
-        if (scriptAssetError) {
-            throw new Error(`Failed to update video script asset: ${scriptAssetError.message}`)
-        }
-
-        // ElevenLabs audio (non-fatal if it fails)
+        // 2. ElevenLabs audio (Reuse if already COMPLETE for this idea)
         let generatedAudioUrl: string | undefined = undefined;
 
-        try {
+        const { data: existingAudioAsset } = await supabaseAdmin
+            .from("content_assets")
+            .select("status, storage_url")
+            .eq("content_idea_id", contentIdeaId)
+            .eq("asset_type", "AUDIO_MP3")
+            .eq("status", "COMPLETE")
+            .maybeSingle()
+
+        if (existingAudioAsset?.storage_url) {
+            console.log(`[videoScriptInline] 🔄 Reusing existing audio asset for content idea: ${contentIdeaId}`)
+            generatedAudioUrl = existingAudioAsset.storage_url
+        } else {
             const voiceoverText = [
                 script.hook,
                 ...script.segments.map(s => s.voiceover),
@@ -987,7 +1021,10 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
                 `PAM_AUDIO_${date}_${slug}_v1.mp3`,
                 voiceId
             )
-            const { error: audioAssetError } = await supabaseAdmin
+        }
+
+        if (generatedAudioUrl) {
+            await supabaseAdmin
                 .from("content_assets")
                 .update({
                     status: "COMPLETE",
@@ -999,26 +1036,28 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
                 })
                 .eq("render_job_id", renderJobId)
                 .eq("asset_type", "AUDIO_MP3")
-
-            if (audioAssetError) {
-                console.error("[videoScriptInline] Failed to update audio asset:", audioAssetError)
-            }
-        } catch (audioErr) {
-            console.error("[videoScriptInline] ElevenLabs failed:", audioErr)
-            const { error: audioFailError } = await supabaseAdmin
-                .from("content_assets")
-                .update({ status: "FAILED" })
-                .eq("render_job_id", renderJobId)
-                .eq("asset_type", "AUDIO_MP3")
-
-            if (audioFailError) {
-                console.error("[videoScriptInline] Failed to mark audio asset FAILED:", audioFailError)
-            }
         }
 
-        // Remotion MP4 generation
+        // 3. Local Remotion MP4 rendering (Reuse if already COMPLETE for this idea)
+        const { data: existingVideoAsset } = await supabaseAdmin
+            .from("content_assets")
+            .select("status, storage_url")
+            .eq("content_idea_id", contentIdeaId)
+            .eq("asset_type", "VIDEO_MP4")
+            .eq("status", "COMPLETE")
+            .maybeSingle()
+
+        if (existingVideoAsset?.storage_url) {
+            console.log(`[videoScriptInline] 🔄 Reusing existing MP4 for content idea: ${contentIdeaId}`)
+            await supabaseAdmin
+                .from("render_jobs")
+                .update({ status: "COMPLETE", completed_at: new Date().toISOString() })
+                .eq("id", renderJobId)
+            return
+        }
+
         if (generatedAudioUrl) {
-            console.log(`[videoScriptInline] Triggering local Remotion renderer...`)
+            console.log(`[videoScriptInline] Video MP4 not found — triggering Remotion renderer...`)
             try {
                 const videoBuffer = await renderVideoInline({
                     hook: script.hook,
@@ -1034,24 +1073,35 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
                     "video/mp4"
                 )
 
-                const { error: videoAssetError } = await supabaseAdmin
+                await supabaseAdmin
                     .from("content_assets")
                     .update({ status: "COMPLETE", storage_url: videoUrl })
                     .eq("render_job_id", renderJobId)
                     .eq("asset_type", "VIDEO_MP4")
 
-                if (videoAssetError) {
-                    throw new Error(`Failed to update video asset metadata: ${videoAssetError.message}`)
-                }
+                await supabaseAdmin
+                    .from("render_jobs")
+                    .update({ status: "COMPLETE", completed_at: new Date().toISOString() })
+                    .eq("id", renderJobId)
+
                 console.log(`[videoScriptInline] Remotion MP4 generated successfully locally: ${videoUrl}`)
-            } catch (videoErr) {
-                console.error("[videoScriptInline] Remotion local failed:", videoErr)
+            } catch (renderErr: unknown) {
+                console.error("[videoScriptInline] Movie render failed (Partial success):", renderErr)
+                // Mark job as PARTIAL since script/audio ARE finished
+                await supabaseAdmin
+                    .from("render_jobs")
+                    .update({ 
+                        status: "PARTIAL", 
+                        errorMessage: `Script/Audio OK. MP4 failed: ${(renderErr as Error).message}` 
+                    })
+                    .eq("id", renderJobId)
+                
+                // Also mark the specific asset as failed
                 await supabaseAdmin
                     .from("content_assets")
                     .update({ status: "FAILED" })
                     .eq("render_job_id", renderJobId)
                     .eq("asset_type", "VIDEO_MP4")
-                throw videoErr
             }
         } else {
             console.warn("[videoScriptInline] Skipping MP4 generation because audio generation failed.")

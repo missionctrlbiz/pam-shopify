@@ -111,7 +111,7 @@ export const CTAScene: React.FC<CTASceneProps> = ({
                     <AnimatedText
                         text="TAKE ACTION"
                         fontSize={24}
-                        fontWeight={700}
+                        fontWeight={800}
                         fontFamily={FONTS.body}
                         color="#F59E0B"
                         delayFrames={5}
@@ -226,7 +226,7 @@ const ActionPills: React.FC<{ delayFrames: number }> = ({ delayFrames }) => {
                 >
                     <span style={{
                         fontFamily: FONTS.body,
-                        fontWeight: 700, fontSize: 22,
+                        fontWeight: 800, fontSize: 22,
                         color: "#FFFFFF",
                         letterSpacing: "0.02em",
                     }}>

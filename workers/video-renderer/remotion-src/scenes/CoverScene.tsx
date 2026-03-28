@@ -124,7 +124,7 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                     }} />
                     <div style={{
                         fontFamily: FONTS.body,
-                        fontWeight: 600, fontSize: 20,
+                        fontWeight: 800, fontSize: 20,
                         color: COLORS.white,
                         letterSpacing: "0.22em",
                         textTransform: "uppercase",
@@ -149,7 +149,7 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                 >
                     <span style={{
                         fontFamily: FONTS.body,
-                        fontWeight: 700, fontSize: 22,
+                        fontWeight: 800, fontSize: 22,
                         color: COLORS.navy,
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
@@ -192,7 +192,7 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                     <AnimatedText
                         text={textOverlay}
                         fontSize={32}
-                        fontWeight={700}
+                        fontWeight={800}
                         fontFamily={FONTS.body}
                         color={COLORS.white}
                         delayFrames={36}

@@ -13,7 +13,7 @@ import type { Platform, PostType } from "./types"
 
 // ── Local types ───────────────────────────────────────────────────────────────
 
-type RenderJobStatus = "QUEUED" | "RUNNING" | "COMPLETE" | "FAILED"
+type RenderJobStatus = "QUEUED" | "RUNNING" | "COMPLETE" | "FAILED" | "PARTIAL"
 type JobType = "CAROUSEL" | "VIDEO" | "AUDIO" | "REPURPOSE"
 
 interface JobAsset {
@@ -125,7 +125,18 @@ const STATUS_CFG: Record<RenderJobStatus, { label: string; color: string; bg: st
     QUEUED: { label: "Queued", color: PROD_BRAND.amber, bg: PROD_BRAND.amberFaint, icon: <Clock size={12} /> },
     RUNNING: { label: "Running", color: PROD_BRAND.blue, bg: PROD_BRAND.blueFaint, icon: <Zap size={12} /> },
     COMPLETE: { label: "Complete", color: PROD_BRAND.green, bg: PROD_BRAND.greenFaint, icon: <CheckCircle2 size={12} /> },
-    FAILED: { label: "Failed", color: PROD_BRAND.red, bg: PROD_BRAND.redFaint, icon: <AlertCircle size={12} /> },
+    FAILED: {
+        label: "Failed",
+        color: PROD_BRAND.red,
+        bg: PROD_BRAND.redFaint,
+        icon: <AlertCircle size={12} />,
+    },
+    PARTIAL: {
+        label: "Incomplete",
+        color: PROD_BRAND.amber,
+        bg: PROD_BRAND.amberFaint,
+        icon: <Clock size={12} />,
+    },
 }
 
 const JOB_TYPE_ICON: Record<JobType, React.ReactNode> = {
@@ -144,11 +155,12 @@ const ASSET_TYPE_ICON: Record<string, React.ReactNode> = {
     VIDEO_SCRIPT_JSON: <FileText size={12} />,
 }
 
-type FilterTab = "all" | "active" | "failed" | "complete"
+type FilterTab = "all" | "active" | "failed" | "complete" | "incomplete"
 const FILTER_TABS: { id: FilterTab; label: string; status?: string }[] = [
     { id: "all", label: "All" },
     { id: "active", label: "Active", status: "QUEUED,RUNNING" },
     { id: "failed", label: "Failed", status: "FAILED" },
+    { id: "incomplete", label: "Incomplete", status: "PARTIAL" },
     { id: "complete", label: "Complete", status: "COMPLETE" },
 ]
 
@@ -706,7 +718,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
 
     return (
         <div style={{
-            border: `1px solid ${isFailed ? PROD_BRAND.red + "44" : isActive ? PROD_BRAND.blue + "44" : PROD_BRAND.border}`,
+            border: `1px solid ${isFailed ? PROD_BRAND.red + "44" : job.status === "PARTIAL" ? PROD_BRAND.amber + "44" : isActive ? PROD_BRAND.blue + "44" : PROD_BRAND.border}`,
             borderRadius: 10,
             background: PROD_BRAND.white,
             overflow: "hidden",
@@ -804,7 +816,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                     )}
 
                     {/* Retry button */}
-                    {isFailed && (
+                    {(isFailed || job.status === "PARTIAL") && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onRetry() }}
                             disabled={isRetrying}
