@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.45.0",
+    "@remotion/bundler": "^4.0.441",
+    "@remotion/cli": "^4.0.441",
     "@remotion/renderer": "4.0.438",
     "@resvg/resvg-js": "^2.6.2",
     "@supabase/ssr": "^0.9.0",
@@ -34,6 +36,7 @@
     "puppeteer": "^24.40.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "remotion": "^4.0.441",
     "satori": "^0.25.0",
     "shopify-buy": "^3.0.7",
     "tailwind-merge": "^3.5.0"

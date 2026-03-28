@@ -720,13 +720,22 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
 
         let logoBase64 = "";
         try {
-            const logoRes = await fetch("https://pam-shopify.vercel.app/logo.png");
-            if (logoRes.ok) {
-                const arr = await logoRes.arrayBuffer();
-                logoBase64 = `data:image/png;base64,${Buffer.from(arr).toString("base64")}`;
+            // Local fallback first (safer in workers)
+            const path = await import("node:path");
+            const fs = await import("node:fs");
+            const localPath = path.join(process.cwd(), "public", "logo.png");
+            if (fs.existsSync(localPath)) {
+                logoBase64 = `data:image/png;base64,${fs.readFileSync(localPath).toString("base64")}`;
+            } else {
+                // Try remote
+                const logoRes = await fetch("https://pam-shopify.vercel.app/logo.png");
+                if (logoRes.ok) {
+                    const arr = await logoRes.arrayBuffer();
+                    logoBase64 = `data:image/png;base64,${Buffer.from(arr).toString("base64")}`;
+                }
             }
         } catch (e) {
-            console.error("[Carousel] Could not fetch remote logo, using text fallback:", e);
+            console.error("[Carousel] Could not obtain logo:", e);
         }
 
         const { date, slug } = makeSlug(entryDate, topic)
@@ -901,7 +910,12 @@ async function renderVideoInline(input: {
     const { tmpdir } = await import("node:os")
     const { readFileSync, unlinkSync } = await import("node:fs")
 
-    const serveUrl = process.env.REMOTION_BUNDLE_PATH || join(process.cwd(), "workers", "video-renderer", "build")
+    const { bundle } = await import("@remotion/bundler")
+    const entry = join(process.cwd(), "workers", "video-renderer", "remotion-src", "index.tsx")
+    const publicDir = join(process.cwd(), "workers", "video-renderer", "remotion-src", "public")
+    
+    // Force re-bundle from source so we Pick up changes to PAMLogo.tsx
+    const serveUrl = await bundle(entry, () => { }, { publicDir })
 
     const composition = await selectComposition({
         serveUrl,
@@ -1114,13 +1128,24 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
         }
 
 
-        const { error: completeError } = await supabaseAdmin
+        // 4. Mark job as truly COMPLETE only if we reached here without errors or PARTIAL status
+        const { data: currentJob } = await supabaseAdmin
             .from("render_jobs")
-            .update({ status: "COMPLETE", completed_at: new Date().toISOString() })
+            .select("status")
             .eq("id", renderJobId)
+            .single()
 
-        if (completeError) {
-            console.error("[videoScriptInline] Failed to mark job COMPLETE:", completeError)
+        if (currentJob?.status !== "PARTIAL") {
+            const { error: completeError } = await supabaseAdmin
+                .from("render_jobs")
+                .update({ status: "COMPLETE", completed_at: new Date().toISOString() })
+                .eq("id", renderJobId)
+
+            if (completeError) {
+                console.error("[videoScriptInline] Failed to mark job COMPLETE:", completeError)
+            }
+        } else {
+            console.log("[videoScriptInline] Job finalized as PARTIAL/INCOMPLETE for later retry.")
         }
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
