@@ -720,10 +720,10 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
 
         let logoBase64 = "";
         try {
-            const logoRes = await fetch("https://pam-shopify.vercel.app/logo.webp");
+            const logoRes = await fetch("https://pam-shopify.vercel.app/logo.png");
             if (logoRes.ok) {
                 const arr = await logoRes.arrayBuffer();
-                logoBase64 = `data:image/webp;base64,${Buffer.from(arr).toString("base64")}`;
+                logoBase64 = `data:image/png;base64,${Buffer.from(arr).toString("base64")}`;
             }
         } catch (e) {
             console.error("[Carousel] Could not fetch remote logo, using text fallback:", e);

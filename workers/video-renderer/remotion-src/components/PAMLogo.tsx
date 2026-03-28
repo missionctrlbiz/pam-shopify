@@ -54,7 +54,7 @@ export const PAMLogo: React.FC<PAMLogoProps> = ({
                 }}
             >
                 <Img
-                    src="https://pam-shopify.vercel.app/favicon.webp"
+                    src="https://pam-shopify.vercel.app/favicon-white.png"
                     style={{
                         width: 72,
                         height: 72,
@@ -76,7 +76,7 @@ export const PAMLogo: React.FC<PAMLogoProps> = ({
                 }}
             >
                 <Img
-                    src="https://pam-shopify.vercel.app/logo.webp"
+                    src="https://pam-shopify.vercel.app/logo.png"
                     style={{
                         height: 48,
                         objectFit: "contain",
@@ -98,7 +98,7 @@ export const PAMLogo: React.FC<PAMLogoProps> = ({
             }}
         >
             <Img
-                src="https://pam-shopify.vercel.app/logo.webp"
+                src="https://pam-shopify.vercel.app/logo.png"
                 style={{
                     height: 80,
                     objectFit: "contain",
