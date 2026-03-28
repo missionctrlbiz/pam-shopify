@@ -2,9 +2,9 @@ import axios, { AxiosError } from "axios"
 
 const ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/text-to-speech"
 
-// Default voice: "Sarah" — calm, ESL-friendly, clinical education
-// George (JBFqnCBsd6RMkjVDRZzb) — authoritative male alternative
-const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "EXAVITQu4vr4xnSDxMaL"
+// Default voice: Pro Female (vCJ255LXSScOjTI93arO)
+// Pro Male (GOTYSPXtooRVmkiNYcw0) — alternative
+const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "vCJ255LXSScOjTI93arO"
 
 interface ElevenLabsSettings {
     stability: number

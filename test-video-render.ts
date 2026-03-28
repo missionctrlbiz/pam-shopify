@@ -29,7 +29,7 @@ async function testRender() {
         postType: "VIDEO",
         topic: "Mental Health Awareness Tips",
         entryDate: "2026-04-01",
-        voiceId: "EXAVITQu4vr4xnSDxMaL"
+        voiceId: "vCJ255LXSScOjTI93arO"
     }
 
     try {

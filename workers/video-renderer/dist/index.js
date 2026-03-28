@@ -70,10 +70,10 @@ app.post("/", async (req, res) => {
         ].join(". ");
         // 1. Generate audio via ElevenLabs
         console.log(`[video-renderer] Generating audio for job ${renderJobId}`);
-        const audioBuffer = await (0, elevenLabs_1.generateAudio)(voiceoverText, voiceId);
+        const { buffer: audioBuffer, durationMs: audioDurationMs } = await (0, elevenLabs_1.generateAudioWithDuration)(voiceoverText, voiceId);
         const audioFilename = `PAM_${platform}_${date}_${topicSlug}_v1.mp3`;
         const audioBlob = await (0, upload_1.uploadAsset)(audioBuffer, `${blobFolder}/AUDIO_MP3/${audioFilename}`, "audio/mpeg");
-        console.log(`[video-renderer] Audio uploaded: ${audioBlob.url}`);
+        console.log(`[video-renderer] Audio uploaded: ${audioBlob.url} (${audioDurationMs} ms)`);
         // 2. Render video via Remotion
         console.log(`[video-renderer] Rendering video for job ${renderJobId}`);
         const videoBuffer = await (0, remotion_1.renderVideo)({
@@ -95,7 +95,7 @@ app.post("/", async (req, res) => {
                 storageUrl: audioBlob.url,
                 storagePath: audioBlob.pathname,
                 fileName: audioFilename,
-                metadata: { voiceoverChars: voiceoverText.length },
+                metadata: { voiceoverChars: voiceoverText.length, durationMs: audioDurationMs },
             },
             {
                 assetType: "VIDEO_MP4",

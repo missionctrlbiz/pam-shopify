@@ -670,7 +670,7 @@ export async function expandToSceneDirectorScript(
 | Setting          | Old                           | New                                                                                                                                         |
 | ---------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Model            | `eleven_turbo_v2_5`           | `eleven_multilingual_v2`                                                                                                                    |
-| Voice            | Rachel `21m00Tcm4TlvDq8ikWAM` | Sarah `EXAVITQu4vr4xnSDxMaL` (default) or George `JBFqnCBsd6RMkjVDRZzb`                                                                     |
+| Voice            | Female Pro `vCJ255LXSScOjTI93arO` (default) or Male Pro `GOTYSPXtooRVmkiNYcw0`                                                                     |
 | SSML processing  | None                          | `[pause]` to `<break time="0.5s"/>`, `[breath]` to `<break time="0.3s"/>`, `[emphasize:word]` to `<emphasis level="strong">word</emphasis>` |
 | Background music | None                          | Optional `backgroundMusicUrl` param; ffmpeg mix at -18 dB (~15% volume)                                                                     |
 
@@ -811,7 +811,7 @@ Content pool rules for Gemini prompt:
 ### Phase 3 — ElevenLabs Upgrade
 
 - [ ] Update `workers/video-renderer/src/elevenLabs.ts`: model → `eleven_multilingual_v2` (see K.5)
-- [ ] Add voice picker: Sarah `EXAVITQu4vr4xnSDxMaL` + George `JBFqnCBsd6RMkjVDRZzb`
+- [ ] Add voice picker: Female Pro `vCJ255LXSScOjTI93arO` + Male Pro `GOTYSPXtooRVmkiNYcw0`
 - [ ] Build `processSSMLMarkers()` — `[pause]`/`[breath]`/`[emphasize:word]` → SSML (strip before TTS, ElevenLabs ignores SSML natively)
 - [ ] Add `backgroundMusicPath` param + ffmpeg mix at -18 dB
 - [ ] Add `/public/audio/ambient-clinical.mp3` (royalty-free 60 s piano loop)

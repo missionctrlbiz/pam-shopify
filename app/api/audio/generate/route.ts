@@ -52,7 +52,7 @@ export const dynamic = "force-dynamic"
 // Allow up to 120 s — ElevenLabs can be slow for long scripts
 export const maxDuration = 120
 
-const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "EXAVITQu4vr4xnSDxMaL"
+const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "vCJ255LXSScOjTI93arO"
 const STORAGE_BUCKET = "production"
 const CACHE_FOLDER = "audio-cache"
 

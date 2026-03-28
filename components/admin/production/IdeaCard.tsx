@@ -63,8 +63,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 // ElevenLabs voice options
 const VOICES = [
-    { id: "EXAVITQu4vr4xnSDxMaL", label: "Sarah", desc: "Female · ESL-friendly" },
-    { id: "JBFqnCBsd6RMkjVDRZzb", label: "George", desc: "Male · Authority tone" },
+    { id: "vCJ255LXSScOjTI93arO", label: "Female (Pro)", desc: "Female · Default" },
+    { id: "GOTYSPXtooRVmkiNYcw0", label: "Male (Pro)", desc: "Male · Custom Voice" },
 ]
 
 // Background music options

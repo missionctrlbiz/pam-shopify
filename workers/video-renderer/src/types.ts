@@ -32,7 +32,7 @@ export interface RenderPayload {
     entryDate: string
     callbackUrl: string
     callbackSecret: string
-    /** ElevenLabs voice ID — defaults to Sarah (EXAVITQu4vr4xnSDxMaL) */
+    /** ElevenLabs voice ID — defaults to Female Pro (vCJ255LXSScOjTI93arO) */
     voiceId?: string
     /** Background music track key: "ambient" | "pulse" | null */
     backgroundMusic?: string | null

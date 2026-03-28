@@ -801,7 +801,7 @@ async function runAudioInline(
     const apiKey = process.env.ELEVENLABS_API_KEY
     if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set")
 
-    const voice = voiceId ?? process.env.ELEVENLABS_VOICE_ID ?? "EXAVITQu4vr4xnSDxMaL"
+    const voice = voiceId ?? process.env.ELEVENLABS_VOICE_ID ?? "vCJ255LXSScOjTI93arO"
 
     // Strip ESL markers before hashing so the key is stable regardless of
     // whether the caller already cleaned the text.
