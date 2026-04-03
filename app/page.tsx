@@ -47,6 +47,12 @@ import siteContent from "@/content/site-content.json";
 const content = siteContent.homePage;
 const global = siteContent.global as any;
 
+interface NavigationItem {
+  label: string;
+  href: string;
+  badge?: string;
+}
+
 // Icon map for pain points
 const painPointIcons: Record<string, typeof AlertCircle> = {
   red: AlertCircle,
@@ -152,7 +158,7 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-6">
               <div className="hidden md:flex space-x-8 items-center">
-                {global.navigation.map((nav) => (
+                {(global.navigation as NavigationItem[]).map((nav) => (
                   <Link
                     key={nav.label}
                     href={nav.href}
@@ -198,7 +204,7 @@ export default function Home() {
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-slate-200 shadow-xl absolute w-full top-20 left-0">
             <div className="px-4 py-4 space-y-3">
-              {global.navigation.map((nav) => (
+              {(global.navigation as NavigationItem[]).map((nav) => (
                 <Link
                   key={nav.label}
                   href={nav.href}
