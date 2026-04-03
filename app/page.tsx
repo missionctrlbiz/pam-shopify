@@ -35,7 +35,6 @@ import {
   User,
   Facebook,
   Instagram,
-  Youtube,
   Linkedin,
   Music,
 } from "lucide-react";
@@ -679,11 +678,6 @@ export default function Home() {
           {global.socialLinks?.linkedin && (
             <Link href={global.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
               <Linkedin className="w-6 h-6 text-slate-400 hover:text-psych-purple transition-colors" />
-            </Link>
-          )}
-          {global.socialLinks?.youtube && (
-            <Link href={global.socialLinks.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube">
-              <Youtube className="w-6 h-6 text-slate-400 hover:text-psych-purple transition-colors" />
             </Link>
           )}
         </div>

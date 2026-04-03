@@ -397,7 +397,6 @@ export function ContentEditor() {
                             {f("Instagram URL", "global.socialLinks.instagram", { type: "url" })}
                             {f("TikTok URL", "global.socialLinks.tiktok", { type: "url" })}
                             {f("LinkedIn URL", "global.socialLinks.linkedin", { type: "url" })}
-                            {f("YouTube URL", "global.socialLinks.youtube", { type: "url" })}
                         </Group>
                         <Group title="Cookie Banner">
                             {f("Banner Message", "global.cookieBanner.message", { type: "textarea", rows: 2 })}
