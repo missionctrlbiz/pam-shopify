@@ -11,7 +11,7 @@ import type {
     GenerateCycleResponse,
 } from "./types"
 import { CalendarTable, PROD_BRAND, STATUS_META, PLATFORM_META } from "./CalendarTable"
-import { DayPanel } from "./DayPanel"
+import DayPanel from "./DayPanel"
 import Link from "next/link"
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
