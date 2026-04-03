@@ -392,6 +392,13 @@ export function ContentEditor() {
                             {f("Footer Copyright", "global.footerCopyright")}
                             {f("Footer Disclaimer", "global.footerDisclaimer", { type: "textarea", rows: 3 })}
                         </Group>
+                        <Group title="Social Media Links">
+                            {f("Facebook URL", "global.socialLinks.facebook", { type: "url" })}
+                            {f("Instagram URL", "global.socialLinks.instagram", { type: "url" })}
+                            {f("TikTok URL", "global.socialLinks.tiktok", { type: "url" })}
+                            {f("LinkedIn URL", "global.socialLinks.linkedin", { type: "url" })}
+                            {f("YouTube URL", "global.socialLinks.youtube", { type: "url" })}
+                        </Group>
                         <Group title="Cookie Banner">
                             {f("Banner Message", "global.cookieBanner.message", { type: "textarea", rows: 2 })}
                             {f("Accept Button Label", "global.cookieBanner.accept")}

@@ -27,7 +27,7 @@ interface DayPanelProps {
     onEntryUpdated: (id: string, newStatus: string) => void
 }
 
-export const DayPanel: React.FC<DayPanelProps> = ({ entryId, onClose, onEntryUpdated }) => {
+export default function DayPanel({ entryId, onClose, onEntryUpdated }: DayPanelProps) {
     const [entry, setEntry] = useState<CalendarEntryDetail | null>(null)
     const [loading, setLoading] = useState(false)
     const [activeTab, setActiveTab] = useState<PanelTab>("content")

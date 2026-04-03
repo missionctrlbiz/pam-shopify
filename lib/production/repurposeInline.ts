@@ -905,12 +905,13 @@ async function renderVideoInline(input: {
     audioUrl: string
     topic: string
 }): Promise<Buffer> {
-    const { renderMedia, selectComposition } = await import("@remotion/renderer")
     const { join } = await import("node:path")
     const { tmpdir } = await import("node:os")
     const { readFileSync, unlinkSync } = await import("node:fs")
-
-    const { bundle } = await import("@remotion/bundler")
+    const remotionRendererPackage = ["@remotion", "renderer"].join("/")
+    const remotionBundlerPackage = ["@remotion", "bundler"].join("/")
+    const { renderMedia, selectComposition } = require(remotionRendererPackage) as typeof import("@remotion/renderer")
+    const { bundle } = require(remotionBundlerPackage) as typeof import("@remotion/bundler")
     const entry = join(process.cwd(), "workers", "video-renderer", "remotion-src", "index.tsx")
     const publicDir = join(process.cwd(), "workers", "video-renderer", "remotion-src", "public")
     

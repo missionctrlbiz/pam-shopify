@@ -30,6 +30,13 @@
         "ctaButton": "Get the Digital Edition ($69.99 USD)",
         "footerDisclaimer": "Educational content only. Not a substitute for clinical supervision or professional judgment. SOAP Architect provides structural support only and does not offer medical advice or diagnosis.",
         "footerCopyright": "© 2026 Tonia Ojomo. All Rights Reserved.",
+        "socialLinks": {
+            "facebook": "https://www.facebook.com/psychassessmastery",
+            "instagram": "https://www.instagram.com/psychassessmastery",
+            "tiktok": "https://www.tiktok.com/@psychassessmastery",
+            "linkedin": "https://www.linkedin.com/company/psychassessmastery",
+            "youtube": "https://www.youtube.com/@psychassessmastery"
+        },
         "cookieBanner": {
             "message": "We use cookies to improve your experience and analyze site traffic. By continuing to use this site, you agree to our use of cookies.",
             "accept": "Accept",

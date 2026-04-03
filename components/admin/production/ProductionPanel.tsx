@@ -14,7 +14,7 @@ import type {
     PublishStatus, Platform, GenerateCycleResponse,
 } from "./types"
 import { CalendarTable, STATUS_META, PLATFORM_META } from "./CalendarTable"
-import { DayPanel } from "./DayPanel"
+import DayPanel from "./DayPanel"
 import { StoryBankTab } from "./StoryBankTab"
 import { RenderJobsTab } from "./RenderJobsTab"
 import { PublishTab } from "./PublishTab"

@@ -33,6 +33,11 @@ import {
   Tag,
   Send,
   User,
+  Facebook,
+  Instagram,
+  Youtube,
+  Linkedin,
+  Music,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -40,7 +45,7 @@ import { motion } from "framer-motion";
 import siteContent from "@/content/site-content.json";
 
 const content = siteContent.homePage;
-const global = siteContent.global;
+const global = siteContent.global as any;
 
 // Icon map for pain points
 const painPointIcons: Record<string, typeof AlertCircle> = {
@@ -649,7 +654,34 @@ export default function Home() {
         <p className="max-w-2xl mx-auto text-xs leading-relaxed text-slate-600 px-6">
           {global.footerDisclaimer}
         </p>
-        <Link href="/admin/login" className="absolute bottom-4 right-6 text-slate-700 hover:text-slate-500 text-[10px] transition">Admin</Link>
+        <div className="flex justify-center space-x-4 mt-6 mb-8">
+          {global.socialLinks?.facebook && (
+            <Link href={global.socialLinks.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+              <Facebook className="w-6 h-6 text-slate-400 hover:text-psych-purple transition-colors" />
+            </Link>
+          )}
+          {global.socialLinks?.instagram && (
+            <Link href={global.socialLinks.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <Instagram className="w-6 h-6 text-slate-400 hover:text-psych-purple transition-colors" />
+            </Link>
+          )}
+          {global.socialLinks?.tiktok && (
+            <Link href={global.socialLinks.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+              <Music className="w-6 h-6 text-slate-400 hover:text-psych-purple transition-colors" />
+            </Link>
+          )}
+          {global.socialLinks?.linkedin && (
+            <Link href={global.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+              <Linkedin className="w-6 h-6 text-slate-400 hover:text-psych-purple transition-colors" />
+            </Link>
+          )}
+          {global.socialLinks?.youtube && (
+            <Link href={global.socialLinks.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+              <Youtube className="w-6 h-6 text-slate-400 hover:text-psych-purple transition-colors" />
+            </Link>
+          )}
+        </div>
+        <Link href="/admin/login" className="inline-block mt-4 px-6 py-2 bg-psych-navy text-white rounded-full font-semibold hover:bg-psych-purple transition-colors text-sm">Admin Login</Link>
       </footer>
 
       {/* PDF Preview Modal */}
