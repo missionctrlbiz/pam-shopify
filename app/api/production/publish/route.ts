@@ -268,6 +268,21 @@ export async function GET(): Promise<NextResponse> {
             .limit(1)
             .single()
 
+        // Usage statistics
+        const { count: totalUsageEvents } = await supabaseAdmin
+            .from("usage_events")
+            .select("id", { count: "exact", head: true })
+
+        // Buffer Daily headroom (limit 20/day for safety, matching social API norms)
+        const BUFFER_DAILY_MAX = 20
+        const startOfDay = new Date()
+        startOfDay.setHours(0, 0, 0, 0)
+        const { count: bufferSentToday } = await supabaseAdmin
+            .from("publish_jobs")
+            .select("id", { count: "exact", head: true })
+            .neq("channel", "EMAIL")
+            .gte("created_at", startOfDay.toISOString())
+
         const state: PublishState = {
             emailSentToday,
             emailDailyLimit: EMAIL_DAILY_LIMIT,
@@ -276,6 +291,8 @@ export async function GET(): Promise<NextResponse> {
             scheduledPosts,
             recentJobs,
             lastBlastAt: lastBlastRow?.dispatched_at ?? null,
+            totalUsageEvents: totalUsageEvents ?? 0,
+            bufferRemainingToday: Math.max(0, BUFFER_DAILY_MAX - (bufferSentToday ?? 0)),
         }
 
         return NextResponse.json(state)
@@ -350,9 +367,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: "Asset must be COMPLETE before publishing" }, { status: 422 })
         }
 
-        // Fetch the HTML body from storage
+        // Fetch the HTML body from storage (unless override is provided)
         let htmlBody: string
-        if (assetRow.storage_url) {
+        if (cfg.htmlOverride) {
+            htmlBody = cfg.htmlOverride
+        } else if (assetRow.storage_url) {
             const htmlRes = await fetch(assetRow.storage_url)
             if (!htmlRes.ok) {
                 return NextResponse.json({ error: "Could not fetch EMAIL_HTML asset content" }, { status: 502 })

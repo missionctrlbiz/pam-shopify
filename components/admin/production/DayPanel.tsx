@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     X, RefreshCw, CheckCircle2, ChevronRight,
-    FileText, Info,
+    FileText, Info, AlertCircle,
 } from "lucide-react"
 import type { CalendarEntryDetail, ApproveResponse, GenerateAssetsResponse } from "./types"
 import { PROD_BRAND, StatusBadge, PLATFORM_META, POST_TYPE_META } from "./CalendarTable"
@@ -30,6 +30,7 @@ interface DayPanelProps {
 export default function DayPanel({ entryId, onClose, onEntryUpdated }: DayPanelProps) {
     const [entry, setEntry] = useState<CalendarEntryDetail | null>(null)
     const [loading, setLoading] = useState(false)
+    const [loadError, setLoadError] = useState(false)
     const [activeTab, setActiveTab] = useState<PanelTab>("content")
     const [approving, setApproving] = useState(false)
     const [generating, setGenerating] = useState(false)
@@ -46,14 +47,22 @@ export default function DayPanel({ entryId, onClose, onEntryUpdated }: DayPanelP
             setEntry(null)
             setActiveTab("content")
             setLoading(true)
+            setLoadError(false)
         }
         try {
             const res = await fetch(`/api/production/calendar/${id}`)
             if (res.ok) {
                 const data = await res.json() as { entry: CalendarEntryDetail }
                 setEntry(data.entry)
+                setLoadError(false)
+            } else {
+                console.error(`[DayPanel] Failed to fetch entry ${id}:`, res.status, await res.text())
+                setLoadError(true)
             }
-        } catch { /* silent */ }
+        } catch (error) {
+            console.error(`[DayPanel] Network error fetching entry ${id}:`, error)
+            setLoadError(true)
+        }
         if (!quiet) setLoading(false)
     }, [])
 
@@ -188,7 +197,7 @@ export default function DayPanel({ entryId, onClose, onEntryUpdated }: DayPanelP
                         exit={{ y: "100%", opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         style={{
-                            position: "fixed", top: "5%", left: "5%", right: "5%", bottom: "5%",
+                            position: "fixed", top: "5%", left: "5%", right: "5%", bottom: 0,
                             maxWidth: 1000, margin: "0 auto",
                             background: "var(--color-surface)",
                             borderRadius: "24px",
@@ -327,9 +336,32 @@ export default function DayPanel({ entryId, onClose, onEntryUpdated }: DayPanelP
 
                         {/* Panel body — scrollable */}
                         <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
-                            {loading || !entry ? (
+                            {loading ? (
                                 <div style={{ display: "flex", justifyContent: "center", paddingTop: 60, color: PROD_BRAND.gray, fontSize: 14 }}>
                                     Loading detail…
+                                </div>
+                            ) : loadError || !entry ? (
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 60, gap: 12 }}>
+                                    <AlertCircle size={32} color={PROD_BRAND.red} />
+                                    <div style={{ color: PROD_BRAND.gray, fontSize: 14, textAlign: "center" }}>
+                                        Failed to load entry details.
+                                    </div>
+                                    <button
+                                        onClick={() => entryId && fetchEntry(entryId)}
+                                        style={{
+                                            padding: "8px 16px",
+                                            background: PROD_BRAND.blue,
+                                            color: "white",
+                                            border: "none",
+                                            borderRadius: 8,
+                                            cursor: "pointer",
+                                            fontSize: 13,
+                                            fontWeight: 600
+                                        }}
+                                    >
+                                        <RefreshCw size={14} style={{ marginRight: 6, display: "inline" }} />
+                                        Retry
+                                    </button>
                                 </div>
                             ) : (
                                 <>

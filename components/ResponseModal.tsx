@@ -64,7 +64,7 @@ export function ResponseModal({
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 z-50 flex items-stretch justify-stretch">
                 {/* Backdrop */}
                 <motion.div
                     initial={{ opacity: 0 }}
@@ -79,7 +79,7 @@ export function ResponseModal({
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full max-w-4xl max-h-[85vh] bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                    className="relative w-full h-full bg-slate-900 rounded-none shadow-none overflow-hidden flex flex-col"
                 >
                     {/* Header */}
                     <div className={`${colorScheme.bg} text-white px-6 py-4 flex items-center justify-between`}>

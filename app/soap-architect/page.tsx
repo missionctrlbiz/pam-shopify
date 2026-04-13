@@ -9,7 +9,7 @@ import {
   ArrowLeft,
   ArrowRight,
 } from "lucide-react";
-import { SoapArchitect } from "@/components/GeminiTools";
+import { SoapArchitect } from "@/components/ClinicalTools";
 
 // Import centralized content
 import siteContent from "@/content/site-content.json";

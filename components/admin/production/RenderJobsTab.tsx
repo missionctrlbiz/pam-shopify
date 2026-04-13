@@ -2,16 +2,33 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import {
-    RefreshCw, AlertCircle, CheckCircle2, Clock, Zap,
-    Download, Image, Video, Music, FileText, Film,
-    RotateCcw, ChevronDown, ChevronUp,
-    Trash2, Square, CheckSquare, X, Loader2, ChevronLeft, ChevronRight
+    RefreshCw,
+    AlertCircle,
+    CheckCircle2,
+    Clock,
+    Zap,
+    Download,
+    Image,
+    Music,
+    FileText,
+    RotateCcw,
+    ChevronDown,
+    ChevronUp,
+    Trash2,
+    Square,
+    CheckSquare,
+    X,
+    Loader2,
+    Copy,
+    Package,
+    ArrowUpRight,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useRouter } from "next/navigation"
+import { CarouselPreview } from "./CarouselPreview"
+import { CarouselViewInline } from "./CarouselViewInline"
 import { PROD_BRAND, PLATFORM_META, POST_TYPE_META } from "./CalendarTable"
 import type { Platform, PostType } from "./types"
-
-// ── Local types ───────────────────────────────────────────────────────────────
 
 type RenderJobStatus = "QUEUED" | "RUNNING" | "COMPLETE" | "FAILED" | "PARTIAL"
 type JobType = "CAROUSEL" | "VIDEO" | "AUDIO" | "REPURPOSE"
@@ -25,66 +42,6 @@ interface JobAsset {
     fileName: string | null
     metadata?: Record<string, unknown> | null
 }
-
-// ── Carousel Slider Subcomponent ──────────────────────────────────────────────────
-function CarouselPreview({ slideUrls }: { slideUrls: string[] }) {
-    const [currentSlide, setCurrentSlide] = React.useState(0);
-    const PURPLE_CONST = "rgba(139, 92, 246, 1)";
-
-    return (
-        <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: "100%", aspectRatio: "1", position: "relative", background: "#f8f9fa", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 15px rgba(0,0,0,0.08)" }}>
-                <img
-                    src={`/api/production/assets/proxy?url=${encodeURIComponent(slideUrls[currentSlide])}`}
-                    alt={`Slide ${currentSlide + 1}`}
-                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-                />
-
-                {slideUrls.length > 1 && (
-                    <>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => (prev > 0 ? prev - 1 : slideUrls.length - 1)) }}
-                            style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.8)", backdropFilter: "blur(4px)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", zIndex: 10 }}
-                        >
-                            <ChevronLeft size={18} color={PROD_BRAND.navy} />
-                        </button>
-
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => (prev < slideUrls.length - 1 ? prev + 1 : 0)) }}
-                            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.8)", backdropFilter: "blur(4px)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", zIndex: 10 }}
-                        >
-                            <ChevronRight size={18} color={PROD_BRAND.navy} />
-                        </button>
-                    </>
-                )}
-            </div>
-
-            {slideUrls.length > 1 && (
-                <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
-                    {slideUrls.map((_, i) => (
-                        <button
-                            key={i}
-                            onClick={(e) => { e.stopPropagation(); setCurrentSlide(i) }}
-                            style={{
-                                width: 8, height: 8, borderRadius: "50%", padding: 0, border: "none", cursor: "pointer",
-                                background: i === currentSlide ? "rgba(139, 92, 246, 1)" : "#d1d5db",
-                                opacity: i === currentSlide ? 1 : 0.4,
-                                transition: "all 0.2s ease"
-                            }}
-                        />
-                    ))}
-                </div>
-            )}
-
-            <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: PROD_BRAND.gray }}>
-                Slide {currentSlide + 1} of {slideUrls.length}
-            </div>
-        </div>
-    );
-}
-
-
-
 
 interface JobRow {
     id: string
@@ -116,23 +73,21 @@ interface JobsApiResponse {
     pagination: { page: number; limit: number; totalPages: number }
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
 const PURPLE = "#af5ce9"
 const PURPLE_FAINT = "rgba(175,92,233,0.08)"
 
 const STATUS_CFG: Record<RenderJobStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-    QUEUED: { label: "Queued", color: PROD_BRAND.amber, bg: PROD_BRAND.amberFaint, icon: <Clock size={12} /> },
-    RUNNING: { label: "Running", color: PROD_BRAND.blue, bg: PROD_BRAND.blueFaint, icon: <Zap size={12} /> },
-    COMPLETE: { label: "Complete", color: PROD_BRAND.green, bg: PROD_BRAND.greenFaint, icon: <CheckCircle2 size={12} /> },
+    QUEUED: { label: "Up next", color: PROD_BRAND.amber, bg: PROD_BRAND.amberFaint, icon: <Clock size={12} /> },
+    RUNNING: { label: "Creating", color: PROD_BRAND.blue, bg: PROD_BRAND.blueFaint, icon: <Zap size={12} /> },
+    COMPLETE: { label: "Ready", color: PROD_BRAND.green, bg: PROD_BRAND.greenFaint, icon: <CheckCircle2 size={12} /> },
     FAILED: {
-        label: "Failed",
+        label: "Needs attention",
         color: PROD_BRAND.red,
         bg: PROD_BRAND.redFaint,
         icon: <AlertCircle size={12} />,
     },
     PARTIAL: {
-        label: "Incomplete",
+        label: "Partially ready",
         color: PROD_BRAND.amber,
         bg: PROD_BRAND.amberFaint,
         icon: <Clock size={12} />,
@@ -141,30 +96,43 @@ const STATUS_CFG: Record<RenderJobStatus, { label: string; color: string; bg: st
 
 const JOB_TYPE_ICON: Record<JobType, React.ReactNode> = {
     CAROUSEL: <Image size={14} />,
-    VIDEO: <Video size={14} />,
     AUDIO: <Music size={14} />,
-    REPURPOSE: <FileText size={14} />,
+    VIDEO: <Image size={14} />,
+    REPURPOSE: <Image size={14} />,
+}
+
+const JOB_TYPE_LABEL: Record<JobType, string> = {
+    CAROUSEL: "Carousel",
+    VIDEO: "Video",
+    AUDIO: "Audio",
+    REPURPOSE: "Repurpose",
 }
 
 const ASSET_TYPE_ICON: Record<string, React.ReactNode> = {
     CAROUSEL_PNG: <Image size={12} />,
-    VIDEO_MP4: <Film size={12} />,
     AUDIO_MP3: <Music size={12} />,
     TEXT_POST: <FileText size={12} />,
     EMAIL_HTML: <FileText size={12} />,
     VIDEO_SCRIPT_JSON: <FileText size={12} />,
 }
 
+const ASSET_TYPE_LABEL: Record<string, string> = {
+    CAROUSEL_PNG: "Carousel",
+    AUDIO_MP3: "Audio",
+    TEXT_POST: "Caption",
+    EMAIL_HTML: "Email",
+    VIDEO_SCRIPT_JSON: "Script",
+}
+
 type FilterTab = "all" | "active" | "failed" | "complete" | "incomplete"
+
 const FILTER_TABS: { id: FilterTab; label: string; status?: string }[] = [
     { id: "all", label: "All" },
-    { id: "active", label: "Active", status: "QUEUED,RUNNING" },
-    { id: "failed", label: "Failed", status: "FAILED" },
-    { id: "incomplete", label: "Incomplete", status: "PARTIAL" },
-    { id: "complete", label: "Complete", status: "COMPLETE" },
+    { id: "active", label: "In progress", status: "QUEUED,RUNNING" },
+    { id: "failed", label: "Needs attention", status: "FAILED" },
+    { id: "incomplete", label: "Partially ready", status: "PARTIAL" },
+    { id: "complete", label: "Ready", status: "COMPLETE" },
 ]
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function elapsed(start: string | null, end: string | null): string {
     if (!start) return "—"
@@ -191,7 +159,13 @@ function buildAssetProxyUrl(storageUrl: string, fileName?: string | null): strin
     return `/api/production/assets/proxy?${params.toString()}`
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+function isVisibleJob(job: JobRow): boolean {
+    return job.jobType !== "VIDEO" && job.jobType !== "REPURPOSE"
+}
+
+function isVisibleAsset(asset: JobAsset): boolean {
+    return asset.assetType !== "VIDEO_MP4"
+}
 
 export const RenderJobsTab: React.FC = () => {
     const [filter, setFilter] = useState<FilterTab>("all")
@@ -203,12 +177,15 @@ export const RenderJobsTab: React.FC = () => {
     const [bulkActing, setBulkActing] = useState(false)
     const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null)
     const [previewAsset, setPreviewAsset] = useState<JobAsset | null>(null)
+    const [carouselViewAssetId, setCarouselViewAssetId] = useState<string | null>(null)
     const [confirmModal, setConfirmModal] = useState<{
-        title: string;
-        desc: string;
-        actionLabel: string;
-        onConfirm: () => void;
+        title: string
+        desc: string
+        actionLabel: string
+        onConfirm: () => void
     } | null>(null)
+
+    const router = useRouter()
     const pollRef = useRef<NodeJS.Timeout | null>(null)
 
     const showToast = (msg: string, type: "ok" | "err" = "ok") => {
@@ -216,69 +193,85 @@ export const RenderJobsTab: React.FC = () => {
         setTimeout(() => setToast(null), 4000)
     }
 
-    // ── Fetch ──────────────────────────────────────────────────────────────
     const fetchJobs = useCallback(async (quiet = false) => {
         if (!quiet) setLoading(true)
         const statusParam = FILTER_TABS.find(t => t.id === filter)?.status ?? ""
         const url = `/api/production/render-jobs?limit=60${statusParam ? `&status=${statusParam}` : ""}`
+
         try {
             const res = await fetch(url)
             if (res.ok) {
                 const json = await res.json() as JobsApiResponse
                 setData(json)
             }
-        } catch { /* silent */ }
+        } catch {
+            // silent
+        }
+
         if (!quiet) setLoading(false)
     }, [filter])
 
-    // Re-fetch when filter changes; also clear selection
     useEffect(() => {
         fetchJobs()
         setSelected(new Set())
-
     }, [fetchJobs])
 
-    // Auto-poll every 8 s when active jobs exist — pause while tab is hidden (frugal)
     useEffect(() => {
         if (pollRef.current) clearInterval(pollRef.current)
         if (!data?.hasActive) return
+
         pollRef.current = setInterval(() => {
             if (!document.hidden) fetchJobs(true)
         }, 8000)
-        // Resume immediately when user switches back to this tab
-        const onVisible = () => { if (!document.hidden && data?.hasActive) fetchJobs(true) }
+
+        const onVisible = () => {
+            if (!document.hidden && data?.hasActive) fetchJobs(true)
+        }
+
         document.addEventListener("visibilitychange", onVisible)
+
         return () => {
             if (pollRef.current) clearInterval(pollRef.current)
             document.removeEventListener("visibilitychange", onVisible)
         }
     }, [data?.hasActive, fetchJobs])
 
-    // ── Retry ─────────────────────────────────────────────────────────────
     const handleRetry = async (jobId: string) => {
         setRetrying(prev => new Set(prev).add(jobId))
+
         try {
             const res = await fetch(`/api/production/render-jobs/${jobId}/retry`, { method: "POST" })
             let errorMsg = "Retry failed"
+
             try {
                 const json = await res.json() as { newJobId?: string; error?: string }
                 if (res.ok) {
-                    showToast(`Job retried → ${json.newJobId?.slice(0, 8)}…`)
+                    showToast("Queued again")
                     await fetchJobs()
-                    setRetrying(prev => { const s = new Set(prev); s.delete(jobId); return s })
+                    setRetrying(prev => {
+                        const s = new Set(prev)
+                        s.delete(jobId)
+                        return s
+                    })
                     return
                 }
                 errorMsg = json.error ?? errorMsg
             } catch {
                 errorMsg = `Server error (${res.status})`
             }
+
             console.error(`[Retry] Job ${jobId} failed:`, errorMsg)
-            showToast("Retry failed — check console", "err")
+            showToast("Could not retry right now", "err")
         } catch (e) {
             console.error("[Retry] Network error:", e)
-            showToast("Network error during retry", "err")
+            showToast("Network error while retrying", "err")
         }
-        setRetrying(prev => { const s = new Set(prev); s.delete(jobId); return s })
+
+        setRetrying(prev => {
+            const s = new Set(prev)
+            s.delete(jobId)
+            return s
+        })
     }
 
     const toggleExpand = (id: string) =>
@@ -288,108 +281,166 @@ export const RenderJobsTab: React.FC = () => {
             return s
         })
 
-    // ── Bulk select ────────────────────────────────────────────────────────
     const toggleSelect = (id: string) =>
-        setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+        setSelected(prev => {
+            const s = new Set(prev)
+            s.has(id) ? s.delete(id) : s.add(id)
+            return s
+        })
+
+    const jobs = (data?.jobs ?? []).filter(isVisibleJob)
+    const allSelected = jobs.length > 0 && selected.size === jobs.length
+    const someSelected = selected.size > 0 && selected.size < jobs.length
 
     const selectAll = () => setSelected(new Set(jobs.map(j => j.id)))
     const clearSelect = () => setSelected(new Set())
 
     const handleBulkRetry = async () => {
         const ids = [...selected].filter(id => jobs.find(j => j.id === id)?.status === "FAILED")
-        if (!ids.length) { showToast("No failed jobs in selection", "err"); return }
+        if (!ids.length) {
+            showToast("Select at least one item that needs attention", "err")
+            return
+        }
+
         setBulkActing(true)
+
         try {
-            const results = await Promise.all(ids.map(id =>
-                fetch(`/api/production/render-jobs/${id}/retry`, { method: "POST" })
-            ))
+            const results = await Promise.all(
+                ids.map(id => fetch(`/api/production/render-jobs/${id}/retry`, { method: "POST" }))
+            )
             const failed = results.filter(r => !r.ok)
+
             if (failed.length > 0) {
                 console.error(`[BulkRetry] ${failed.length} jobs failed to retry. Check network logs.`)
-                showToast(`${failed.length} retries failed — check console`, "err")
+                showToast(`Could not retry ${failed.length} item${failed.length !== 1 ? "s" : ""}`, "err")
             } else {
-                showToast(`Retried ${ids.length} job${ids.length !== 1 ? "s" : ""}`)
+                showToast(`Queued ${ids.length} item${ids.length !== 1 ? "s" : ""} again`)
             }
+
             clearSelect()
             await fetchJobs()
         } catch (e) {
             console.error("[BulkRetry] Error:", e)
-            showToast("Bulk retry had errors — check console", "err")
+            showToast("Bulk retry hit an error", "err")
         }
+
         setBulkActing(false)
     }
 
     const handleBulkDelete = async () => {
         setConfirmModal({
-            title: "Delete Jobs",
-            desc: `Permanently delete these ${selected.size} job${selected.size !== 1 ? "s" : ""}? This action cannot be undone.`,
-            actionLabel: bulkActing ? "Deleting…" : "Delete",
+            title: "Remove selected items?",
+            desc: `This will permanently delete ${selected.size} item${selected.size !== 1 ? "s" : ""} from the queue.`,
+            actionLabel: bulkActing ? "Removing…" : "Remove",
             onConfirm: async () => {
                 setConfirmModal(null)
                 setBulkActing(true)
+
                 try {
                     const res = await fetch("/api/production/render-jobs/bulk", {
                         method: "DELETE",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ ids: [...selected] }),
                     })
-                    if (!res.ok) throw new Error("Delete failed")
-                    showToast(`Deleted ${selected.size} job${selected.size !== 1 ? "s" : ""}`)
+
+                    if (!res.ok) throw new Error("Could not remove selected items")
+
+                    showToast(`Removed ${selected.size} item${selected.size !== 1 ? "s" : ""}`)
                     clearSelect()
                     await fetchJobs()
-                } catch (e) { showToast(String(e), "err") }
+                } catch (e) {
+                    showToast(String(e), "err")
+                }
+
                 setBulkActing(false)
-            }
+            },
         })
     }
 
-    // ── Render ────────────────────────────────────────────────────────────
-    const jobs = data?.jobs ?? []
-    const allSelected = jobs.length > 0 && selected.size === jobs.length
-    const someSelected = selected.size > 0 && selected.size < jobs.length
+    const visibleTotal = jobs.length
+    const hasVisibleActive = jobs.some(job => job.status === "QUEUED" || job.status === "RUNNING")
 
     return (
         <div style={{ position: "relative" }}>
-
-            {/* Toast */}
             {toast && (
-                <div style={{
-                    position: "fixed", top: 24, left: "50%", transform: "translateX(-50%)",
-                    background: toast.type === "ok" ? PROD_BRAND.green : PROD_BRAND.red,
-                    color: PROD_BRAND.white, borderRadius: 8,
-                    padding: "9px 22px", fontSize: 13, fontWeight: 600,
-                    zIndex: 999, boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-                    whiteSpace: "nowrap",
-                }}>
+                <div
+                    style={{
+                        position: "fixed",
+                        top: 24,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        background: toast.type === "ok" ? PROD_BRAND.green : PROD_BRAND.red,
+                        color: PROD_BRAND.white,
+                        borderRadius: 999,
+                        padding: "10px 20px",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        zIndex: 999,
+                        boxShadow: "0 10px 30px rgba(0,0,0,0.16)",
+                        whiteSpace: "nowrap",
+                    }}
+                >
                     {toast.msg}
                 </div>
             )}
 
-            {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    marginBottom: 20,
+                    gap: 16,
+                }}
+            >
                 <div>
-                    <h2 style={{ fontSize: 18, fontWeight: 800, color: PROD_BRAND.navy, margin: 0 }}>
-                        Render Queue
+                    <h2
+                        style={{
+                            fontSize: 20,
+                            fontWeight: 800,
+                            color: PROD_BRAND.navy,
+                            margin: 0,
+                            letterSpacing: "-0.02em",
+                        }}
+                    >
+                        Content Queue
                     </h2>
-                    {data && (
-                        <div style={{ fontSize: 12, color: PROD_BRAND.gray, marginTop: 4 }}>
-                            {data.total} job{data.total !== 1 ? "s" : ""}
-                            {data.hasActive && (
-                                <span style={{ color: PROD_BRAND.blue, marginLeft: 10, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                    <Zap size={10} /> renders in progress — polling every 5s
-                                </span>
-                            )}
-                        </div>
-                    )}
+
+                    <div style={{ fontSize: 12, color: PROD_BRAND.gray, marginTop: 6 }}>
+                        {visibleTotal} item{visibleTotal !== 1 ? "s" : ""}
+                        {hasVisibleActive && (
+                            <span
+                                style={{
+                                    color: PROD_BRAND.blue,
+                                    marginLeft: 10,
+                                    fontWeight: 700,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                }}
+                            >
+                                <Zap size={10} />
+                                updates automatically while work is in progress
+                            </span>
+                        )}
+                    </div>
                 </div>
+
                 <button
                     onClick={() => fetchJobs()}
                     style={{
-                        display: "flex", alignItems: "center", gap: 6,
-                        padding: "7px 14px", borderRadius: 6,
-                        background: PURPLE_FAINT,
-                        border: `1px solid ${PURPLE}44`,
-                        color: PURPLE, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "9px 14px",
+                        borderRadius: 999,
+                        background: "linear-gradient(135deg, rgba(175,92,233,0.08), rgba(236,81,133,0.08))",
+                        border: `1px solid ${PURPLE}33`,
+                        color: PURPLE,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        boxShadow: "0 6px 18px rgba(175,92,233,0.08)",
                     }}
                 >
                     <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
@@ -397,20 +448,34 @@ export const RenderJobsTab: React.FC = () => {
                 </button>
             </div>
 
-            {/* Filter tabs */}
-            <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: `1px solid ${PROD_BRAND.border}`, paddingBottom: 0 }}>
+            <div
+                style={{
+                    display: "flex",
+                    gap: 6,
+                    marginBottom: 20,
+                    padding: 4,
+                    background: "#fff",
+                    border: `1px solid ${PROD_BRAND.border}`,
+                    borderRadius: 16,
+                    boxShadow: "0 6px 20px rgba(15, 23, 42, 0.04)",
+                    overflowX: "auto",
+                }}
+            >
                 {FILTER_TABS.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setFilter(tab.id)}
                         style={{
-                            padding: "7px 16px",
-                            background: "none", border: "none",
-                            borderBottom: filter === tab.id ? `2px solid ${PURPLE}` : "2px solid transparent",
+                            padding: "9px 14px",
+                            background: filter === tab.id ? PURPLE_FAINT : "transparent",
+                            border: "none",
+                            borderRadius: 12,
                             color: filter === tab.id ? PURPLE : PROD_BRAND.gray,
-                            fontSize: 13, fontWeight: filter === tab.id ? 700 : 400,
-                            cursor: "pointer", transition: "all 0.15s",
-                            marginBottom: -1,
+                            fontSize: 12,
+                            fontWeight: filter === tab.id ? 800 : 600,
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                            whiteSpace: "nowrap",
                         }}
                     >
                         {tab.label}
@@ -418,83 +483,154 @@ export const RenderJobsTab: React.FC = () => {
                 ))}
             </div>
 
-            {/* Job list */}
             {loading ? (
-                <div style={{ display: "flex", justifyContent: "center", paddingTop: 60, color: PROD_BRAND.gray, fontSize: 14 }}>
-                    Loading jobs…
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        paddingTop: 64,
+                        color: PROD_BRAND.gray,
+                        fontSize: 14,
+                    }}
+                >
+                    Loading queue…
                 </div>
             ) : jobs.length === 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 60, gap: 12, color: PROD_BRAND.gray }}>
-                    <CheckCircle2 size={36} style={{ opacity: 0.25 }} />
-                    <span style={{ fontSize: 14 }}>No render jobs{filter !== "all" ? ` with status "${filter}"` : ""} found.</span>
+                <div
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        paddingTop: 72,
+                        gap: 12,
+                        color: PROD_BRAND.gray,
+                        background: "#fff",
+                        border: `1px solid ${PROD_BRAND.border}`,
+                        borderRadius: 24,
+                        paddingBottom: 72,
+                        boxShadow: "0 10px 30px rgba(15, 23, 42, 0.04)",
+                    }}
+                >
+                    <CheckCircle2 size={40} style={{ opacity: 0.3 }} />
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>
+                        Nothing to show here right now.
+                    </span>
                 </div>
             ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {/* Select-all row */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 4px 6px", borderBottom: `1px solid ${PROD_BRAND.border}`, marginBottom: 4 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "4px 6px 8px",
+                            borderBottom: `1px solid ${PROD_BRAND.border}`,
+                            marginBottom: 2,
+                        }}
+                    >
                         <button
                             onClick={allSelected ? clearSelect : selectAll}
-                            style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, padding: 0, color: allSelected || someSelected ? PURPLE : PROD_BRAND.gray }}
+                            style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: 0,
+                                color: allSelected || someSelected ? PURPLE : PROD_BRAND.gray,
+                            }}
                         >
-                            {allSelected
-                                ? <CheckSquare size={15} />
-                                : someSelected
-                                    ? <CheckSquare size={15} style={{ opacity: 0.5 }} />
-                                    : <Square size={15} />
-                            }
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>
-                                {allSelected ? "Deselect all" : "Select all"}
+                            {allSelected ? (
+                                <CheckSquare size={15} />
+                            ) : someSelected ? (
+                                <CheckSquare size={15} style={{ opacity: 0.5 }} />
+                            ) : (
+                                <Square size={15} />
+                            )}
+                            <span style={{ fontSize: 12, fontWeight: 700 }}>
+                                {allSelected ? "Clear selection" : "Select all"}
                             </span>
                         </button>
+
                         {selected.size > 0 && (
-                            <span style={{ fontSize: 12, color: PURPLE, fontWeight: 700 }}>
+                            <span style={{ fontSize: 12, color: PURPLE, fontWeight: 800 }}>
                                 {selected.size} selected
                             </span>
                         )}
                     </div>
 
-                    {/* Bulk action bar */}
                     {selected.size > 0 && (
-                        <div style={{
-                            display: "flex", alignItems: "center", gap: 8,
-                            padding: "10px 14px", borderRadius: 8,
-                            background: PURPLE_FAINT, border: `1px solid ${PURPLE}33`,
-                            marginBottom: 4,
-                        }}>
-                            <span style={{ fontSize: 12, color: PROD_BRAND.gray, marginRight: 4 }}>
-                                Bulk actions:
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "12px 14px",
+                                borderRadius: 18,
+                                background: "linear-gradient(135deg, rgba(175,92,233,0.08), rgba(236,81,133,0.06))",
+                                border: `1px solid ${PURPLE}22`,
+                                marginBottom: 4,
+                            }}
+                        >
+                            <span style={{ fontSize: 12, color: PROD_BRAND.gray, marginRight: 4, fontWeight: 700 }}>
+                                Quick actions
                             </span>
+
                             <button
                                 onClick={handleBulkRetry}
                                 disabled={bulkActing}
                                 style={{
-                                    display: "inline-flex", alignItems: "center", gap: 5,
-                                    padding: "5px 12px", borderRadius: 6, border: "none",
-                                    background: PURPLE, color: "#fff",
-                                    fontSize: 11, fontWeight: 700,
-                                    cursor: bulkActing ? "not-allowed" : "pointer", opacity: bulkActing ? 0.6 : 1,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 5,
+                                    padding: "7px 12px",
+                                    borderRadius: 999,
+                                    border: "none",
+                                    background: PURPLE,
+                                    color: "#fff",
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    cursor: bulkActing ? "not-allowed" : "pointer",
+                                    opacity: bulkActing ? 0.6 : 1,
                                 }}
                             >
-                                <RotateCcw size={10} /> Retry Failed
+                                <RotateCcw size={10} />
+                                Retry
                             </button>
+
                             <button
                                 onClick={handleBulkDelete}
                                 disabled={bulkActing}
                                 style={{
-                                    display: "inline-flex", alignItems: "center", gap: 5,
-                                    padding: "5px 12px", borderRadius: 6, border: "none",
-                                    background: PROD_BRAND.red, color: "#fff",
-                                    fontSize: 11, fontWeight: 700,
-                                    cursor: bulkActing ? "not-allowed" : "pointer", opacity: bulkActing ? 0.6 : 1,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 5,
+                                    padding: "7px 12px",
+                                    borderRadius: 999,
+                                    border: "none",
+                                    background: PROD_BRAND.red,
+                                    color: "#fff",
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    cursor: bulkActing ? "not-allowed" : "pointer",
+                                    opacity: bulkActing ? 0.6 : 1,
                                 }}
                             >
-                                <Trash2 size={10} /> Delete
+                                <Trash2 size={10} />
+                                Remove
                             </button>
+
                             <button
                                 onClick={clearSelect}
                                 style={{
-                                    marginLeft: "auto", background: "none", border: "none",
-                                    color: PROD_BRAND.gray, fontSize: 11, cursor: "pointer", fontWeight: 600,
+                                    marginLeft: "auto",
+                                    background: "none",
+                                    border: "none",
+                                    color: PROD_BRAND.gray,
+                                    fontSize: 11,
+                                    cursor: "pointer",
+                                    fontWeight: 700,
                                 }}
                             >
                                 Clear
@@ -502,109 +638,198 @@ export const RenderJobsTab: React.FC = () => {
                         </div>
                     )}
 
-                    {jobs.map(job => <JobCard
-                        key={job.id}
-                        job={job}
-                        isExpanded={expanded.has(job.id)}
-                        onToggle={() => toggleExpand(job.id)}
-                        onRetry={() => handleRetry(job.id)}
-                        isRetrying={retrying.has(job.id)}
-                        isSelected={selected.has(job.id)}
-                        onSelect={() => toggleSelect(job.id)}
-                        onPreviewAsset={setPreviewAsset}
-                    />)}
+                    {jobs.map(job => (
+                        <JobCard
+                            key={job.id}
+                            job={job}
+                            isExpanded={expanded.has(job.id)}
+                            onToggle={() => toggleExpand(job.id)}
+                            onRetry={() => handleRetry(job.id)}
+                            isRetrying={retrying.has(job.id)}
+                            isSelected={selected.has(job.id)}
+                            onSelect={() => toggleSelect(job.id)}
+                            onOpenCarousel={(assetId) => setCarouselViewAssetId(assetId)}
+                            onPreviewAsset={setPreviewAsset}
+                        />
+                    ))}
                 </div>
             )}
 
-            {/* Asset Preview Modal Pop-up */}
-            {previewAsset && (
+            {previewAsset && previewAsset.assetType !== "CAROUSEL_PNG" && (
                 <div
                     onClick={() => setPreviewAsset(null)}
                     style={{
-                        position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-                        background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        zIndex: 9999, padding: 20,
+                        position: "absolute",
+                        inset: 0,
+                        background: "rgba(4, 31, 80, 0.4)",
+                        backdropFilter: "blur(8px)",
+                        display: "flex",
+                        alignItems: "stretch",
+                        justifyContent: "stretch",
+                        zIndex: 9999,
                     }}
                 >
-                    <div
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
                         onClick={e => e.stopPropagation()}
                         style={{
-                            background: "#fff", borderRadius: 12, padding: 24,
-                            width: "100%", maxWidth: 640, maxHeight: "85vh",
-                            overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-                            position: "relative", display: "flex", flexDirection: "column", gap: 16
+                            background: "#fff",
+                            borderRadius: 0,
+                            padding: 40,
+                            width: "100%",
+                            height: "100%",
+                            overflowY: "auto",
+                            position: "relative",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 24,
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${PROD_BRAND.border}`, paddingBottom: 12 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ color: PURPLE }}>{ASSET_TYPE_ICON[previewAsset.assetType] ?? <FileText size={16} />}</span>
-                                <span style={{ fontWeight: 700, color: PROD_BRAND.navy, fontSize: 14 }}>{previewAsset.assetType.replace(/_/g, " ")}</span>
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "start",
+                                justifyContent: "space-between",
+                                borderBottom: `1px solid ${PROD_BRAND.border}`,
+                                paddingBottom: 24,
+                            }}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                                <div
+                                    style={{
+                                        width: 56,
+                                        height: 56,
+                                        borderRadius: 16,
+                                        background: `linear-gradient(135deg, ${PROD_BRAND.blueLight}, ${PROD_BRAND.blue})`,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        color: "#fff",
+                                        boxShadow: "0 8px 20px rgba(59, 130, 246, 0.3)",
+                                    }}
+                                >
+                                    {React.isValidElement(ASSET_TYPE_ICON[previewAsset.assetType])
+                                        ? React.cloneElement(ASSET_TYPE_ICON[previewAsset.assetType] as any, { size: 28 })
+                                        : <FileText size={28} />}
+                                </div>
+
+                                <div>
+                                    <h4
+                                        style={{
+                                            fontWeight: 800,
+                                            color: PROD_BRAND.navy,
+                                            fontSize: 24,
+                                            margin: 0,
+                                            letterSpacing: "-0.02em",
+                                        }}
+                                    >
+                                        {ASSET_TYPE_LABEL[previewAsset.assetType] ?? previewAsset.assetType.replace(/_/g, " ")}
+                                    </h4>
+                                    <p style={{ fontSize: 13, color: PROD_BRAND.gray, margin: "4px 0 0", fontWeight: 500 }}>
+                                        Preview
+                                    </p>
+                                </div>
                             </div>
+
                             <button
                                 onClick={() => setPreviewAsset(null)}
-                                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: PROD_BRAND.gray }}
-                            >✕</button>
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: "50%",
+                                    background: "#f8fafc",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: PROD_BRAND.gray,
+                                }}
+                            >
+                                <X size={20} />
+                            </button>
                         </div>
 
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 120 }}>
+                        <div style={{ flex: 1, minHeight: 200 }}>
                             {previewAsset.assetType === "AUDIO_MP3" && previewAsset.storageUrl && (
-                                <audio controls autoPlay style={{ width: "100%" }} src={buildAssetProxyUrl(previewAsset.storageUrl, previewAsset.fileName)} />
+                                <div style={{ padding: "40px 0" }}>
+                                    <audio
+                                        controls
+                                        autoPlay
+                                        style={{ width: "100%", height: 54 }}
+                                        src={buildAssetProxyUrl(previewAsset.storageUrl, previewAsset.fileName)}
+                                    />
+                                </div>
                             )}
 
-                            {previewAsset.assetType === "VIDEO_MP4" && previewAsset.storageUrl && (
-                                <video
-                                    controls
-                                    autoPlay
-                                    playsInline
-                                    preload="metadata"
-                                    style={{ width: "100%", maxHeight: "65vh", borderRadius: 8, background: "#000" }}
-                                    src={buildAssetProxyUrl(previewAsset.storageUrl, previewAsset.fileName)}
-                                />
-                            )}
-
-                            {previewAsset.assetType === "CAROUSEL_PNG" && (() => {
-                                const slideUrls = (previewAsset.metadata?.slideUrls as string[]) ?? []
-                                return (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
-                                        {slideUrls.length > 0 ? (
-                                            <CarouselPreview slideUrls={slideUrls} />
-                                        ) : previewAsset.storageUrl ? (
-                                            <img src={buildAssetProxyUrl(previewAsset.storageUrl, previewAsset.fileName)} alt="Slide" style={{ width: "100%", height: "auto", borderRadius: 8 }} />
-                                        ) : null}
-                                    </div>
-                                )
-                            })()}
-
-                            {(previewAsset.assetType === "TEXT_POST" || previewAsset.assetType === "EMAIL_HTML" || previewAsset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
+                            {(previewAsset.assetType === "TEXT_POST" ||
+                                previewAsset.assetType === "EMAIL_HTML" ||
+                                previewAsset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
                                 const content = (previewAsset.metadata?.content as string) ?? ""
+
                                 return (
                                     <div style={{ width: "100%" }}>
-                                        <div style={{
-                                            whiteSpace: "pre-wrap", background: PROD_BRAND.grayFaint,
-                                            padding: 16, borderRadius: 8, fontSize: 12, lineHeight: 1.6,
-                                            color: PROD_BRAND.navy, maxHeight: 400, overflowY: "auto",
-                                            border: `1px solid ${PROD_BRAND.border}`
-                                        }}>{content}</div>
-                                        <button
-                                            onClick={() => { navigator.clipboard.writeText(content); alert("Copied full text!"); }}
+                                        <div
                                             style={{
-                                                marginTop: 12, width: "100%", padding: "10px",
-                                                background: PURPLE, color: "#fff", border: "none",
-                                                borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: "pointer"
+                                                whiteSpace: "pre-wrap",
+                                                background: "#f8fafc",
+                                                padding: 32,
+                                                borderRadius: 24,
+                                                fontSize: 15,
+                                                lineHeight: 1.8,
+                                                color: PROD_BRAND.navy,
+                                                maxHeight: 450,
+                                                overflowY: "auto",
+                                                border: `1px solid ${PROD_BRAND.border}`,
+                                                fontFamily: "var(--font-montserrat)",
                                             }}
                                         >
-                                            Copy Full Content
-                                        </button>
+                                            {content}
+                                        </div>
+
+                                        <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(content)
+                                                    showToast("Copied")
+                                                }}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: "16px",
+                                                    background: "linear-gradient(135deg, #ed415b, #ec5185, #af5ce9)",
+                                                    color: "#fff",
+                                                    border: "none",
+                                                    borderRadius: 16,
+                                                    fontWeight: 700,
+                                                    fontSize: 14,
+                                                    cursor: "pointer",
+                                                    boxShadow: "0 10px 25px rgba(175, 92, 233, 0.3)",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    gap: 8,
+                                                }}
+                                            >
+                                                <Copy size={18} />
+                                                Copy text
+                                            </button>
+                                        </div>
                                     </div>
                                 )
                             })()}
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             )}
 
-            {/* Confirmation modal */}
+            {carouselViewAssetId && (
+                <CarouselViewInline
+                    assetId={carouselViewAssetId}
+                    onClose={() => setCarouselViewAssetId(null)}
+                />
+            )}
+
             <ConfirmModal
                 open={!!confirmModal}
                 onClose={() => setConfirmModal(null)}
@@ -618,8 +843,15 @@ export const RenderJobsTab: React.FC = () => {
     )
 }
 
-// ─── Reusable Confirm Modal ───────────────────────────────────────────────────
-function ConfirmModal({ open, onClose, onConfirm, title, desc, actionLabel, loading }: {
+function ConfirmModal({
+    open,
+    onClose,
+    onConfirm,
+    title,
+    desc,
+    actionLabel,
+    loading,
+}: {
     open: boolean
     onClose: () => void
     onConfirm: () => void
@@ -637,10 +869,14 @@ function ConfirmModal({ open, onClose, onConfirm, title, desc, actionLabel, load
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     style={{
-                        position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-                        background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        zIndex: 10000
+                        position: "absolute",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.5)",
+                        backdropFilter: "blur(2px)",
+                        display: "flex",
+                        alignItems: "stretch",
+                        justifyContent: "stretch",
+                        zIndex: 10000,
                     }}
                     onClick={onClose}
                 >
@@ -650,37 +886,95 @@ function ConfirmModal({ open, onClose, onConfirm, title, desc, actionLabel, load
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 16 }}
                         transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                        onClick={e => e.stopPropagation()} // Prevent close on clicking inside modal
+                        onClick={e => e.stopPropagation()}
                         style={{
-                            width: 420, maxWidth: "90vw", background: "#ffffff", borderRadius: 24, padding: 28,
-                            boxShadow: "0 20px 50px rgba(0,0,0,0.15)", zIndex: 10001
+                            width: "100%",
+                            height: "100%",
+                            background: "#ffffff",
+                            borderRadius: 0,
+                            padding: 28,
+                            boxShadow: "none",
+                            zIndex: 10001,
+                            overflow: "auto",
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                justifyContent: "space-between",
+                                marginBottom: 16,
+                            }}
+                        >
                             <div>
-                                <h3 style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 4, color: PROD_BRAND.navy, margin: 0 }}>
+                                <h3
+                                    style={{
+                                        fontSize: 20,
+                                        fontWeight: 800,
+                                        letterSpacing: "-0.02em",
+                                        marginBottom: 4,
+                                        color: PROD_BRAND.navy,
+                                        margin: 0,
+                                    }}
+                                >
                                     {title}
                                 </h3>
                                 <p style={{ fontSize: 13, color: PROD_BRAND.gray, lineHeight: 1.6, margin: "4px 0 0" }}>
                                     {desc}
                                 </p>
                             </div>
-                            <button onClick={onClose} aria-label="Close" style={{ padding: 6, borderRadius: 10, background: "none", border: "none", cursor: "pointer", color: PROD_BRAND.gray, marginLeft: 16 }}>
+
+                            <button
+                                onClick={onClose}
+                                aria-label="Close"
+                                style={{
+                                    padding: 6,
+                                    borderRadius: 10,
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    color: PROD_BRAND.gray,
+                                    marginLeft: 16,
+                                }}
+                            >
                                 <X size={18} />
                             </button>
                         </div>
 
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
-                            <button onClick={onClose} disabled={loading}
-                                style={{ padding: "10px 18px", borderRadius: 12, border: `1px solid ${PROD_BRAND.border}`, background: "#fff", fontSize: 12, fontWeight: 700, color: PROD_BRAND.gray, cursor: "pointer" }}>
+                            <button
+                                onClick={onClose}
+                                disabled={loading}
+                                style={{
+                                    padding: "10px 18px",
+                                    borderRadius: 12,
+                                    border: `1px solid ${PROD_BRAND.border}`,
+                                    background: "#fff",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    color: PROD_BRAND.gray,
+                                    cursor: "pointer",
+                                }}
+                            >
                                 Cancel
                             </button>
-                            <button onClick={onConfirm} disabled={loading}
+
+                            <button
+                                onClick={onConfirm}
+                                disabled={loading}
                                 style={{
-                                    padding: "10px 22px", borderRadius: 12, border: "none",
+                                    padding: "10px 22px",
+                                    borderRadius: 12,
+                                    border: "none",
                                     background: "linear-gradient(135deg, #ed415b, #ec5185, #af5ce9)",
-                                    color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                                    display: "flex", alignItems: "center", gap: 6, opacity: loading ? 0.7 : 1
+                                    color: "#fff",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    opacity: loading ? 0.7 : 1,
                                 }}
                             >
                                 {loading && <Loader2 size={12} className="animate-spin" />}
@@ -694,8 +988,6 @@ function ConfirmModal({ open, onClose, onConfirm, title, desc, actionLabel, load
     )
 }
 
-// ── JobCard ───────────────────────────────────────────────────────────────────
-
 const PURPLE_CONST = "#af5ce9"
 
 interface JobCardProps {
@@ -706,10 +998,11 @@ interface JobCardProps {
     isRetrying: boolean
     isSelected: boolean
     onSelect: () => void
+    onOpenCarousel: (assetId: string) => void
     onPreviewAsset: (asset: JobAsset) => void
 }
 
-const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, isRetrying, isSelected, onSelect, onPreviewAsset }) => {
+const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, isRetrying, isSelected, onSelect, onOpenCarousel, onPreviewAsset }) => {
     const entry = job.contentIdea.calendarEntry
     const cfg = STATUS_CFG[job.status]
     const isActive = job.status === "QUEUED" || job.status === "RUNNING"
@@ -774,11 +1067,11 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                             {job.jobType}
                         </span>
                         <span style={{ fontSize: 10, color: PROD_BRAND.gray }}>
-                            queued {relTime(job.queuedAt)}
+                            {relTime(job.queuedAt)}
                         </span>
                         {(job.startedAt || job.completedAt) && (
                             <span style={{ fontSize: 10, color: PROD_BRAND.gray }}>
-                                duration: {elapsed(job.startedAt, job.completedAt)}
+                                {elapsed(job.startedAt, job.completedAt)}
                             </span>
                         )}
                         {job.retryCount > 0 && (
@@ -794,24 +1087,22 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                     {/* Status badge */}
                     <span style={{
                         display: "inline-flex", alignItems: "center", gap: 4,
-                        padding: "3px 10px", borderRadius: 20,
+                        padding: "4px 8px", borderRadius: 20,
                         background: cfg.bg, color: cfg.color,
                         fontSize: 11, fontWeight: 700,
                     }}>
                         {isActive ? <RefreshCw size={10} className="animate-spin" /> : cfg.icon}
-                        {cfg.label}
                     </span>
 
                     {/* Asset count badge */}
                     {completedAssets.length > 0 && (
                         <span style={{
                             display: "inline-flex", alignItems: "center", gap: 3,
-                            padding: "3px 8px", borderRadius: 20,
+                            padding: "4px 8px", borderRadius: 20,
                             background: PROD_BRAND.greenFaint, color: PROD_BRAND.green,
                             fontSize: 11, fontWeight: 600,
                         }}>
-                            <Download size={10} />
-                            {completedAssets.length}
+                            <Download size={12} />
                         </span>
                     )}
 
@@ -832,7 +1123,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                             }}
                         >
                             {isRetrying
-                                ? <><RefreshCw size={10} className="animate-spin" /> Retrying…</>
+                                ? <><RefreshCw size={10} className="animate-spin" /> Retrying...</>
                                 : <><RotateCcw size={10} /> Retry</>
                             }
                         </button>
@@ -863,26 +1154,10 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                         </div>
                     )}
 
-                    {/* Timestamps */}
-                    <div style={{ display: "flex", gap: 24, marginBottom: 14 }}>
-                        {[
-                            { label: "Queued", val: job.queuedAt },
-                            { label: "Started", val: job.startedAt },
-                            { label: "Completed", val: job.completedAt },
-                        ].map(({ label, val }) => (
-                            <div key={label}>
-                                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: PROD_BRAND.gray, marginBottom: 2 }}>{label}</div>
-                                <div style={{ fontSize: 12, color: PROD_BRAND.navy }}>
-                                    {val ? new Date(val).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
 
                     {/* Assets */}
                     {job.assets.length > 0 && (
                         <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: PROD_BRAND.gray, marginBottom: 8 }}>Assets</div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                                 {job.assets.map(asset => {
                                     const isDone = asset.status === "COMPLETE" && asset.storageUrl
@@ -905,26 +1180,39 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                     {asset.assetType.replace(/_/g, " ")}
                                                 </span>
                                                 {isDone && asset.storageUrl && (
-                                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                                         <a
-                                                            href={buildAssetProxyUrl(asset.storageUrl, asset.fileName)}
+                                                            href={asset.assetType === "CAROUSEL_PNG" && asset.metadata?.zipUrl 
+                                                                ? buildAssetProxyUrl(asset.metadata.zipUrl as string, (asset.fileName || "carousel").replace(".png", ".zip"))
+                                                                : buildAssetProxyUrl(asset.storageUrl, asset.fileName)}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             onClick={e => e.stopPropagation()}
                                                             style={{
-                                                                display: "inline-flex", alignItems: "center", gap: 3,
+                                                                display: "inline-flex", alignItems: "center", gap: 5,
                                                                 color: PROD_BRAND.green, textDecoration: "none",
-                                                                fontWeight: 700, fontSize: 10,
+                                                                fontWeight: 800, fontSize: 13,
+                                                                padding: "4px 8px", borderRadius: 6,
+                                                                background: PROD_BRAND.white, border: `1px solid ${PROD_BRAND.green}44`
                                                             }}
                                                         >
-                                                            <Download size={10} /> DL
+                                                            <Download size={14} /> DL
                                                         </a>
                                                         <button
-                                                            onClick={(e) => { e.stopPropagation(); onPreviewAsset(asset); }}
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                if (asset.assetType === "CAROUSEL_PNG") {
+                                                                    onOpenCarousel(asset.id);
+                                                                } else {
+                                                                    onPreviewAsset(asset); 
+                                                                }
+                                                            }}
                                                             style={{
-                                                                display: "inline-flex", alignItems: "center", gap: 3,
-                                                                color: PURPLE_CONST, background: "none", border: "none",
-                                                                fontWeight: 700, fontSize: 10, cursor: "pointer", padding: 0
+                                                                display: "inline-flex", alignItems: "center", gap: 5,
+                                                                color: PURPLE_CONST, background: PROD_BRAND.white,
+                                                                border: `1px solid ${PURPLE_CONST}44`,
+                                                                fontWeight: 800, fontSize: 13, cursor: "pointer", 
+                                                                padding: "4px 8px", borderRadius: 6
                                                             }}
                                                         >
                                                             View
@@ -947,44 +1235,25 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                             src={buildAssetProxyUrl(asset.storageUrl, asset.fileName)}
                                                         />
                                                     )}
-                                                    {asset.assetType === "CAROUSEL_PNG" && (() => {
-                                                        const slideUrls = (asset.metadata?.slideUrls as string[]) ?? []
-                                                        return slideUrls.length > 0 ? (
-                                                            <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 4, width: "100%" }}>
-                                                                {slideUrls.map((u, i) => (
-                                                                    <img
-                                                                        key={i}
-                                                                        src={buildAssetProxyUrl(u)}
-                                                                        alt={`Slide ${i + 1}`}
-                                                                        style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 4, flexShrink: 0 }}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <img
-                                                                src={buildAssetProxyUrl(asset.storageUrl, asset.fileName)}
-                                                                alt={asset.assetType}
-                                                                style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 4, display: "block" }}
-                                                            />
-                                                        )
-                                                    })()}
+                                                    {asset.assetType === "CAROUSEL_PNG" && (
+                                                        <CarouselPreview slideUrls={(asset.metadata?.slideUrls as string[]) ?? []} />
+                                                    )}
                                                     {(asset.assetType === "TEXT_POST" || asset.assetType === "EMAIL_HTML" || asset.assetType === "VIDEO_SCRIPT_JSON") && (() => {
                                                         const content = (asset.metadata?.content as string) ?? ""
-                                                        const preview = content.slice(0, 90) + (content.length > 90 ? "…" : "")
+                                                        const preview = content.slice(0, 90) + (content.length > 90 ? "..." : "")
                                                         return content ? (
                                                             <div style={{ marginTop: 4 }}>
-                                                                <div style={{
-                                                                    fontSize: 10, color: PROD_BRAND.gray,
-                                                                    background: PROD_BRAND.grayFaint,
-                                                                    padding: "4px 6px", borderRadius: 4,
-                                                                    marginBottom: 4, lineHeight: 1.4,
-                                                                    whiteSpace: "pre-wrap", wordBreak: "break-word",
-                                                                }}>{preview}</div>
-                                                                {/* Simple Copy button just inline or using navigator */}
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(content); alert("Copied!") }}
-                                                                    style={{ background: "none", border: "none", fontSize: 10, cursor: "pointer", color: PROD_BRAND.blue, padding: 0 }}
-                                                                >Copy</button>
+                                                                 <div style={{
+                                                                     fontSize: 10, color: PROD_BRAND.gray,
+                                                                     background: PROD_BRAND.grayFaint,
+                                                                     padding: "4px 6px", borderRadius: 4,
+                                                                     marginBottom: 4, lineHeight: 1.4,
+                                                                     whiteSpace: "pre-wrap", wordBreak: "break-word",
+                                                                 }}>{preview}</div>
+                                                                 <button
+                                                                     onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(content); alert("Copied!") }}
+                                                                     style={{ background: "none", border: "none", fontSize: 10, cursor: "pointer", color: PROD_BRAND.blue, padding: 0 }}
+                                                                 >Copy</button>
                                                             </div>
                                                         ) : null
                                                     })()}
@@ -993,7 +1262,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
 
                                             {!isDone && (
                                                 <div style={{ fontSize: 10, color: PROD_BRAND.gray, fontStyle: "italic" }}>
-                                                    {asset.status.toLowerCase()}…
+                                                    {asset.status.toLowerCase()}...
                                                 </div>
                                             )}
                                         </div>
@@ -1002,68 +1271,6 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                             </div>
                         </div>
                     )}
-
-                    {/* Job Diagnostics Panel */}
-                    <div style={{ marginTop: 16, borderTop: `1px solid ${PROD_BRAND.border}`, paddingTop: 16 }}>
-                        <h4 style={{ fontSize: 12, fontWeight: 700, color: PROD_BRAND.navy, marginBottom: 12, fontFamily: "var(--font-montserrat)" }}>Job Diagnostics</h4>
-
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0 }}>Job ID:</span>
-                                <span style={{ fontFamily: "monospace", fontSize: 10, color: PROD_BRAND.navy, background: PROD_BRAND.grayFaint, padding: "2px 6px", borderRadius: 4 }}>{job.id}</span>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(job.id); }}
-                                    style={{ background: "none", border: "none", fontSize: 10, cursor: "pointer", color: PROD_BRAND.blue, padding: 0 }}
-                                    title="Copy Job ID"
-                                >Copy</button>
-                            </div>
-
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0 }}>Entry ID:</span>
-                                <span style={{ fontFamily: "monospace", fontSize: 10, color: PROD_BRAND.navy, background: PROD_BRAND.grayFaint, padding: "2px 6px", borderRadius: 4 }}>{entry.id}</span>
-                                <a
-                                    href={`/admin?panel=production&entryId=${entry.id}`}
-                                    style={{ fontSize: 10, color: PURPLE_CONST, textDecoration: "none", fontWeight: 600, display: "flex", alignItems: "center" }}
-                                >
-                                    Open Entry
-                                </a>
-                            </div>
-
-                            {/* Show callback payload indicator if we have completed assets */}
-                            {completedAssets.length > 0 && (
-                                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                                    <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0, marginTop: 2 }}>Storage:</span>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                        {completedAssets.map(a => (
-                                            <div key={a.id} style={{ fontSize: 10, fontFamily: "monospace", color: PROD_BRAND.gray, wordBreak: "break-all" }}>
-                                                {a.storageUrl ? new URL(a.storageUrl).pathname.split('/').pop() || 'Unknown path' : 'No URL'}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {job.errorMessage && (
-                                <div style={{ marginTop: 8, background: PROD_BRAND.redFaint, padding: 12, borderRadius: 8, border: `1px solid ${PROD_BRAND.red}44` }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                        <span style={{ fontSize: 11, fontWeight: 700, color: PROD_BRAND.red }}>Error Log</span>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(job.errorMessage || ""); }}
-                                            style={{ background: "none", border: "none", fontSize: 10, cursor: "pointer", color: PROD_BRAND.red, padding: 0, fontWeight: 600 }}
-                                        >Copy Error</button>
-                                    </div>
-                                    <pre style={{ fontSize: 10, color: PROD_BRAND.red, margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "monospace", maxHeight: 150, overflowY: "auto" }}>
-                                        {job.errorMessage}
-                                    </pre>
-                                </div>
-                            )}
-
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                                <span style={{ fontSize: 10, color: PROD_BRAND.gray, width: 80, flexShrink: 0 }}>Worker:</span>
-                                <span style={{ fontSize: 10, color: PROD_BRAND.gray }}>Trigger.dev background task</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             )}
         </div>

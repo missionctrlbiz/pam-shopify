@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { supabaseBrowser } from "@/lib/supabase"
+import { supabaseBrowser } from "@/lib/supabase-browser"
 import { useRouter } from "next/navigation"
 import { Lock, Mail, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { motion } from "framer-motion"
@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
         setIsLoading(true)
 
         try {
-            const { error: signInError } = await supabaseBrowser.auth.signInWithPassword({
+            const { error: signInError } = await supabaseBrowser().auth.signInWithPassword({
                 email,
                 password,
             })

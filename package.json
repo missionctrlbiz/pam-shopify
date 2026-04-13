@@ -26,6 +26,7 @@
     "dompurify": "^3.3.2",
     "framer-motion": "^12.34.2",
     "isomorphic-dompurify": "^3.0.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.575.0",
     "marked": "^17.0.3",
     "motion-icons-react": "^1.0.9",

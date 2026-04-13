@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     // "google-auth-library",
     "@remotion/renderer",
     "@remotion/bundler",
+    "remotion",
     "@resvg/resvg-js-darwin-arm64",
     "@resvg/resvg-js-darwin-x64",
     "@resvg/resvg-js-linux-arm64-gnu",

@@ -8,13 +8,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY")
 }
 
-import { createBrowserClient } from "@supabase/ssr"
-
-export const supabaseBrowser = createBrowserClient(supabaseUrl, supabaseAnonKey)
-
 // ---------------------------------------------------------------------------
 // Admin Client (Service Role)
 // For use in server-side background tasks/workers where RLS should be bypassed
+// Browser client is in lib/supabase-browser.ts (client components only)
 // ---------------------------------------------------------------------------
 export const supabaseAdmin = supabaseServiceRoleKey
     ? createClient(supabaseUrl, supabaseServiceRoleKey, {

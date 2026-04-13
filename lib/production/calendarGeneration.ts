@@ -1,87 +1,355 @@
-import { supabaseAdmin } from "@/lib/supabase"
-import { generateContentIdea } from "@/lib/production/contentStrategist"
-import {
-  Platform,
-  FunnelStage,
-  PostType,
-} from "@/lib/enums"
+import { supabaseAdmin } from "@/lib/supabase";
+import { generateContentIdea } from "@/lib/production/contentStrategist";
+import { Platform, FunnelStage, PostType } from "@/lib/enums";
 
-export const SCHEDULE_TEMPLATE: Array<{
-  platform: Platform
-  postType: PostType
-  funnelStage: FunnelStage
-  contentGoal: string
-}> = [
-    { platform: "IG", postType: "CAROUSEL", funnelStage: "AWARENESS", contentGoal: "Educate & build trust with PMHNP students" },
-    { platform: "TIKTOK", postType: "VIDEO", funnelStage: "AWARENESS", contentGoal: "Hook new audience with clinical tension" },
-    { platform: "LINKEDIN", postType: "TEXT_POST", funnelStage: "CONSIDERATION", contentGoal: "Establish Tonia as clinical thought leader" },
-    { platform: "IG", postType: "REEL", funnelStage: "AWARENESS", contentGoal: "Convert scroll to follow with quick clinical tip" },
-    { platform: "FB", postType: "TEXT_POST", funnelStage: "CONSIDERATION", contentGoal: "Drive community discussion around clinical challenges" },
-    { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "CONVERSION", contentGoal: "Nurture leads toward PAM Mastery Bundle purchase" },
-    { platform: "IG", postType: "CAROUSEL", funnelStage: "CONSIDERATION", contentGoal: "Deepen expertise, drive saves" },
-    { platform: "TIKTOK", postType: "VIDEO", funnelStage: "AWARENESS", contentGoal: "Reach new PMHNP students with high-yield tip" },
-    { platform: "IG", postType: "STORY", funnelStage: "RETENTION", contentGoal: "Re-engage existing followers with poll/quiz" },
-    { platform: "LINKEDIN", postType: "TEXT_POST", funnelStage: "CONVERSION", contentGoal: "Drive clicks to PAM product page" },
-    { platform: "IG", postType: "CAROUSEL", funnelStage: "AWARENESS", contentGoal: "Educate & build trust with PMHNP students" },
-    { platform: "VIDEO", postType: "VIDEO", funnelStage: "CONSIDERATION", contentGoal: "Deliver AI voice educational video for YouTube/IG" },
-    { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "CONVERSION", contentGoal: "Abandoned cart sequence — highlight PAM bundle value" },
-    { platform: "TIKTOK", postType: "REEL", funnelStage: "AWARENESS", contentGoal: "Viral potential — clinical myth-busting" },
-    { platform: "IG", postType: "CAROUSEL", funnelStage: "CONVERSION", contentGoal: "Social proof + direct offer CTA" },
-    { platform: "FB", postType: "TEXT_POST", funnelStage: "RETENTION", contentGoal: "Long-form case breakdown, drive group engagement" },
-    { platform: "IG", postType: "REEL", funnelStage: "AWARENESS", contentGoal: "Broad reach — hook on diagnostic mistake" },
-    { platform: "LINKEDIN", postType: "TEXT_POST", funnelStage: "CONSIDERATION", contentGoal: "Build professional credibility, invite follows" },
-    { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "CONVERSION", contentGoal: "Final nudge sequence — last chance bundle offer" },
-    { platform: "IG", postType: "CAROUSEL", funnelStage: "CONSIDERATION", contentGoal: "Deep-dive clinical skill, drive saves" },
-    { platform: "TIKTOK", postType: "VIDEO", funnelStage: "AWARENESS", contentGoal: "New audience acquisition — trending audio format" },
-    { platform: "IG", postType: "STORY", funnelStage: "RETENTION", contentGoal: "Ask-me-anything or rapid-fire clinical tips" },
-    { platform: "VIDEO", postType: "VIDEO", funnelStage: "CONSIDERATION", contentGoal: "Second weekly AI voice video — MSE deep-dive" },
-    { platform: "LINKEDIN", postType: "TEXT_POST", funnelStage: "CONVERSION", contentGoal: "Testimonial + direct link to PAM bundle" },
-    { platform: "IG", postType: "CAROUSEL", funnelStage: "AWARENESS", contentGoal: "Top-of-funnel awareness — shareable quick reference" },
-    { platform: "FB", postType: "TEXT_POST", funnelStage: "CONSIDERATION", contentGoal: "Group warm-up, invite replies" },
-    { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "RETENTION", contentGoal: "Post-purchase onboarding email mini-lesson" },
-    { platform: "TIKTOK", postType: "REEL", funnelStage: "AWARENESS", contentGoal: "Clinical storytelling — patient scenario hook" },
-    { platform: "IG", postType: "CAROUSEL", funnelStage: "CONVERSION", contentGoal: "Month-end conversion push — bundle CTA" },
-    { platform: "EMAIL", postType: "EMAIL_LESSON", funnelStage: "CONVERSION", contentGoal: "Day 30 — re-engagement + strong purchase CTA" },
-  ]
+export type ToneOption =
+  | "educational"
+  | "professional"
+  | "conversational"
+  | "inspiring";
+
+export type RatioOption = "1:1" | "4:5" | "9:16";
+
+export type PostTypeSelectionKey =
+  | "CAROUSEL"
+  | "EMAIL"
+  | "CAPTION"
+  | "LINKEDIN";
+
+export interface PostTypeSelection {
+  enabled: boolean;
+  count: number;
+  slides?: number;
+  ratios?: RatioOption[];
+  tone?: ToneOption;
+  platform?: string;
+}
+
+export interface SelectionTemplate {
+  platform: Platform;
+  postType: PostType;
+  funnelStage: FunnelStage;
+  contentGoal: string;
+  selectionKey: PostTypeSelectionKey;
+  tone?: ToneOption;
+  slides?: number;
+  ratios?: RatioOption[];
+  requestedPlatform?: string;
+}
 
 export interface CalendarGenerationInput {
-  days: number
-  offset: number
-  overwrite: boolean
-  startDate: string
-  generatedById: string
+  days: number;
+  offset: number;
+  overwrite: boolean;
+  startDate: string;
+  generatedById: string;
+  selections?: Partial<Record<PostTypeSelectionKey, PostTypeSelection>>;
 }
 
 export interface CalendarGenerationResult {
-  generated: number
-  failed: number
-  entries: { dayNumber: number; entryId: string; topic: string }[]
-  errors?: string[]
+  generated: number;
+  failed: number;
+  entries: { dayNumber: number; entryId: string; topic: string }[];
+  errors?: string[];
 }
 
-export async function runCalendarGenerationBatch(input: CalendarGenerationInput): Promise<CalendarGenerationResult> {
-  const days = Math.min(Math.max(input.days, 1), 30)
-  const offset = Math.max(input.offset, 0)
-  const startDate = new Date(input.startDate)
+const LEGACY_SAFE_TEMPLATE: SelectionTemplate[] = [
+  {
+    platform: "IG",
+    postType: "CAROUSEL",
+    funnelStage: "AWARENESS",
+    contentGoal: "Educational carousel focused on practical assessment skills.",
+    selectionKey: "CAROUSEL",
+    tone: "educational",
+    slides: 6,
+    ratios: ["1:1", "4:5", "9:16"],
+  },
+  {
+    platform: "FB",
+    postType: "TEXT_POST",
+    funnelStage: "CONSIDERATION",
+    contentGoal:
+      "Readable social post that explains a practical psychiatric concept clearly.",
+    selectionKey: "CAPTION",
+    tone: "conversational",
+    requestedPlatform: "FB",
+  },
+  {
+    platform: "LINKEDIN",
+    postType: "TEXT_POST",
+    funnelStage: "CONSIDERATION",
+    contentGoal:
+      "Professional thought-leadership post grounded in real clinical practice.",
+    selectionKey: "LINKEDIN",
+    tone: "professional",
+    requestedPlatform: "LINKEDIN",
+  },
+  {
+    platform: "EMAIL",
+    postType: "EMAIL_LESSON",
+    funnelStage: "CONVERSION",
+    contentGoal:
+      "Structured educational email with a clear lesson and next step.",
+    selectionKey: "EMAIL",
+    tone: "educational",
+  },
+  {
+    platform: "IG",
+    postType: "CAROUSEL",
+    funnelStage: "CONSIDERATION",
+    contentGoal:
+      "Save-worthy carousel that breaks down a common assessment challenge.",
+    selectionKey: "CAROUSEL",
+    tone: "educational",
+    slides: 6,
+    ratios: ["1:1", "4:5", "9:16"],
+  },
+];
+
+function clampCount(
+  value: number | undefined,
+  min: number,
+  max: number,
+  fallback: number,
+) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
+function normalizeTone(tone?: string): ToneOption {
+  if (
+    tone === "educational" ||
+    tone === "professional" ||
+    tone === "conversational" ||
+    tone === "inspiring"
+  ) {
+    return tone;
+  }
+  return "educational";
+}
+
+function normalizeRatios(ratios?: string[]): RatioOption[] {
+  const allowed: RatioOption[] = ["1:1", "4:5", "9:16"];
+  const next = (ratios ?? []).filter((r): r is RatioOption =>
+    allowed.includes(r as RatioOption),
+  );
+  return next.length > 0 ? Array.from(new Set(next)) : ["1:1", "4:5", "9:16"];
+}
+
+function buildContentGoal(
+  base: string,
+  opts?: {
+    tone?: ToneOption;
+    slides?: number;
+    ratios?: RatioOption[];
+    requestedPlatform?: string;
+  },
+) {
+  const parts = [base];
+
+  if (opts?.tone) {
+    const toneMap: Record<ToneOption, string> = {
+      educational: "Use a clear educational tone.",
+      professional: "Use a polished professional tone.",
+      conversational: "Use a warm conversational tone.",
+      inspiring: "Use an encouraging and motivating tone.",
+    };
+    parts.push(toneMap[opts.tone]);
+  }
+
+  if (opts?.slides) {
+    parts.push(`Build exactly ${opts.slides} carousel slides.`);
+  }
+
+  if (opts?.ratios?.length) {
+    parts.push(
+      `Prepare content that works cleanly in these layouts: ${opts.ratios.join(", ")}.`,
+    );
+  }
+
+  if (opts?.requestedPlatform) {
+    parts.push(`Primary destination: ${opts.requestedPlatform}.`);
+  }
+
+  parts.push("Keep the copy specific, polished, practical, and non-generic.");
+  return parts.join(" ");
+}
+
+function buildTemplatesFromSelections(
+  selections?: Partial<Record<PostTypeSelectionKey, PostTypeSelection>>,
+): SelectionTemplate[] {
+  const s = selections ?? {};
+
+  const templates: SelectionTemplate[] = [];
+
+  const carousel = s.CAROUSEL;
+  if (carousel?.enabled) {
+    const count = clampCount(carousel.count, 1, 5, 1);
+    const slides = clampCount(carousel.slides, 2, 10, 6);
+    const tone = normalizeTone(carousel.tone);
+    const ratios = normalizeRatios(carousel.ratios);
+
+    for (let i = 0; i < count; i++) {
+      const stageCycle: FunnelStage[] = [
+        "AWARENESS",
+        "CONSIDERATION",
+        "CONVERSION",
+        "RETENTION",
+        "AWARENESS",
+      ];
+      const funnelStage = stageCycle[i % stageCycle.length];
+      templates.push({
+        platform: "IG",
+        postType: "CAROUSEL",
+        funnelStage,
+        selectionKey: "CAROUSEL",
+        tone,
+        slides,
+        ratios,
+        contentGoal: buildContentGoal(
+          "Create a carousel built from seeded clinical topics with clear, practical teaching value.",
+          { tone, slides, ratios, requestedPlatform: "IG" },
+        ),
+      });
+    }
+  }
+
+  const email = s.EMAIL;
+  if (email?.enabled) {
+    const count = clampCount(email.count, 1, 5, 1);
+    const tone = normalizeTone(email.tone);
+
+    for (let i = 0; i < count; i++) {
+      const stageCycle: FunnelStage[] = [
+        "CONSIDERATION",
+        "CONVERSION",
+        "RETENTION",
+        "CONSIDERATION",
+        "CONVERSION",
+      ];
+      templates.push({
+        platform: "EMAIL",
+        postType: "EMAIL_LESSON",
+        funnelStage: stageCycle[i % stageCycle.length],
+        selectionKey: "EMAIL",
+        tone,
+        contentGoal: buildContentGoal(
+          "Create a structured email lesson with strong clarity, useful teaching points, and an actionable close.",
+          { tone, requestedPlatform: "EMAIL" },
+        ),
+      });
+    }
+  }
+
+  const caption = s.CAPTION;
+  if (caption?.enabled) {
+    const count = clampCount(caption.count, 1, 5, 1);
+    const tone = normalizeTone(caption.tone);
+    const requestedPlatform = (caption.platform ?? "IG").toUpperCase();
+    const platform: Platform =
+      requestedPlatform === "FB"
+        ? "FB"
+        : requestedPlatform === "LINKEDIN"
+          ? "LINKEDIN"
+          : "IG";
+
+    for (let i = 0; i < count; i++) {
+      const stageCycle: FunnelStage[] = [
+        "AWARENESS",
+        "CONSIDERATION",
+        "RETENTION",
+        "AWARENESS",
+        "CONSIDERATION",
+      ];
+      templates.push({
+        platform,
+        postType: "TEXT_POST",
+        funnelStage: stageCycle[i % stageCycle.length],
+        selectionKey: "CAPTION",
+        tone,
+        requestedPlatform,
+        contentGoal: buildContentGoal(
+          "Create a concise social post with clear teaching value and strong readability.",
+          { tone, requestedPlatform },
+        ),
+      });
+    }
+  }
+
+  const linkedin = s.LINKEDIN;
+  if (linkedin?.enabled) {
+    const count = clampCount(linkedin.count, 1, 5, 1);
+    const tone = normalizeTone(linkedin.tone ?? "professional");
+
+    for (let i = 0; i < count; i++) {
+      const stageCycle: FunnelStage[] = [
+        "CONSIDERATION",
+        "CONVERSION",
+        "CONSIDERATION",
+        "RETENTION",
+        "CONSIDERATION",
+      ];
+      templates.push({
+        platform: "LINKEDIN",
+        postType: "TEXT_POST",
+        funnelStage: stageCycle[i % stageCycle.length],
+        selectionKey: "LINKEDIN",
+        tone,
+        requestedPlatform: "LINKEDIN",
+        contentGoal: buildContentGoal(
+          "Create a polished LinkedIn post with authority, clarity, and practical insight.",
+          { tone, requestedPlatform: "LINKEDIN" },
+        ),
+      });
+    }
+  }
+
+  return templates;
+}
+
+export async function runCalendarGenerationBatch(
+  input: CalendarGenerationInput,
+): Promise<CalendarGenerationResult> {
+  const startDate = new Date(input.startDate);
 
   if (Number.isNaN(startDate.getTime())) {
-    throw new Error("Invalid startDate")
+    throw new Error("Invalid startDate");
   }
+
+  const selectionTemplates = buildTemplatesFromSelections(input.selections);
+  const usingSelections = selectionTemplates.length > 0;
+
+  const totalRequested = usingSelections
+    ? selectionTemplates.length
+    : Math.min(Math.max(input.days, 1), 5);
+
+  if (totalRequested < 1) {
+    throw new Error("Select at least one post format before generating.");
+  }
+
+  if (totalRequested > 5) {
+    throw new Error("You can generate a maximum of 5 entries at a time.");
+  }
+
+  const days = totalRequested;
+  const offset = Math.max(input.offset, 0);
 
   if (input.overwrite) {
     const { error: deleteError } = await supabaseAdmin
       .from("production_calendar_entries")
       .delete()
-      .eq("publish_status", "DRAFT")
+      .eq("publish_status", "DRAFT");
 
     if (deleteError) {
-      throw new Error(`Failed to clear drafts: ${deleteError.message}`)
+      throw new Error(`Failed to clear drafts: ${deleteError.message}`);
     }
   }
 
   const { data: clinicalFields, error: clinicalError } = await supabaseAdmin
     .from("clinical_fields")
-    .select(`
+    .select(
+      `
       id,
       fieldKey:field_key,
       displayName:display_name,
@@ -89,27 +357,32 @@ export async function runCalendarGenerationBatch(input: CalendarGenerationInput)
       description,
       clinicalContext:clinical_context,
       exampleValues:example_values
-    `)
+    `,
+    )
     .eq("is_active", true)
-    .order("field_category", { ascending: true })
+    .order("field_category", { ascending: true });
 
   if (clinicalError) {
-    throw new Error(`Failed to read clinical fields: ${clinicalError.message}`)
+    throw new Error(`Failed to read clinical fields: ${clinicalError.message}`);
   }
 
   if (!clinicalFields || clinicalFields.length === 0) {
-    throw new Error("No active ClinicalField records found. Run the seed first.")
+    throw new Error("No active topic records found. Load topics first.");
   }
 
-  const results: CalendarGenerationResult["entries"] = []
-  const errors: string[] = []
+  const templates = usingSelections
+    ? selectionTemplates
+    : LEGACY_SAFE_TEMPLATE.slice(0, days);
+
+  const results: CalendarGenerationResult["entries"] = [];
+  const errors: string[] = [];
 
   const tasks = Array.from({ length: days }).map(async (_, i) => {
-    const absoluteDay = offset + i
-    const template = SCHEDULE_TEMPLATE[absoluteDay % SCHEDULE_TEMPLATE.length]
-    const field = clinicalFields[absoluteDay % clinicalFields.length]
-    const entryDate = new Date(startDate)
-    entryDate.setDate(startDate.getDate() + absoluteDay)
+    const absoluteDay = offset + i;
+    const template = templates[i % templates.length];
+    const field = clinicalFields[absoluteDay % clinicalFields.length];
+    const entryDate = new Date(startDate);
+    entryDate.setDate(startDate.getDate() + i);
 
     try {
       const { masterJson, rawPrompt } = await generateContentIdea(
@@ -128,7 +401,16 @@ export async function runCalendarGenerationBatch(input: CalendarGenerationInput)
           contentGoal: template.contentGoal,
           dayNumber: i + 1,
         },
-      )
+      );
+
+      const enrichedMasterJson = {
+        ...masterJson,
+        requestedTone: template.tone ?? null,
+        requestedPlatform: template.requestedPlatform ?? template.platform,
+        requestedCarouselSlides: template.slides ?? null,
+        requestedRatios: template.ratios ?? null,
+        selectedFormat: template.selectionKey,
+      };
 
       const { data: calEntry, error: entryError } = await supabaseAdmin
         .from("production_calendar_entries")
@@ -136,19 +418,24 @@ export async function runCalendarGenerationBatch(input: CalendarGenerationInput)
           day_number: absoluteDay + 1,
           entry_date: entryDate.toISOString(),
           platform: template.platform,
-          topic: masterJson.title || masterJson.hook || field.displayName,
+          topic:
+            enrichedMasterJson.title ||
+            enrichedMasterJson.hook ||
+            field.displayName,
           content_goal: template.contentGoal,
           funnel_stage: template.funnelStage,
           post_type: template.postType,
-          hook: masterJson.hook,
-          cta: masterJson.cta,
+          hook: enrichedMasterJson.hook,
+          cta: enrichedMasterJson.cta,
           publish_status: "DRAFT",
         })
         .select("id")
-        .single()
+        .single();
 
       if (entryError || !calEntry) {
-        throw new Error(entryError?.message ?? "Failed to create calendar entry")
+        throw new Error(
+          entryError?.message ?? "Failed to create calendar entry",
+        );
       }
 
       const { error: ideaError } = await supabaseAdmin
@@ -156,33 +443,36 @@ export async function runCalendarGenerationBatch(input: CalendarGenerationInput)
         .insert({
           calendar_entry_id: calEntry.id,
           clinical_field_id: field.id,
-          master_json: masterJson,
+          master_json: enrichedMasterJson,
           raw_gemini_prompt: rawPrompt,
           quality_gate_status: "PENDING",
           generated_by_id: input.generatedById,
-        })
+        });
 
       if (ideaError) {
-        throw new Error(ideaError.message)
+        throw new Error(ideaError.message);
       }
 
       results.push({
         dayNumber: absoluteDay + 1,
         entryId: calEntry.id,
-        topic: masterJson.title || masterJson.hook || field.displayName,
-      })
+        topic:
+          enrichedMasterJson.title ||
+          enrichedMasterJson.hook ||
+          field.displayName,
+      });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      errors.push(`Day ${absoluteDay + 1} (${field.fieldKey}): ${message}`)
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`Day ${absoluteDay + 1} (${field.fieldKey}): ${message}`);
     }
-  })
+  });
 
-  await Promise.allSettled(tasks)
+  await Promise.allSettled(tasks);
 
   return {
     generated: results.length,
     failed: errors.length,
     entries: results,
     errors: errors.length > 0 ? errors : undefined,
-  }
+  };
 }

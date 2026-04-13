@@ -52,18 +52,14 @@ export const QG_META: Record<QualityGateStatus, { label: string; color: string }
 export const PLATFORM_META: Record<Platform, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
     IG: { label: "IG", icon: <Instagram size={14} />, color: "#E1306C", bg: "#FDF2F8" },
     FB: { label: "FB", icon: <Facebook size={14} />, color: "#1877F2", bg: "#EFF6FF" },
-    TIKTOK: { label: "TT", icon: <Film size={14} />, color: "#010101", bg: "#F8FAFC" },
     LINKEDIN: { label: "LI", icon: <Linkedin size={14} />, color: "#0A66C2", bg: "#EFF6FF" },
     EMAIL: { label: "EM", icon: <Mail size={14} />, color: "#EA4335", bg: "#FEF2F2" },
-    VIDEO: { label: "VD", icon: <Video size={14} />, color: "#7C3AED", bg: "#F5F3FF" },
+    TIKTOK: { label: "TT", icon: <Video size={14} />, color: "#000000", bg: "#F3F4F6" },
 }
 
 export const POST_TYPE_META: Record<PostType, { label: string; icon: React.ReactNode }> = {
     CAROUSEL: { label: "Carousel", icon: <Layers size={13} /> },
-    VIDEO: { label: "Video", icon: <Video size={13} /> },
     TEXT_POST: { label: "Text Post", icon: <FileText size={13} /> },
-    REEL: { label: "Reel", icon: <Film size={13} /> },
-    STORY: { label: "Story", icon: <Presentation size={13} /> },
     EMAIL_LESSON: { label: "Email", icon: <BookOpen size={13} /> },
 }
 
@@ -97,7 +93,7 @@ export const QGBadge: React.FC<{ status: QualityGateStatus; score?: number | nul
 
 // ── PlatformIcon ──────────────────────────────────────────────────────────────
 const PlatformChip: React.FC<{ platform: Platform }> = ({ platform }) => {
-    const meta = PLATFORM_META[platform]
+    const meta = PLATFORM_META[platform] ?? { label: platform, icon: <Video size={14} />, color: PROD_BRAND.gray, bg: PROD_BRAND.grayFaint }
     return (
         <span
             style={{
@@ -106,7 +102,7 @@ const PlatformChip: React.FC<{ platform: Platform }> = ({ platform }) => {
                 background: meta.bg, color: meta.color,
                 fontSize: 11, fontWeight: 700,
             }}
-            title={platform === "IG" ? "Instagram" : platform === "FB" ? "Facebook" : platform === "TIKTOK" ? "TikTok" : platform === "LINKEDIN" ? "LinkedIn" : platform === "EMAIL" ? "Email" : "Video"}
+            title={platform === "IG" ? "Instagram" : platform === "FB" ? "Facebook" : (platform as string) === "TIKTOK" ? "TikTok" : platform === "LINKEDIN" ? "LinkedIn" : platform === "EMAIL" ? "Email" : "Video"}
         >
             {meta.icon}
             {meta.label}
@@ -116,7 +112,7 @@ const PlatformChip: React.FC<{ platform: Platform }> = ({ platform }) => {
 
 // ── PostTypeChip ──────────────────────────────────────────────────────────────
 const PostTypeChip: React.FC<{ postType: PostType }> = ({ postType }) => {
-    const meta = POST_TYPE_META[postType]
+    const meta = POST_TYPE_META[postType] || { icon: <FileText size={12} />, label: postType }
     return (
         <span
             style={{

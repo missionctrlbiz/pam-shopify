@@ -39,7 +39,6 @@ const PLATFORM_LABEL: Record<Platform, string> = {
     TIKTOK: "TikTok",
     LINKEDIN: "LinkedIn",
     EMAIL: "Email",
-    VIDEO: "Video",
 }
 
 const POST_TYPE_LABEL: Record<string, string> = {

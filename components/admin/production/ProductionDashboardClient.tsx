@@ -99,7 +99,7 @@ const GenerateCycleModal: React.FC<{
                     key="modal-backdrop"
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     onClick={onClose}
-                    style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60 }}
+                    style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60 }}
                 />
                 <motion.div
                     key="modal"
@@ -108,11 +108,12 @@ const GenerateCycleModal: React.FC<{
                     exit={{ opacity: 0, scale: 0.95, y: 16 }}
                     transition={{ type: "spring", stiffness: 300, damping: 28 }}
                     style={{
-                        position: "fixed", top: "50%", left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        width: 480, background: PROD_BRAND.white,
-                        borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                        position: "absolute", inset: 0,
+                        background: PROD_BRAND.white,
+                        borderRadius: 0, boxShadow: "none",
                         padding: 32, zIndex: 70,
+                        display: "flex", flexDirection: "column",
+                        overflow: "auto",
                     }}
                 >
                     {/* Header */}
@@ -122,7 +123,7 @@ const GenerateCycleModal: React.FC<{
                                 Generate 30-Day Cycle
                             </div>
                             <div style={{ fontSize: 13, color: PROD_BRAND.gray, lineHeight: 1.5 }}>
-                                This calls Gemini for each day and creates 30 calendar entries with draft content.
+                                This process initializes the clinical calendar for each day and creates 30 calendar entries with draft content.
                                 Existing entries in <strong>DRAFT</strong> will be overwritten. Takes 2–5 minutes.
                             </div>
                         </div>

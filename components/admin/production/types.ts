@@ -1,8 +1,8 @@
 /** Shared TypeScript types for the /admin/production UI. */
 
 // ── Enum mirrors ──────────────────────────────────────────────────────────────
-export type Platform = "IG" | "FB" | "TIKTOK" | "LINKEDIN" | "EMAIL" | "VIDEO"
-export type PostType = "CAROUSEL" | "VIDEO" | "TEXT_POST" | "REEL" | "STORY" | "EMAIL_LESSON"
+export type Platform = "IG" | "FB" | "LINKEDIN" | "EMAIL" | "TIKTOK"
+export type PostType = "CAROUSEL" | "TEXT_POST" | "EMAIL_LESSON"
 export type PublishStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "GENERATING" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED"
 export type AssetStatus = "PENDING" | "GENERATING" | "COMPLETE" | "FAILED"
 export type AssetType = "CAROUSEL_PNG" | "VIDEO_MP4" | "TEXT_POST" | "EMAIL_HTML" | "AUDIO_MP3" | "VIDEO_SCRIPT_JSON"
@@ -236,6 +236,8 @@ export interface EmailBlastConfig {
     subject: string
     /** Hard cap per dispatch; must stay ≤ daily quota (default 90) */
     maxRecipients: number
+    /** Manual HTML override for inline editing */
+    htmlOverride?: string
 }
 
 /** Configuration for a Buffer multi-channel blast */
@@ -295,6 +297,8 @@ export interface PublishState {
     scheduledPosts: ScheduledPostRow[]
     recentJobs: PublishJob[]
     lastBlastAt: string | null
+    totalUsageEvents: number      // Global content counter
+    bufferRemainingToday: number  // Daily buffer slot headroom
 }
 
 /** Response body for POST /api/production/publish */

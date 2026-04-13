@@ -22,10 +22,8 @@ const BRAND = {
 }
 
 // ─── Filter options ──────────────────────────────────────────────────────────
-const ALL_PLATFORMS: Platform[] = ["IG", "FB", "TIKTOK", "LINKEDIN", "EMAIL", "VIDEO"]
-const ALL_POST_TYPES: PostType[] = [
-    "CAROUSEL", "REEL", "TEXT_POST", "STORY", "VIDEO", "EMAIL_LESSON",
-]
+const ALL_PLATFORMS: Platform[] = ["IG", "FB", "TIKTOK", "LINKEDIN", "EMAIL"]
+const ALL_POST_TYPES: PostType[] = ["CAROUSEL", "TEXT_POST", "EMAIL_LESSON"]
 const ALL_STATUSES: PublishStatus[] = [
     "DRAFT", "PENDING_APPROVAL", "APPROVED", "GENERATING", "SCHEDULED", "PUBLISHED", "ARCHIVED",
 ]
