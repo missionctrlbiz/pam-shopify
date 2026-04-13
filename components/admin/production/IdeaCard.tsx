@@ -43,10 +43,7 @@ const PLATFORM_LABEL: Record<Platform, string> = {
 
 const POST_TYPE_LABEL: Record<string, string> = {
     CAROUSEL: "Carousel",
-    VIDEO: "Video",
     TEXT_POST: "Text Post",
-    REEL: "Reel",
-    STORY: "Story",
     EMAIL_LESSON: "Email",
 }
 

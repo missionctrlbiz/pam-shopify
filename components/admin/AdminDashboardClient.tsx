@@ -28,6 +28,7 @@ import { ContentEditor } from "./ContentEditor";
 import Link from "next/link";
 import { ProductionPanel } from "./production/ProductionPanel";
 import { StandaloneCalendar } from "./production/StandaloneCalendar";
+import { PublishTab } from "./production/PublishTab";
 
 interface DashboardStats {
   totalBuyers: number;
@@ -54,6 +55,7 @@ type Tab =
   | "leads"
   | "analytics"
   | "content"
+  | "notifications"
   | "production"
   | "calendar";
 
@@ -98,6 +100,7 @@ const VALID_TABS: Tab[] = [
   "leads",
   "analytics",
   "content",
+  "notifications",
   "production",
   "calendar",
 ];
@@ -112,12 +115,16 @@ export function AdminDashboardClient({ session }: { session: any }) {
 
   const switchTab = useCallback(
     (tab: Tab) => {
-      setActiveTab(tab);
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("panel", tab);
-      router.replace(`/admin?${params.toString()}`, { scroll: false });
+      try {
+        const params = new URLSearchParams(window.location.search);
+        params.set("panel", tab);
+        router.replace(`/admin?${params.toString()}`, { scroll: false });
+        setActiveTab(tab);
+      } catch (err) {
+        console.error("[Dashboard] Navigation failed:", err);
+      }
     },
-    [router, searchParams],
+    [router],
   );
   const [newBuyerEmail, setNewBuyerEmail] = useState("");
   const [addingBuyer, setAddingBuyer] = useState(false);
@@ -138,15 +145,19 @@ export function AdminDashboardClient({ session }: { session: any }) {
     if (showSpinner) setIsRefreshing(true);
     try {
       const res = await fetch("/api/admin/stats");
-      if (res.ok) {
-        const data = await res.json();
+      if (!res.ok) {
+        console.warn(`[Dashboard] Stats fetch failed with status: ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      if (data.stats) {
         setStats(data.stats);
-        setBuyers(data.recentBuyers);
-        setLeads(data.recentLeads);
+        setBuyers(data.recentBuyers || []);
+        setLeads(data.recentLeads || []);
         setIsLoaded(true);
       }
-    } catch {
-      /* silently fail */
+    } catch (err) {
+      console.error("[Dashboard] Network error during fetchData:", err);
     }
     if (showSpinner) setTimeout(() => setIsRefreshing(false), 400);
   }, []);
@@ -220,6 +231,12 @@ export function AdminDashboardClient({ session }: { session: any }) {
       label: "Site Content",
       icon: FileEdit,
       iconName: "FileEdit",
+    },
+    {
+      key: "notifications",
+      label: "Email Notifications",
+      icon: Mail,
+      iconName: "Send",
     },
     {
       key: "production",
@@ -844,6 +861,18 @@ export function AdminDashboardClient({ session }: { session: any }) {
                 className="bg-white rounded-3xl p-6 md:p-8 shadow-xl shadow-slate-200/40 border border-slate-100"
               >
                 <ContentEditor />
+              </motion.div>
+            )}
+
+            {/* Email Notifications Tab */}
+            {activeTab === "notifications" && (
+              <motion.div
+                key="notifications"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+              >
+                <PublishTab />
               </motion.div>
             )}
 

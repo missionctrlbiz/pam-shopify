@@ -29,7 +29,6 @@ const VALID_PLATFORMS = new Set<Platform>([
 const VALID_POST_TYPES = new Set<PostType>([
   "CAROUSEL",
   "TEXT_POST",
-  "STORY",
   "EMAIL_LESSON",
 ]);
 

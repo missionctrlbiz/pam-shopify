@@ -26,12 +26,9 @@ export type FunnelStage = ValueOf<typeof FunnelStage>
 
 export const PostType = {
     CAROUSEL: "CAROUSEL",
-    VIDEO: "VIDEO",
     TEXT_POST: "TEXT_POST",
-    REEL: "REEL",
-    STORY: "STORY",
     EMAIL_LESSON: "EMAIL_LESSON",
-} as const
+} as const;
 export type PostType = ValueOf<typeof PostType>
 
 export const PublishStatus = {

@@ -1,4 +1,4 @@
-import { getAI } from "@/lib/ai";
+import { getAI, PRODUCTION_MODEL } from "@/lib/ai";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
         }
 
         const result = await getAI().models.generateContent({
-            model: "gemini-2.5-pro",
+            model: PRODUCTION_MODEL,
             contents: prompt,
         });
         const text = result.text ?? "";
