@@ -11,8 +11,7 @@
  * Model: gemini-2.0-flash-thinking-exp-01-21 (thinking model — prompt-based JSON).
  */
 
-import { getAI } from "@/lib/ai"
-import { PRODUCTION_MODEL } from "./contentStrategist"
+import { getAI, PRODUCTION_MODEL, FALLBACK_MODEL } from "@/lib/ai"
 import {
     QUALITY_GATE_QUESTIONS,
     QualityGateInput,
@@ -22,7 +21,9 @@ import {
     evaluateQualityGateResponse
 } from "./qualityGateUtils"
 
-export { QUALITY_GATE_QUESTIONS, PASS_THRESHOLD_SCORE, PASS_THRESHOLD_COUNT }
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+export { QUALITY_GATE_QUESTIONS, PASS_THRESHOLD_SCORE, PASS_THRESHOLD_COUNT, PRODUCTION_MODEL }
 export type { QualityGateInput, QualityGateOutput }
 
 // ---------------------------------------------------------------------------
@@ -76,12 +77,44 @@ export async function runQualityGate(
     idea: QualityGateInput
 ): Promise<QualityGateOutput> {
     const prompt = buildQualityPrompt(idea)
-    const response = await getAI().models.generateContent({
-        model: PRODUCTION_MODEL,
-        config: { responseMimeType: "application/json" },
-        contents: prompt,
-    })
-    const text = response.text ?? "{}"
+    const ai = getAI()
+    
+    let responseText = "{}"
+    let currentModel = PRODUCTION_MODEL
+    let lastError: any = null
 
-    return evaluateQualityGateResponse(text)
+    // Retry loop with exponential backoff and model fallback
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const response = await ai.models.generateContent({
+                model: currentModel,
+                config: { responseMimeType: "application/json" },
+                contents: prompt,
+            })
+            responseText = response.text ?? "{}"
+            lastError = null
+            break
+        } catch (error: any) {
+            lastError = error
+            const errorMsg = error?.message?.toLowerCase() || ""
+            const is503 = error?.status === 503 || errorMsg.includes("high demand") || errorMsg.includes("overloaded")
+            
+            if (is503 && attempt < 2) {
+                const delay = Math.pow(2, attempt) * 1500
+                console.warn(`[QualityGate] 503 High Demand for ${currentModel}. Retrying in ${delay}ms...`)
+                await sleep(delay)
+                if (attempt === 1) {
+                    currentModel = FALLBACK_MODEL
+                }
+            } else {
+                break
+            }
+        }
+    }
+
+    if (lastError) {
+        throw lastError
+    }
+
+    return evaluateQualityGateResponse(responseText)
 }

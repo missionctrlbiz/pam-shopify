@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     X, RefreshCw, CheckCircle2, ChevronRight,
-    FileText, Info, AlertCircle,
+    FileText, Info, AlertCircle, Layers,
 } from "lucide-react"
 import type { CalendarEntryDetail, ApproveResponse, GenerateAssetsResponse } from "./types"
 import { PROD_BRAND, StatusBadge, PLATFORM_META, POST_TYPE_META } from "./CalendarTable"
@@ -258,13 +258,13 @@ export default function DayPanel({ entryId, onClose, onEntryUpdated }: DayPanelP
                                                 <span style={{ fontFamily: "monospace", fontSize: 11, background: PROD_BRAND.blueFaint, color: PROD_BRAND.blue, padding: "2px 8px", borderRadius: 4, fontWeight: 700, flexShrink: 0 }}>
                                                     Day {String(entry.dayNumber).padStart(2, "0")}
                                                 </span>
-                                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: PLATFORM_META[entry.platform]?.color, flexShrink: 0 }}>
-                                                    {PLATFORM_META[entry.platform]?.icon}
-                                                    {PLATFORM_META[entry.platform]?.label}
+                                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: (PLATFORM_META as any)[entry.platform]?.color || PROD_BRAND.gray, flexShrink: 0 }}>
+                                                    {(PLATFORM_META as any)[entry.platform]?.icon || <FileText size={14} />}
+                                                    {(PLATFORM_META as any)[entry.platform]?.label || entry.platform}
                                                 </span>
                                                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: PROD_BRAND.gray, flexShrink: 0 }}>
-                                                    {POST_TYPE_META[entry.postType]?.icon}
-                                                    {POST_TYPE_META[entry.postType]?.label}
+                                                    {(POST_TYPE_META as any)[entry.postType]?.icon || <Layers size={13} />}
+                                                    {(POST_TYPE_META as any)[entry.postType]?.label || entry.postType.replace(/_/g, " ")}
                                                 </span>
                                                 <StatusBadge status={entry.publishStatus} />
                                             </div>

@@ -20,13 +20,15 @@
  * Model: gemini-2.5-flash via PRODUCTION_MODEL import from contentStrategist
  */
 
-import { getAI } from "@/lib/ai"
+import { getAI, FALLBACK_MODEL } from "@/lib/ai"
 import {
     PRODUCTION_MODEL,
     ContentIdeaMasterJson,
     PAMScene,
     PlatformPromptBank,
 } from "./contentStrategist"
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -205,23 +207,28 @@ export async function expandToSceneDirectorScript(
     postType: string
 ): Promise<SceneDirectorResult> {
     const rawPrompt = buildScenePrompt(masterJson, platform, postType)
+    const ai = getAI()
 
-    // Attempt once, retry once if ESL markers are missing
     let result: SceneDirectorResult | null = null
     let lastError = ""
+    let currentModel = PRODUCTION_MODEL
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    // Core attempt loop: tries normally, retries up to 3 times for 503s.
+    // Separately tracks "missing ESL markers" retry logic.
+    let markersAttempt = 1
+
+    for (let attempt = 1; attempt <= 4; attempt++) {
         try {
-            const prompt = attempt === 1
+            const prompt = markersAttempt === 1
                 ? rawPrompt
                 : rawPrompt + "\n\nPREVIOUS OUTPUT REJECTED: Missing required [pause], [breath], or [emphasize:word] cues in voiceoverText. You MUST include all three types of ESL markers. Retry with corrected output."
-            const response = await getAI().models.generateContent({
-                model: PRODUCTION_MODEL,
+            
+            const response = await ai.models.generateContent({
+                model: currentModel,
                 config: { responseMimeType: "application/json" },
                 contents: prompt,
             })
             const text = response.text ?? "{}"
-
             const parsed = JSON.parse(text) as SceneDirectorResult
 
             // Enforce duration bounds server-side
@@ -233,24 +240,36 @@ export async function expandToSceneDirectorScript(
 
             // Validate ESL markers
             if (!hasRequiredESLMarkers(parsed.scenes)) {
-                if (attempt === 1) {
+                if (markersAttempt === 1) {
                     lastError = "Missing ESL markers — retrying"
-                    continue
+                    markersAttempt++
+                    continue // Try again within the same retry loop budget
                 }
-                // On second attempt, accept anyway but log warning
+                // On second marker attempt, accept anyway but log warning
                 console.warn(
-                    "[sceneDirector] ESL markers still missing after retry — accepting output"
+                    `[sceneDirector] ESL markers still missing after retry on ${currentModel} — accepting output`
                 )
             }
 
             result = parsed
             break
-        } catch (err) {
+        } catch (err: any) {
             lastError = String(err)
-            if (attempt === 2) {
-                throw new Error(
-                    `sceneDirector failed after 2 attempts: ${lastError}`
-                )
+            const errorMsg = err?.message?.toLowerCase() || ""
+            const is503 = err?.status === 503 || errorMsg.includes("high demand") || errorMsg.includes("overloaded")
+            
+            if (is503 && attempt < 3) {
+                const delay = Math.pow(2, attempt) * 1500
+                console.warn(`[sceneDirector] 503 High Demand for ${currentModel}. Retrying in ${delay}ms...`)
+                await sleep(delay)
+                if (attempt === 2) {
+                    currentModel = FALLBACK_MODEL
+                }
+            } else if (attempt >= 3) {
+                throw new Error(`sceneDirector failed after ${attempt} attempts: ${lastError}`)
+            } else {
+                // If it's a parsing error or something else, throw if we exhausted attempts
+                 throw new Error(`sceneDirector non-retryable error: ${lastError}`)
             }
         }
     }

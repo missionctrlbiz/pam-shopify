@@ -92,8 +92,8 @@ export const QGBadge: React.FC<{ status: QualityGateStatus; score?: number | nul
 }
 
 // ── PlatformIcon ──────────────────────────────────────────────────────────────
-const PlatformChip: React.FC<{ platform: Platform }> = ({ platform }) => {
-    const meta = PLATFORM_META[platform] ?? { label: platform, icon: <Video size={14} />, color: PROD_BRAND.gray, bg: PROD_BRAND.grayFaint }
+const PlatformChip: React.FC<{ platform: string }> = ({ platform }) => {
+    const meta = (PLATFORM_META as any)[platform] || { label: platform, icon: <FileText size={14} />, color: PROD_BRAND.gray, bg: PROD_BRAND.grayFaint }
     return (
         <span
             style={{
@@ -102,7 +102,7 @@ const PlatformChip: React.FC<{ platform: Platform }> = ({ platform }) => {
                 background: meta.bg, color: meta.color,
                 fontSize: 11, fontWeight: 700,
             }}
-            title={platform === "IG" ? "Instagram" : platform === "FB" ? "Facebook" : (platform as string) === "TIKTOK" ? "TikTok" : platform === "LINKEDIN" ? "LinkedIn" : platform === "EMAIL" ? "Email" : "Video"}
+            title={platform}
         >
             {meta.icon}
             {meta.label}
@@ -111,8 +111,8 @@ const PlatformChip: React.FC<{ platform: Platform }> = ({ platform }) => {
 }
 
 // ── PostTypeChip ──────────────────────────────────────────────────────────────
-const PostTypeChip: React.FC<{ postType: PostType }> = ({ postType }) => {
-    const meta = POST_TYPE_META[postType] || { icon: <FileText size={12} />, label: postType }
+const PostTypeChip: React.FC<{ postType: string }> = ({ postType }) => {
+    const meta = (POST_TYPE_META as any)[postType] || { icon: <FileText size={12} />, label: postType.replace(/_/g, " ") }
     return (
         <span
             style={{

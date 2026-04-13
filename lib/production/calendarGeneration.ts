@@ -377,7 +377,9 @@ export async function runCalendarGenerationBatch(
   const results: CalendarGenerationResult["entries"] = [];
   const errors: string[] = [];
 
-  const tasks = Array.from({ length: days }).map(async (_, i) => {
+  // Running tasks sequentially to prevent 503/429 "High Demand" rate limits
+  // when bursting multiple requests to the Gemini API simultaneously.
+  for (let i = 0; i < days; i++) {
     const absoluteDay = offset + i;
     const template = templates[i % templates.length];
     const field = clinicalFields[absoluteDay % clinicalFields.length];
@@ -462,12 +464,28 @@ export async function runCalendarGenerationBatch(
           field.displayName,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      let message = error instanceof Error ? error.message : String(error);
+      
+      // Parse out Google's raw JSON error for a beautiful UI message
+      if (message.includes('"error"')) {
+        try {
+          const parsed = JSON.parse(message);
+          if (parsed.error && parsed.error.message) {
+            message = parsed.error.message;
+            if (message.includes("high demand") || parsed.error.code === 503) {
+              message = "Gemini AI is currently overloaded. Waiting a few minutes usually resolves this.";
+            }
+          }
+        } catch {
+          // Ignore parse errors, fallback to raw message
+        }
+      } else if (message.includes("503") || message.toLowerCase().includes("high demand")) {
+         message = "Gemini AI is currently overloaded. Waiting a few minutes usually resolves this.";
+      }
+
       errors.push(`Day ${absoluteDay + 1} (${field.fieldKey}): ${message}`);
     }
-  });
-
-  await Promise.allSettled(tasks);
+  }
 
   return {
     generated: results.length,

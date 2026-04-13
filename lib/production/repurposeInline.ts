@@ -706,6 +706,10 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
         const raw = await callGemini(buildCarouselPrompt(input))
         const script = JSON.parse(raw) as CarouselScript
 
+        if (!script || !Array.isArray(script.slides) || script.slides.length === 0) {
+            throw new Error("AI generated an invalid or empty carousel script.")
+        }
+
         script.title = cleanText(script.title)
         script.coverText = cleanText(script.coverText)
         script.ctaSlide = cleanText(script.ctaSlide)

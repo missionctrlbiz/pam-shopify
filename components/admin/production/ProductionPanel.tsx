@@ -83,7 +83,7 @@ export type ToneOption =
   | "conversational"
   | "inspiring";
 export type RatioOption = "1:1" | "4:5" | "9:16";
-export type PostTypeKey = "CAROUSEL" | "EMAIL" | "CAPTION" | "LINKEDIN";
+export type PostTypeKey = "CAROUSEL" | "TEXT_POST" | "EMAIL_LESSON";
 
 export interface PostTypeSelection {
   enabled: boolean;
@@ -114,24 +114,18 @@ export const POST_TYPE_CONFIGS: Record<
     hasSlides: true,
     hasRatios: true,
   },
-  EMAIL: {
-    label: "Email Newsletter",
-    description: "Educational email for your subscriber list",
-    emoji: "📧",
-    color: "#3B82F6",
-  },
-  CAPTION: {
-    label: "Social Caption",
-    description: "Engaging text post for Instagram & Facebook",
+  TEXT_POST: {
+    label: "Text Post / Caption",
+    description: "Engaging short post with hook and CTA",
     emoji: "✍️",
     color: "#E1306C",
     hasPlatform: true,
   },
-  LINKEDIN: {
-    label: "LinkedIn Article",
-    description: "Professional thought-leadership content",
-    emoji: "💼",
-    color: "#0A66C2",
+  EMAIL_LESSON: {
+    label: "Email Lesson",
+    description: "Educational email for your subscriber list",
+    emoji: "📧",
+    color: "#3B82F6",
   },
 };
 
@@ -161,14 +155,13 @@ function defaultSelections(): Record<PostTypeKey, PostTypeSelection> {
       ratios: ["1:1", "4:5", "9:16"],
       tone: "educational",
     },
-    EMAIL: { enabled: false, count: 1, tone: "educational" },
-    CAPTION: {
+    TEXT_POST: {
       enabled: false,
       count: 1,
       tone: "conversational",
       platform: "IG",
     },
-    LINKEDIN: { enabled: false, count: 1, tone: "professional" },
+    EMAIL_LESSON: { enabled: false, count: 1, tone: "educational" },
   };
 }
 
@@ -334,11 +327,11 @@ function GenerateModal({
           />
           <motion.div
             key="modal"
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 16 }}
-            transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="absolute inset-0 bg-white rounded-none shadow-none z-60 flex flex-col overflow-auto"
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ type: "spring", stiffness: 350, damping: 30 }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl max-h-[90vh] bg-white rounded-[32px] shadow-2xl z-60 flex flex-col overflow-hidden border border-slate-100"
           >
             {/* Header */}
             <div className="flex items-start justify-between p-7 pb-5 border-b border-slate-100">
@@ -393,14 +386,33 @@ function GenerateModal({
                       </div>
                     )}
                   </div>
-                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                    <p className="text-sm text-slate-600 leading-relaxed">
+                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                    <p className="text-sm text-slate-600 leading-relaxed font-medium">
                       Your content is now in the Data Table with{" "}
-                      <strong>DRAFT</strong> status. Review each post, make
+                      <strong className="text-purple-600">DRAFT</strong> status. Review each post, make
                       edits as needed, and mark them as{" "}
-                      <strong>Approved</strong> when ready.
+                      <strong className="text-emerald-600">Approved</strong> when ready.
                     </p>
                   </div>
+
+                  {/* Errors display */}
+                  {result.errors && result.errors.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest px-2">
+                        Failure reasons ({result.errors.length})
+                      </p>
+                      <div className="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                        {result.errors.map((err, i) => (
+                          <div key={i} className="flex gap-2 p-3 bg-red-50/50 rounded-xl border border-red-100/50">
+                            <AlertCircle size={12} className="text-red-400 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-red-700 leading-tight font-medium">
+                              {err}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
@@ -768,11 +780,11 @@ function ConfirmModal({
           />
           <motion.div
             key="modal"
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 16 }}
-            transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="absolute inset-0 bg-white rounded-none shadow-none p-7 z-60 overflow-auto"
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ type: "spring", stiffness: 350, damping: 30 }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[32px] shadow-2xl p-8 z-60 border border-slate-100"
           >
             <div className="flex items-start justify-between mb-4">
               <div>

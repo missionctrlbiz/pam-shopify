@@ -41,16 +41,18 @@ import type {
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-type GenerationScope = "PRIMARY" | "CAROUSEL" | "TEXT" | "EMAIL";
+type GenerationScope = "PRIMARY" | "CAROUSEL" | "TEXT" | "EMAIL" | "ALL";
 
 function normalizeScope(value: unknown): GenerationScope {
+  const v = String(value || "").toUpperCase();
   if (
-    value === "CAROUSEL" ||
-    value === "TEXT" ||
-    value === "EMAIL" ||
-    value === "PRIMARY"
+    v === "CAROUSEL" ||
+    v === "TEXT" ||
+    v === "EMAIL" ||
+    v === "ALL" ||
+    v === "PRIMARY"
   ) {
-    return value;
+    return v as GenerationScope;
   }
   return "PRIMARY";
 }
@@ -94,7 +96,7 @@ function getPrimaryRepurposeTarget(
     return { assetType: "EMAIL_HTML", platform: "EMAIL" };
   }
 
-  if (postType === "TEXT_POST" || postType === "STORY") {
+  if (postType === "TEXT_POST") {
     return { assetType: "TEXT_POST", platform };
   }
 
@@ -122,7 +124,7 @@ function determineRequestedWork(
       return {
         wantsCarousel: false,
         repurposeTarget:
-          postType === "TEXT_POST" || postType === "STORY"
+          postType === "TEXT_POST"
             ? primaryRepurposeTarget
             : null,
       };
@@ -132,6 +134,12 @@ function determineRequestedWork(
         wantsCarousel: false,
         repurposeTarget:
           postType === "EMAIL_LESSON" ? primaryRepurposeTarget : null,
+      };
+
+    case "ALL":
+      return {
+        wantsCarousel: true,
+        repurposeTarget: primaryRepurposeTarget,
       };
 
     case "PRIMARY":
@@ -231,7 +239,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (entry.postType === "VIDEO" || entry.postType === "REEL") {
+    if (entry.postType === "VIDEO" || entry.postType === "REEL" || entry.postType === "STORY") {
       return NextResponse.json(
         {
           error:

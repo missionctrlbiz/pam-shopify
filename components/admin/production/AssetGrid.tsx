@@ -74,7 +74,7 @@ function AssetPreviewModal({ asset, onClose }: { asset: ContentAsset, onClose: (
             setContent(meta.content as string);
             setLoading(false);
         } else if (asset.storageUrl) {
-            fetch(`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}`)
+            fetch(asset.storageUrl)
                 .then(res => res.text())
                 .then(text => setContent(text))
                 .catch(err => setContent("Error loading content: " + String(err)))
@@ -283,11 +283,11 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                                 return slideUrls.length > 0 ? (
                                                     <CarouselPreview slideUrls={slideUrls} />
                                                 ) : (
-                                                    <img src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl!)}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Thumbnail" />
+                                                    <img src={asset.storageUrl!} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Thumbnail" />
                                                 )
                                             })()
                                         ) : isVideo ? (
-                                            <video muted src={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                            <video muted src={asset.storageUrl!} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                         ) : (
                                             <div style={{ opacity: 0.1, color: PROD_BRAND.navy }}>{React.cloneElement(ASSET_ICON[asset.assetType] as any, { size: 64 })}</div>
                                         )
@@ -324,7 +324,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                                     <Eye size={14} /> View
                                                 </button>
                                                 <a
-                                                    href={`/api/production/assets/proxy?url=${encodeURIComponent(asset.storageUrl)}&filename=${encodeURIComponent(asset.fileName || "asset")}`}
+                                                    href={`${asset.storageUrl}?download=${encodeURIComponent(asset.fileName || "asset")}`}
                                                     download={asset.fileName || true}
                                                     style={{ width: 36, height: 36, borderRadius: 10, background: PROD_BRAND.blueLight, border: "none", color: PROD_BRAND.blue, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
                                                 >

@@ -9,16 +9,18 @@
  * Zod validation with safe fallback placeholders prevents parsing crashes and
  * protects continuous generation loops from missing-field timeouts.
  *
- * Model: gemini-2.5-flash (gemini-2.0-flash unavailable for new API keys as of March 2026)
+ * Model: gemini-2.5-pro (providing high-fidelity reasoning for clinical psychiatric content)
  * JSON mode: native responseSchema (type: OBJECT) + Zod-backed guardrail validation.
  */
 
-import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
+import { getAI, PRODUCTION_MODEL, FALLBACK_MODEL } from "@/lib/ai"
 import {
     CONTENT_IDEA_RESPONSE_SCHEMA,
     validateContentIdeaOutput,
     buildContextBlock,
 } from "@/lib/ai/prompts"
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // PRODUCTION_MODEL re-exported so qualityGate / repurposingRouter / sceneDirector
 // can import it from this module without touching lib/ai directly.
@@ -337,24 +339,58 @@ export async function generateContentIdea(
     meta: ContentIdeaInput
 ): Promise<{ masterJson: ContentIdeaMasterJson; rawPrompt: string }> {
     const rawPrompt = buildPrompt(field, meta)
+    const ai = getAI()
 
-    // Use native responseSchema (type: OBJECT) to guarantee structured output.
-    // The schema enforces the minimum required fields { title, body, slideText }
-    // and all extended ContentIdeaMasterJson fields at the API level.
-    const response = await getAI().models.generateContent({
-        model: PRODUCTION_MODEL,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: CONTENT_IDEA_RESPONSE_SCHEMA,
-        },
-        contents: rawPrompt,
-    })
+    let responseText = "{}"
+    let currentModel = PRODUCTION_MODEL
+    let lastError: any = null
+
+    // Retry loop with exponential backoff and model fallback (Fixes 503 High Demand)
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const result = await ai.models.generateContent({
+                model: currentModel,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: CONTENT_IDEA_RESPONSE_SCHEMA,
+                },
+                contents: rawPrompt,
+            })
+            responseText = result.text ?? "{}"
+            lastError = null
+            break
+        } catch (error: any) {
+            lastError = error
+            // Detect 503 High Demand or Overloaded
+            const errorMsg = error?.message?.toLowerCase() || ""
+            const is503 = error?.status === 503 || errorMsg.includes("high demand") || errorMsg.includes("overloaded")
+            
+            if (is503 && attempt < 2) {
+                const delay = Math.pow(2, attempt) * 1500
+                console.warn(`[Gemini] 503 High Demand for ${currentModel}. Retrying in ${delay}ms... (Attempt ${attempt + 1})`)
+                await sleep(delay)
+                
+                // On the final attempt, fallback to Flash if Pro is still failing
+                if (attempt === 1) {
+                    console.info(`[Gemini] Pro model still busy. Falling back to ${FALLBACK_MODEL} for final attempt.`)
+                    currentModel = FALLBACK_MODEL
+                }
+            } else {
+                // Not a retryable error or max retries reached
+                break
+            }
+        }
+    }
+
+    if (lastError) {
+        throw lastError
+    }
 
     // Safe try/catch parser — defaults to empty object so validateContentIdeaOutput
     // can apply Zod fallback placeholders rather than crashing the loop.
     let rawParsed: unknown
     try {
-        rawParsed = JSON.parse(response.text ?? "{}")
+        rawParsed = JSON.parse(responseText || "{}")
     } catch {
         rawParsed = {}
     }

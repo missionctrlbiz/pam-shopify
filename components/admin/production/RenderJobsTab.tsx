@@ -1177,7 +1177,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                     {ASSET_TYPE_ICON[asset.assetType] ?? <FileText size={12} />}
                                                 </span>
                                                 <span style={{ color: PROD_BRAND.navy, fontWeight: 600, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                    {asset.assetType.replace(/_/g, " ")}
+                                                    {(POST_TYPE_META as any)[asset.assetType] || (ASSET_TYPE_ICON as any)[asset.assetType] ? asset.assetType.replace(/_/g, " ") : "Unknown Asset"}
                                                 </span>
                                                 {isDone && asset.storageUrl && (
                                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

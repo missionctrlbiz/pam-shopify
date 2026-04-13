@@ -146,10 +146,11 @@ export async function PUT(
     let gateOutput
     try {
         gateOutput = await runQualityGate(gateInput)
-    } catch (err) {
+    } catch (err: any) {
         console.error("[approve] Quality gate error:", err)
+        console.error("[approve] Quality gate inner message:", err?.message)
         return NextResponse.json(
-            { error: "Quality gate service failed. Check logs." },
+            { error: `Quality gate service failed: ${err?.message || "Check logs."}` },
             { status: 502 }
         )
     }

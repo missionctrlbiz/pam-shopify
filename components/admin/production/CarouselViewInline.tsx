@@ -106,7 +106,7 @@ export function CarouselViewInline({ asset: passedAsset, assetId, topic: topicOv
     const zipUrl = asset?.metadata?.zipUrl
     const topic = topicOverride || asset?.metadata?.topic || "Clinical Carousel Preview"
 
-    const getProxyUrl = (url: string) => `/api/production/assets/proxy?url=${encodeURIComponent(url)}`
+    const getProxyUrl = (url: string) => url
 
     const handleDownloadBatch = () => {
         if (!zipUrl) {
@@ -114,8 +114,10 @@ export function CarouselViewInline({ asset: passedAsset, assetId, topic: topicOv
             return
         }
         const filename = `${(asset?.fileName || "carousel").replace(".png", "")}_batch.zip`
-        const dlUrl = `/api/production/assets/proxy?url=${encodeURIComponent(zipUrl)}&filename=${encodeURIComponent(filename)}`
-        window.open(dlUrl, "_blank")
+        // Ready for production: Direct Supabase download to avoid Vercel 4.5MB serverless payload limit
+        const dlUrl = new URL(zipUrl)
+        dlUrl.searchParams.set("download", filename)
+        window.open(dlUrl.toString(), "_blank")
     }
 
     const prevSlide = () => setCurrentSlide((prev) => Math.max(0, prev - 1))
@@ -289,8 +291,10 @@ export function CarouselViewInline({ asset: passedAsset, assetId, topic: topicOv
                                         </div>
 
                                         {/* The device frame */}
-                                        <div className={ratio.aspectClass} style={{
-                                            width: "100%", position: "relative",
+                                        <div style={{
+                                            width: "100%", 
+                                            aspectRatio: ratio.key.replace(":", "/"),
+                                            position: "relative",
                                             borderRadius: "2.5rem", padding: 10,
                                             background: BRAND.navy,
                                             boxShadow: "0 30px 60px -12px rgba(4,31,80,0.3)",

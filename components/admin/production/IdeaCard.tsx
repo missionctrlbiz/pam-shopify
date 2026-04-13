@@ -32,13 +32,13 @@ const SCENE_COLOR: Record<string, string> = {
     CTA: BRAND.purple,   // brand purple — not red
 }
 
-// Platform labels
-const PLATFORM_LABEL: Record<Platform, string> = {
+const PLATFORM_LABEL: Record<string, string> = {
     IG: "IG",
     FB: "FB",
     TIKTOK: "TikTok",
     LINKEDIN: "LinkedIn",
     EMAIL: "Email",
+    VIDEO: "Video",
 }
 
 const POST_TYPE_LABEL: Record<string, string> = {
@@ -71,7 +71,7 @@ const MUSIC_OPTIONS = [
 ]
 
 // Generate scope options
-const SCOPES = ["Carousel", "Video", "Repurpose", "All"]
+const SCOPES = ["Primary", "Carousel", "Repurpose", "All"]
 
 // ─── Gesture cue highlighter ──────────────────────────────────────────────────
 function HighlightedVoiceover({ text }: { text: string }) {
@@ -339,7 +339,7 @@ export function IdeaCard({ entry, onRefresh }: IdeaCardProps) {
         if (!entry.contentIdea?.id) return
         setGenerating(true)
         try {
-            await fetch("/api/production/assets/generate", {
+            const res = await fetch("/api/production/assets/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -349,12 +349,19 @@ export function IdeaCard({ entry, onRefresh }: IdeaCardProps) {
                     backgroundMusic: selectedMusic !== "off" ? selectedMusic : null,
                 }),
             })
-            setToast({ msg: `Successfully queued ${selectedScope} generation!`, type: "ok" })
-            setTimeout(() => setToast(null), 3000)
-            onRefresh?.()
-        } catch {
-            setToast({ msg: "Failed to queue generation. Check console.", type: "err" })
-            setTimeout(() => setToast(null), 3000)
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                const detail = errData.error || errData.detail || res.statusText
+                setToast({ msg: `Generate failed: ${detail}`, type: "err" })
+            } else {
+                setToast({ msg: `Successfully queued ${selectedScope} generation!`, type: "ok" })
+                onRefresh?.()
+            }
+            setTimeout(() => setToast(null), 4000)
+        } catch (err) {
+            setToast({ msg: "Failed to queue generation. Network error.", type: "err" })
+            setTimeout(() => setToast(null), 4000)
         } finally {
             setGenerating(false)
         }

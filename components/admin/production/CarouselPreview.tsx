@@ -11,7 +11,7 @@ export function CarouselPreview({ slideUrls }: { slideUrls: string[] }) {
         <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             <div style={{ width: "100%", aspectRatio: "1", position: "relative", background: "#f8f9fa", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 15px rgba(0,0,0,0.08)" }}>
                 <img
-                    src={`/api/production/assets/proxy?url=${encodeURIComponent(slideUrls[currentSlide])}`}
+                    src={slideUrls[currentSlide]}
                     alt={`Slide ${currentSlide + 1}`}
                     style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
                 />
