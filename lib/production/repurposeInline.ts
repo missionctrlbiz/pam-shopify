@@ -514,25 +514,39 @@ function pickDeckTheme(contentIdeaId: string): DeckTheme {
 interface CarouselAssets { logoBase64: string; iconBase64: string }
 
 async function fetchCarouselAssets(): Promise<CarouselAssets> {
-    let logoBase64 = ""
-    let iconBase64 = ""
-    try {
-        const path = await import("node:path")
-        const fs   = await import("node:fs")
-        const local = path.join(process.cwd(), "public", "logo.png")
-        if (fs.existsSync(local)) {
-            logoBase64 = `data:image/png;base64,${fs.readFileSync(local).toString("base64")}`
-        } else {
-            const r = await fetch("https://pam-shopify.vercel.app/logo.png")
-            if (r.ok) logoBase64 = `data:image/png;base64,${Buffer.from(await r.arrayBuffer()).toString("base64")}`
-        }
-    } catch (e) { console.error("[Carousel] logo fetch failed:", e) }
+    const logoPromise = (async () => {
+        try {
+            const path = await import("node:path")
+            const fsp  = await import("node:fs/promises")
+            const local = path.join(process.cwd(), "public", "logo.png")
+            try {
+                const buf = await fsp.readFile(local)
+                return `data:image/png;base64,${buf.toString("base64")}`
+            } catch {
+                const r = await fetch("https://pam-shopify.vercel.app/logo.png")
+                if (r.ok) return `data:image/png;base64,${Buffer.from(await r.arrayBuffer()).toString("base64")}`
+            }
+        } catch (e) { console.error("[Carousel] logo fetch failed:", e) }
+        return ""
+    })()
 
-    try {
-        const r = await fetch("https://pam-shopify.vercel.app/favicon-white.png")
-        if (r.ok) iconBase64 = `data:image/png;base64,${Buffer.from(await r.arrayBuffer()).toString("base64")}`
-    } catch (e) { console.error("[Carousel] icon fetch failed:", e) }
+    const iconPromise = (async () => {
+        try {
+            const path = await import("node:path")
+            const fsp  = await import("node:fs/promises")
+            const local = path.join(process.cwd(), "public", "favicon-white.png")
+            try {
+                const buf = await fsp.readFile(local)
+                return `data:image/png;base64,${buf.toString("base64")}`
+            } catch {
+                const r = await fetch("https://pam-shopify.vercel.app/favicon-white.png")
+                if (r.ok) return `data:image/png;base64,${Buffer.from(await r.arrayBuffer()).toString("base64")}`
+            }
+        } catch (e) { console.error("[Carousel] icon fetch failed:", e) }
+        return ""
+    })()
 
+    const [logoBase64, iconBase64] = await Promise.all([logoPromise, iconPromise])
     return { logoBase64, iconBase64 }
 }
 
@@ -575,7 +589,7 @@ function makeSlideElement(
 
     // ── Shared: bullet list ───────────────────────────────────────────────
     function bulletList(text: string): object {
-        const items = text.split(/\n|•/).map(b => b.trim().replace(/^[-\d+.]\s*/, "")).filter(Boolean)
+        const items = text.split(/\n|•/).map(b => b.trim().replace(/^(?:\d+\.\s+|[-•]\s+)/, "")).filter(Boolean)
         return {
             type: "div",
             props: {
@@ -628,7 +642,8 @@ function makeSlideElement(
     } : null
 
     // ── Pagination label ──────────────────────────────────────────────────
-    const pageLabel = `${String(slideIndex + 1).padStart(2, "0")} / ${String(totalSlides).padStart(2, "0")}`
+    const currentSlideNumber = Number.isFinite(slide.slideNumber) ? slide.slideNumber : (slideIndex + 1)
+    const pageLabel = `${String(currentSlideNumber).padStart(2, "0")} / ${String(totalSlides).padStart(2, "0")}`
 
     // ─────────────────────────────────────────────────────────────────────
     // Layout variants
@@ -694,6 +709,7 @@ function makeSlideElement(
                             ].filter(Boolean),
                         },
                     },
+                    footer,
                     watermark,
                 ].filter(Boolean),
             },
