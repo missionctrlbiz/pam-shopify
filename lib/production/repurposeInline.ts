@@ -580,8 +580,12 @@ function makeSlideElement(
     const TEACH: Variant[] = ["BOLD", "NUMBER", "LIST", "SPLIT"]
     const variant: Variant = isCover ? "COVER" : isCTA ? "CTA" : TEACH[(slideIndex - 1) % 4]
 
-    const hasBullets = !!(slide.bodyText &&
-        (slide.bodyText.includes("•") || slide.bodyText.includes("- ") || /^\d+\.\s/m.test(slide.bodyText)))
+    // Require bullet marker at start of a line to avoid false positives like "risk - benefit"
+    const hasBullets = !!(slide.bodyText && (
+        /(?:^|\n)\s*•/.test(slide.bodyText) ||
+        /(?:^|\n)\s*-\s+\S/.test(slide.bodyText) ||
+        /(?:^|\n)\d+\.\s+\S/.test(slide.bodyText)
+    ))
 
     // Scaled helpers
     const r = (n: number) => Math.round(n * fs)
@@ -930,8 +934,9 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
         script.title    = cleanText(script.title)
         script.coverText = cleanText(script.coverText)
         script.ctaSlide  = cleanText(script.ctaSlide)
-        script.slides    = script.slides.map(s => ({
+        script.slides    = script.slides.map((s, i) => ({
             ...s,
+            slideNumber: Math.max(1, Math.min(Number(s.slideNumber) || (i + 1), script.slides.length)),
             headline:    cleanText(s.headline),
             bodyText:    cleanText(s.bodyText),
             speakerNote: s.speakerNote ? cleanText(s.speakerNote) : undefined,
