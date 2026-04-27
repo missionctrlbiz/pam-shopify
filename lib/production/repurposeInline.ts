@@ -948,7 +948,7 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
         const theme = pickDeckTheme(contentIdeaId)
 
         // Emoji accents: pull from masterJson.scenes if available, else default sequence
-        const masterScenes = (input.masterJson as { scenes?: Array<{ emojiAccent?: string }> }).scenes ?? []
+        const masterScenes = (input.masterJson as { scenes?: Array<{ emojiAccent?: string }> } | null | undefined)?.scenes ?? []
         const defaultEmojis = ["🧠","🔬","💊","📋","⚡","🎯"]
         const getEmoji = (i: number) => masterScenes[i]?.emojiAccent ?? defaultEmojis[i % defaultEmojis.length]
 
