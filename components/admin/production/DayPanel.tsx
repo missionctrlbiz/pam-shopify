@@ -183,7 +183,8 @@ export default function DayPanel({ entryId, onClose, onEntryUpdated }: DayPanelP
                         exit={{ opacity: 0 }}
                         onClick={onClose}
                         style={{
-                            position: "fixed", inset: 0,
+                            position: "fixed", top: 0, left: 0,
+                            width: "100vw", height: "100vh", minHeight: "100dvh",
                             background: "rgba(0,0,0,0.35)",
                             zIndex: 40,
                         }}
