@@ -408,6 +408,18 @@ export function IdeaCard({ entry, onRefresh }: IdeaCardProps) {
                 {/* ── Header bar with gradient accent ────────────────────────── */}
                 <div className="h-1.5 w-full" style={{ background: BRAND.gradient }} />
 
+                {/* ── Background-generation progress bar (indeterminate) ──── */}
+                {entry.publishStatus === "GENERATING" && (
+                    <div className="h-1 w-full bg-slate-100 overflow-hidden">
+                        <motion.div
+                            className="h-full"
+                            style={{ background: BRAND.gradient, width: "40%" }}
+                            animate={{ x: ["-100%", "250%"] }}
+                            transition={{ duration: 1.6, ease: "easeInOut", repeat: Infinity }}
+                        />
+                    </div>
+                )}
+
                 {/* ── Card header ─────────────────────────────────────────────── */}
                 <div className="p-4">
                     {/* Badge row */}

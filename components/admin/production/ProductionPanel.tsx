@@ -322,8 +322,9 @@ function GenerateModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50"
-            onClick={!running ? onClose : undefined}
+            className="fixed left-0 top-0 bg-black/50 backdrop-blur-sm z-50"
+            style={{ width: "100vw", height: "100vh", minHeight: "100dvh" }}
+            onClick={onClose}
           />
           <motion.div
             key="modal"
@@ -331,7 +332,7 @@ function GenerateModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl max-h-[90vh] bg-white rounded-[32px] shadow-2xl z-60 flex flex-col overflow-hidden border border-slate-100"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl max-h-[90vh] bg-white rounded-[32px] shadow-2xl z-[60] flex flex-col overflow-hidden border border-slate-100 mx-4"
           >
             {/* Header */}
             <div className="flex items-start justify-between p-7 pb-5 border-b border-slate-100">
@@ -348,15 +349,14 @@ function GenerateModal({
                     : `Choose up to 5 post formats — ${5 - enabledCount} remaining`}
                 </p>
               </div>
-              {!running && (
-                <button
-                  onClick={onClose}
-                  aria-label="Close"
-                  className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition ml-4 flex-shrink-0"
-                >
-                  <X size={18} />
-                </button>
-              )}
+              <button
+                onClick={onClose}
+                aria-label={running ? "Hide (generation continues in background)" : "Close"}
+                title={running ? "Hide — generation continues in background" : "Close"}
+                className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition ml-4 flex-shrink-0"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             {/* Body */}
@@ -454,8 +454,7 @@ function GenerateModal({
                         Generating your content…
                       </p>
                       <p className="text-sm text-slate-400 mt-1">
-                        Finalizing your content. Keep this window open while it
-                        finishes.
+                        You can close this window — generation will continue in the background and each card shows its own progress.
                       </p>
                     </div>
                   </div>
@@ -775,7 +774,8 @@ function ConfirmModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/40 z-50"
+            className="fixed left-0 top-0 bg-black/40 z-50"
+            style={{ width: "100vw", height: "100vh", minHeight: "100dvh" }}
             onClick={onClose}
           />
           <motion.div
@@ -784,7 +784,7 @@ function ConfirmModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[32px] shadow-2xl p-8 z-60 border border-slate-100"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[32px] shadow-2xl p-8 z-[60] border border-slate-100 mx-4"
           >
             <div className="flex items-start justify-between mb-4">
               <div>

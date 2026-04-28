@@ -242,23 +242,25 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                 </div>
             )}
 
-            {/* Asset grid */}
-            {assets.length === 0 ? (
-                <div style={{ 
-                    textAlign: "center", padding: "60px 20px", color: PROD_BRAND.gray, 
-                    background: "#fcfdff", borderRadius: 20, border: `2px dashed #e2e8f0`
-                }}>
-                    <div style={{ opacity: 0.3, marginBottom: 16 }}><Package size={48} /></div>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>
-                        {hasActiveJobs
-                            ? "Clinical assets are currently being compiled…"
-                            : "Click 'Initialize Assets' to begin the clinical generation process."}
-                    </p>
-                </div>
-            ) : (
+            {/* Asset grid — only completed assets are shown; in-flight work is reflected in the Active Queue Status above */}
+            {(() => {
+                const completedAssets = assets.filter(a => a.assetStatus === "COMPLETE" && a.storageUrl)
+                if (completedAssets.length === 0) {
+                    return hasActiveJobs ? null : (
+                        <div style={{
+                            textAlign: "center", padding: "60px 20px", color: PROD_BRAND.gray,
+                            background: "#fcfdff", borderRadius: 20, border: `2px dashed #e2e8f0`
+                        }}>
+                            <div style={{ opacity: 0.3, marginBottom: 16 }}><Package size={48} /></div>
+                            <p style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>
+                                Click &apos;Initialize Assets&apos; to begin the clinical generation process.
+                            </p>
+                        </div>
+                    )
+                }
+                return (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
-                    {assets.map(asset => {
-                        const style = ASSET_STATUS_STYLE[asset.assetStatus] || ASSET_STATUS_STYLE.PENDING
+                    {completedAssets.map(asset => {
                         const isImage = asset.assetType === "CAROUSEL_PNG"
                         const isVideo = asset.assetType === "VIDEO_MP4"
 
@@ -338,7 +340,8 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                         )
                     })}
                 </div>
-            )}
+                )
+            })()}
 
             {/* Modal — carousel gets full viewer, others get text preview */}
             {previewAsset && previewAsset.assetType === "CAROUSEL_PNG" ? (
