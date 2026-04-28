@@ -64,7 +64,10 @@ export function ResponseModal({
 
     return (
         <AnimatePresence>
-            <div className="absolute inset-0 z-50 flex items-stretch justify-stretch">
+            <div
+                className="fixed left-0 top-0 z-50 flex items-stretch justify-stretch"
+                style={{ width: "100vw", height: "100vh", minHeight: "100dvh" }}
+            >
                 {/* Backdrop */}
                 <motion.div
                     initial={{ opacity: 0 }}

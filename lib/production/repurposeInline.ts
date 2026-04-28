@@ -444,249 +444,470 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
 }
 
 // ---------------------------------------------------------------------------
-// CAROUSEL inline — renders actual 1080x1080 PNGs via satori + @resvg/resvg-js
+// CAROUSEL inline — renders actual 1080×1080 / 1080×1350 / 1080×1920 PNGs
+//                   via satori + @resvg/resvg-js
 // ---------------------------------------------------------------------------
+
+// ── Brand design tokens (exact PAM palette from globals.css) ──────────────
+const PAM_C = {
+    navy:       "#041f50",
+    blue:       "#1f6cb9",
+    red:        "#ed415b",
+    pink:       "#ec5185",
+    purple:     "#af5ce9",
+    purpleDk:   "#8d39c5",
+    white:      "#ffffff",
+    slate200:   "#e2e8f0",
+    slate600:   "#475569",
+} as const
+
+const GRAD_PSYCH = `linear-gradient(135deg, #ed415b 0%, #ec5185 50%, #af5ce9 100%)`
+const GRAD_BRAIN = `linear-gradient(135deg, #af5ce9 0%, #1f6cb9 100%)`
+const GRAD_NAVY  = `linear-gradient(135deg, #041f50 0%, #0a3175 100%)`
+
+// ── Per-ratio layout config ───────────────────────────────────────────────
+const RATIO_CFG = {
+    "1:1":  { w: 1080, h: 1080, fs: 1.00, pv: 100, ph: 100 },
+    "4:5":  { w: 1080, h: 1350, fs: 1.05, pv: 110, ph: 100 },
+    "9:16": { w: 1080, h: 1920, fs: 1.25, pv: 140, ph:  90 },
+} as const
+type RatioKey = keyof typeof RATIO_CFG
+
+// ── Deck themes — picked once per generation run ──────────────────────────
+interface DeckTheme {
+    bgCover:     string   // gradient for cover / CTA
+    bgTeach:     string   // background for teaching slides (solid colour)
+    bgTeachGrad: boolean  // true → bgTeach is a gradient string
+    hl:          string   // headline colour
+    body:        string   // body text colour
+    accent:      string   // accent / bullet colour
+    muted:       string   // muted / footer colour
+    dark:        boolean  // dark background — affects opacity values
+}
+
+const DECK_THEMES: DeckTheme[] = [
+    // 0 — GRADIENT_SPLASH: full PAM gradient throughout
+    { bgCover: GRAD_PSYCH, bgTeach: GRAD_PSYCH, bgTeachGrad: true,
+      hl: "#ffffff", body: "rgba(255,255,255,0.88)", accent: "#ffffff",
+      muted: "rgba(255,255,255,0.55)", dark: true },
+    // 1 — NAVY_PREMIUM: deep navy, pink accents
+    { bgCover: GRAD_NAVY, bgTeach: PAM_C.navy, bgTeachGrad: false,
+      hl: "#ffffff", body: PAM_C.slate200, accent: PAM_C.pink,
+      muted: "rgba(255,255,255,0.45)", dark: true },
+    // 2 — CLEAN_CLINICAL: white background, purple accents
+    { bgCover: GRAD_PSYCH, bgTeach: PAM_C.white, bgTeachGrad: false,
+      hl: PAM_C.navy, body: PAM_C.slate600, accent: PAM_C.purple,
+      muted: "rgba(4,31,80,0.45)", dark: false },
+    // 3 — DEEP_PURPLE: rich purple, red-pink accents
+    { bgCover: GRAD_BRAIN, bgTeach: PAM_C.purple, bgTeachGrad: false,
+      hl: "#ffffff", body: "rgba(255,255,255,0.88)", accent: PAM_C.red,
+      muted: "rgba(255,255,255,0.50)", dark: true },
+]
+
+function pickDeckTheme(contentIdeaId: string): DeckTheme {
+    const hex = contentIdeaId.replace(/-/g, "").slice(-4)
+    const idx = parseInt(hex, 16) % DECK_THEMES.length
+    return DECK_THEMES[isNaN(idx) ? 0 : idx]
+}
+
+// ── Assets fetched once per run (logo + watermark icon) ───────────────────
+interface CarouselAssets { logoBase64: string; iconBase64: string }
+
+async function fetchCarouselAssets(): Promise<CarouselAssets> {
+    const logoPromise = (async () => {
+        try {
+            const path = await import("node:path")
+            const fsp  = await import("node:fs/promises")
+            const local = path.join(process.cwd(), "public", "logo.png")
+            try {
+                const buf = await fsp.readFile(local)
+                return `data:image/png;base64,${buf.toString("base64")}`
+            } catch {
+                const r = await fetch("https://pam-shopify.vercel.app/logo.png")
+                if (r.ok) return `data:image/png;base64,${Buffer.from(await r.arrayBuffer()).toString("base64")}`
+            }
+        } catch (e) { console.error("[Carousel] logo fetch failed:", e) }
+        return ""
+    })()
+
+    const iconPromise = (async () => {
+        try {
+            const path = await import("node:path")
+            const fsp  = await import("node:fs/promises")
+            const local = path.join(process.cwd(), "public", "favicon-white.png")
+            try {
+                const buf = await fsp.readFile(local)
+                return `data:image/png;base64,${buf.toString("base64")}`
+            } catch {
+                const r = await fetch("https://pam-shopify.vercel.app/favicon-white.png")
+                if (r.ok) return `data:image/png;base64,${Buffer.from(await r.arrayBuffer()).toString("base64")}`
+            }
+        } catch (e) { console.error("[Carousel] icon fetch failed:", e) }
+        return ""
+    })()
+
+    const [logoBase64, iconBase64] = await Promise.all([logoPromise, iconPromise])
+    return { logoBase64, iconBase64 }
+}
 
 async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuffer> {
     const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}&display=swap`
     const css = await (await fetch(cssUrl)).text()
-    // Match .ttf fonts delivered by Google Fonts without header override
     const matches = [...css.matchAll(/src:\s*url\(['"]?([^'")\s]+\.ttf)['"]?\)/g)]
     const fontUrl = matches[matches.length - 1]?.[1]
     if (!fontUrl) throw new Error(`No ttf URL in Google Fonts CSS for ${family} ${weight}`)
     return (await fetch(fontUrl)).arrayBuffer()
 }
 
-function makeSlideElement(slide: CarouselSlide, totalSlides: number, logoBase64: string): object {
-    const isCover = slide.slideNumber === 1
-    const isCTA = slide.slideNumber === totalSlides
-    const isDark = isCover
+// ── Slide renderer ────────────────────────────────────────────────────────
+function makeSlideElement(
+    slide:      CarouselSlide,
+    slideIndex: number,          // 0-based
+    totalSlides: number,
+    theme:      DeckTheme,
+    ratioKey:   RatioKey,
+    assets:     CarouselAssets,
+    emoji:      string,
+): object {
+    const c  = RATIO_CFG[ratioKey]
+    const fs = c.fs
+    const { pv, ph } = c
 
-    const innerBg = isDark ? "#0F172A" : "#FFFFFF"
-    const textColor = isDark ? "#FFFFFF" : "#0F172A"
-    const bodyColor = isDark ? "#E2E8F0" : "#475569"
-    const accentColor = "#A855F7"
-    const mutedColor = isDark ? "rgba(255,255,255,0.45)" : "rgba(15,23,42,0.5)"
+    const isCover = slideIndex === 0
+    const isCTA   = slideIndex === totalSlides - 1
 
-    const innerChildren: object[] = []
+    type Variant = "COVER" | "CTA" | "BOLD" | "NUMBER" | "LIST" | "SPLIT"
+    const TEACH: Variant[] = ["BOLD", "NUMBER", "LIST", "SPLIT"]
+    const variant: Variant = isCover ? "COVER" : isCTA ? "CTA" : TEACH[(slideIndex - 1) % 4]
 
-    // Pagination top-left counter style
-    if (!isCover && !isCTA) {
-        innerChildren.push({
+    // Require bullet marker at start of a line to avoid false positives like "risk - benefit"
+    const hasBullets = !!(slide.bodyText && (
+        /(?:^|\n)\s*•/.test(slide.bodyText) ||
+        /(?:^|\n)\s*-\s+\S/.test(slide.bodyText) ||
+        /(?:^|\n)\d+\.\s+\S/.test(slide.bodyText)
+    ))
+
+    // Scaled helpers
+    const r = (n: number) => Math.round(n * fs)
+    const maxW = (base: number) => Math.round(base * Math.min(fs, 1.1))  // cap width growth
+
+    // ── Shared: bullet list ───────────────────────────────────────────────
+    function bulletList(text: string): object {
+        const items = text.split(/\n|•/).map(b => b.trim().replace(/^(?:\d+\.\s+|[-•]\s+)/, "")).filter(Boolean)
+        return {
             type: "div",
             props: {
-                style: { position: "absolute", top: 40, left: 50, fontSize: 18, fontWeight: 700, color: accentColor, letterSpacing: 1 },
-                children: `${String(slide.slideNumber).padStart(2, '0')} / ${String(totalSlides).padStart(2, '0')}`,
-            },
-        })
-    }
-
-    // Determine layout variations based on slideIndex
-    const isBulletList = slide.bodyText ? slide.bodyText.includes("•") || slide.bodyText.includes("- ") || slide.bodyText.includes("1. ") : false;
-    const contentAlign = (slide.slideNumber % 2 === 0 || isBulletList) && !isCover ? "flex-start" : "center";
-    const textAlign = (slide.slideNumber % 2 === 0 || isBulletList) && !isCover ? "left" : "center";
-    
-    // Label above headline
-    if (!isCover && slide.slideNumber % 2 !== 0 && !isCTA) {
-        innerChildren.push({
-            type: "div",
-            props: {
-                style: { fontSize: 16, fontWeight: 700, color: accentColor, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 },
-                children: "CLINICAL PEARL"
-            }
-        });
-    }
-
-    // Headline
-    innerChildren.push({
-        type: "div",
-        props: {
-            style: {
-                fontSize: isCover ? 88 : 48,
-                fontWeight: 800,
-                color: textColor,
-                textAlign: textAlign,
-                lineHeight: 1.15,
-                letterSpacing: "-0.03em",
-                maxWidth: 920,
-                marginBottom: slide.bodyText ? 32 : 0,
-                borderBottom: (contentAlign === "flex-start" && !isCover) ? `6px solid ${accentColor}` : "none",
-                paddingBottom: (contentAlign === "flex-start" && !isCover) ? 16 : 0,
-            },
-            children: slide.headline,
-        },
-    })
-
-    // Divider Line accent (only for centered covers)
-    if (isCover) {
-        innerChildren.push({
-            type: "div",
-            props: { style: { width: 120, height: 6, background: "linear-gradient(90deg, #A855F7, #6D28D9)", borderRadius: 3, marginTop: 32 }, children: "" },
-        })
-    }
-
-    // Body Text
-    if (slide.bodyText) {
-        // Bullet list renderer
-        if (isBulletList && !isCover && !isCTA) {
-            const bullets = slide.bodyText.split(/\n|•/).map(b => b.trim().replace(/^- /,"")).filter(Boolean);
-            const listItems = bullets.map(b => ({
-                type: "div",
-                props: {
-                    style: { display: "flex", alignItems: "flex-start", marginBottom: 16 },
-                    children: [
-                        {
-                            type: "div",
-                            props: { style: { width: 12, height: 12, background: accentColor, borderRadius: "50%", marginTop: 14, marginRight: 24, flexShrink: 0 }, children: "" }
-                        },
-                        {
-                            type: "div",
-                            props: { style: { fontSize: 28, fontWeight: 400, color: bodyColor, lineHeight: 1.5, maxWidth: 840 }, children: b }
-                        }
-                    ]
-                }
-            }));
-
-            innerChildren.push({
-                type: "div",
-                props: {
-                    style: { display: "flex", flexDirection: "column", width: "100%", marginTop: 12 },
-                    children: listItems
-                }
-            });
-        } else {
-            // Standard body paragraph
-            innerChildren.push({
-                type: "div",
-                props: {
-                    style: {
-                        fontSize: 28,
-                        fontWeight: 400,
-                        color: bodyColor,
-                        textAlign: textAlign,
-                        lineHeight: 1.6,
-                        maxWidth: 820
+                style: { display: "flex", flexDirection: "column", width: "100%" },
+                children: items.map(b => ({
+                    type: "div",
+                    props: {
+                        style: { display: "flex", alignItems: "flex-start", marginBottom: r(16) },
+                        children: [
+                            { type: "div", props: { style: { width: r(12), height: r(12), borderRadius: "50%", backgroundImage: GRAD_PSYCH, marginTop: r(11), marginRight: r(18), flexShrink: 0 }, children: "" } },
+                            { type: "div", props: { style: { fontSize: r(25), fontWeight: 400, color: theme.body, lineHeight: 1.55, maxWidth: maxW(820) }, children: b } },
+                        ],
                     },
-                    children: slide.bodyText,
-                },
-            })
+                })),
+            },
         }
     }
 
-    // "Swipe" lucide icon edge widget for body slides (bottom right corner)
-    if (!isCover && !isCTA) {
-        innerChildren.push({
-            type: "div",
-            props: {
-                style: { position: "absolute", bottom: 40, right: 50, display: "flex", alignItems: "center", color: mutedColor, fontSize: 16, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" },
-                children: [
-                    { type: "span", props: { style: { marginRight: 8 }, children: "Swipe" } },
-                    { type: "svg", props: {
-                        xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round",
-                        children: [
-                            { type: "path", props: { d: "M5 12h14" } },
-                            { type: "path", props: { d: "m12 5 7 7-7 7" } }
-                        ]
-                    }}
-                ]
-            }
-        });
-    }
-
-    // Footer Watermark (Logo + 'psychassessmentguide.com')
-    const footerContent = logoBase64 
-        ? [
-            {
-                type: "img",
-                props: {
-                    src: logoBase64,
-                    style: { height: 32, opacity: isDark ? 0.9 : 0.6, marginBottom: 8 }
-                }
-            },
-            {
-                type: "div",
-                props: {
-                    style: { fontSize: 13, fontWeight: 800, color: mutedColor, letterSpacing: 1 },
-                    children: "psychassessmentguide.com"
-                }
-            }
-        ]
-        : {
-            type: "div",
-            props: {
-                style: { fontSize: 16, fontWeight: 700, letterSpacing: 4, textTransform: "uppercase" },
-                children: "psychassessmentguide.com"
-            }
-        };
-
-    innerChildren.push({
+    // ── Shared: footer (absolute, bottom-center) ──────────────────────────
+    const footer: object = {
         type: "div",
         props: {
+            style: { position: "absolute", bottom: r(38), left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center" },
+            children: assets.logoBase64
+                ? [
+                    { type: "img", props: { src: assets.logoBase64, style: { height: r(28), opacity: 0.72, marginBottom: r(5) } } },
+                    { type: "div", props: { style: { fontSize: r(11), fontWeight: 700, color: theme.muted, letterSpacing: 1.5 }, children: "psychassessmentguide.com" } },
+                ]
+                : { type: "div", props: { style: { fontSize: r(12), fontWeight: 700, color: theme.muted, letterSpacing: 2 }, children: "psychassessmentguide.com" } },
+        },
+    }
+
+    // ── Shared: watermark icon (bottom-right, rotated) ────────────────────
+    const iconSz     = r(300)
+    const iconOffset = Math.round(iconSz * 0.15)
+    const watermark: object | null = assets.iconBase64 ? {
+        type: "img",
+        props: {
+            src: assets.iconBase64,
             style: {
                 position: "absolute",
-                bottom: 40,
-                color: mutedColor,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
+                bottom: -iconOffset,
+                right:  -iconOffset,
+                width:  iconSz,
+                height: iconSz,
+                opacity: variant === "BOLD" ? 0.07 : theme.dark ? 0.15 : 0.09,
+                transform: "rotate(15deg)",
             },
-            children: footerContent,
         },
-    })
+    } : null
 
-    // Outer Wrapper creates the V2 CapCut Gradient Border
+    // ── Pagination label ──────────────────────────────────────────────────
+    const currentSlideNumber = Number.isFinite(slide.slideNumber) ? slide.slideNumber : (slideIndex + 1)
+    const pageLabel = `${String(currentSlideNumber).padStart(2, "0")} / ${String(totalSlides).padStart(2, "0")}`
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Layout variants
+    // ─────────────────────────────────────────────────────────────────────
+
+    // COVER ─────────────────────────────────────────────────────────────
+    if (variant === "COVER") {
+        return {
+            type: "div",
+            props: {
+                style: { width: "100%", height: "100%", display: "flex", flexDirection: "column", backgroundImage: theme.bgCover, position: "relative", overflow: "hidden" },
+                children: [
+                    // Main content (space-between: logo top, headline center, swipe bottom)
+                    {
+                        type: "div",
+                        props: {
+                            style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", flex: 1, padding: `${pv}px ${ph}px` },
+                            children: [
+                                // Top zone: logo + brand label
+                                {
+                                    type: "div",
+                                    props: {
+                                        style: { display: "flex", flexDirection: "column", alignItems: "center" },
+                                        children: [
+                                            assets.logoBase64 ? { type: "img", props: { src: assets.logoBase64, style: { height: r(44), opacity: 0.92, marginBottom: r(8) } } } : null,
+                                            { type: "div", props: { style: { fontSize: r(11), fontWeight: 700, color: "rgba(255,255,255,0.65)", letterSpacing: 3 }, children: "PSYCHIATRIC ASSESSMENT MASTERY" } },
+                                        ].filter(Boolean),
+                                    },
+                                },
+                                // Center zone: emoji + headline + divider
+                                {
+                                    type: "div",
+                                    props: {
+                                        style: { display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" },
+                                        children: [
+                                            emoji ? { type: "div", props: { style: { fontSize: r(72), lineHeight: 1, marginBottom: r(20) }, children: emoji } } : null,
+                                            { type: "div", props: { style: { fontSize: r(80), fontWeight: 800, color: "#ffffff", lineHeight: 1.1, letterSpacing: "-0.03em", textAlign: "center", maxWidth: maxW(900) }, children: slide.headline } },
+                                            { type: "div", props: { style: { width: r(140), height: 4, background: "rgba(255,255,255,0.38)", borderRadius: 2, marginTop: r(28) }, children: "" } },
+                                            slide.bodyText ? { type: "div", props: { style: { fontSize: r(22), fontWeight: 400, color: "rgba(255,255,255,0.75)", marginTop: r(18), textAlign: "center", maxWidth: maxW(780) }, children: slide.bodyText } } : null,
+                                        ].filter(Boolean),
+                                    },
+                                },
+                                // Bottom zone: swipe hint + dots
+                                {
+                                    type: "div",
+                                    props: {
+                                        style: { display: "flex", flexDirection: "column", alignItems: "center" },
+                                        children: [
+                                            { type: "div", props: { style: { fontSize: r(15), fontWeight: 700, color: "rgba(255,255,255,0.55)", letterSpacing: 1, marginBottom: r(10) }, children: "Swipe to learn →" } },
+                                            {
+                                                type: "div",
+                                                props: {
+                                                    style: { display: "flex", flexDirection: "row" },
+                                                    children: Array.from({ length: Math.min(totalSlides, 6) }).map((_, di) => ({
+                                                        type: "div",
+                                                        props: { style: { width: di === 0 ? r(20) : r(8), height: r(8), borderRadius: 4, background: di === 0 ? "#ffffff" : "rgba(255,255,255,0.32)", marginRight: r(5) }, children: "" },
+                                                    })),
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            ].filter(Boolean),
+                        },
+                    },
+                    footer,
+                    watermark,
+                ].filter(Boolean),
+            },
+        }
+    }
+
+    // CTA ───────────────────────────────────────────────────────────────
+    if (variant === "CTA") {
+        return {
+            type: "div",
+            props: {
+                style: { width: "100%", height: "100%", display: "flex", flexDirection: "column", backgroundImage: theme.bgCover, position: "relative", overflow: "hidden" },
+                children: [
+                    {
+                        type: "div",
+                        props: {
+                            style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, padding: `${pv}px ${ph}px`, textAlign: "center" },
+                            children: [
+                                emoji ? { type: "div", props: { style: { fontSize: r(68), lineHeight: 1, marginBottom: r(20) }, children: emoji } } : null,
+                                { type: "div", props: { style: { fontSize: r(66), fontWeight: 800, color: "#ffffff", lineHeight: 1.1, letterSpacing: "-0.03em", textAlign: "center", maxWidth: maxW(900), marginBottom: r(24) }, children: slide.headline } },
+                                slide.bodyText ? { type: "div", props: { style: { fontSize: r(24), fontWeight: 400, color: "rgba(255,255,255,0.82)", lineHeight: 1.55, textAlign: "center", maxWidth: maxW(820), marginBottom: r(36) }, children: slide.bodyText } } : null,
+                                { type: "div", props: { style: { width: r(70), height: 2, background: "rgba(255,255,255,0.28)", borderRadius: 1, marginBottom: r(22) }, children: "" } },
+                                { type: "div", props: { style: { fontSize: r(19), fontWeight: 700, color: "rgba(255,255,255,0.70)", letterSpacing: 1 }, children: "Follow @psychassessmentguide" } },
+                            ].filter(Boolean),
+                        },
+                    },
+                    footer,
+                    watermark,
+                ].filter(Boolean),
+            },
+        }
+    }
+
+    // BOLD_STATEMENT ────────────────────────────────────────────────────
+    if (variant === "BOLD") {
+        const bgStyle = theme.bgTeachGrad ? { backgroundImage: theme.bgTeach } : { background: theme.bgTeach }
+        return {
+            type: "div",
+            props: {
+                style: { width: "100%", height: "100%", display: "flex", flexDirection: "column", ...bgStyle, position: "relative", overflow: "hidden" },
+                children: [
+                    {
+                        type: "div",
+                        props: {
+                            style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, padding: `${pv}px ${ph}px`, textAlign: "center", position: "relative" },
+                            children: [
+                                // Pagination top-left
+                                { type: "div", props: { style: { position: "absolute", top: r(pv * 0.4), left: ph, fontSize: r(14), fontWeight: 700, color: theme.accent, letterSpacing: 1.5 }, children: pageLabel } },
+                                emoji ? { type: "div", props: { style: { fontSize: r(60), lineHeight: 1, marginBottom: r(18) }, children: emoji } } : null,
+                                { type: "div", props: { style: { fontSize: r(72), fontWeight: 800, color: theme.hl, lineHeight: 1.1, letterSpacing: "-0.03em", textAlign: "center", maxWidth: maxW(880), marginBottom: slide.bodyText ? r(26) : 0 }, children: slide.headline } },
+                                slide.bodyText && !hasBullets ? { type: "div", props: { style: { fontSize: r(26), fontWeight: 400, color: theme.body, lineHeight: 1.6, textAlign: "center", maxWidth: maxW(820) }, children: slide.bodyText } } : null,
+                                slide.bodyText && hasBullets ? bulletList(slide.bodyText) : null,
+                            ].filter(Boolean),
+                        },
+                    },
+                    footer,
+                    watermark,
+                ].filter(Boolean),
+            },
+        }
+    }
+
+    // NUMBER_BLOCK ──────────────────────────────────────────────────────
+    if (variant === "NUMBER") {
+        const bgStyle = theme.bgTeachGrad ? { backgroundImage: theme.bgTeach } : { background: theme.bgTeach }
+        return {
+            type: "div",
+            props: {
+                style: { width: "100%", height: "100%", display: "flex", flexDirection: "column", ...bgStyle, position: "relative", overflow: "hidden" },
+                children: [
+                    {
+                        type: "div",
+                        props: {
+                            style: { display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", flex: 1, padding: `${pv}px ${ph}px`, position: "relative" },
+                            children: [
+                                // Giant slide number at 50% opacity (decorative)
+                                { type: "div", props: { style: { position: "absolute", top: -r(20), right: r(30), fontSize: r(280), fontWeight: 800, color: theme.accent, opacity: 0.10, lineHeight: 1, letterSpacing: "-0.05em" }, children: String(slideIndex + 1) } },
+                                // Pagination label
+                                { type: "div", props: { style: { fontSize: r(14), fontWeight: 700, color: theme.accent, letterSpacing: 2, marginBottom: r(18) }, children: pageLabel } },
+                                // Headline with left accent bar
+                                {
+                                    type: "div",
+                                    props: {
+                                        style: { display: "flex", flexDirection: "row", alignItems: "stretch", marginBottom: r(26), maxWidth: maxW(900) },
+                                        children: [
+                                            { type: "div", props: { style: { width: 6, backgroundImage: GRAD_PSYCH, borderRadius: 3, marginRight: r(20), flexShrink: 0 }, children: "" } },
+                                            { type: "div", props: { style: { fontSize: r(50), fontWeight: 800, color: theme.hl, lineHeight: 1.12, letterSpacing: "-0.02em" }, children: slide.headline } },
+                                        ],
+                                    },
+                                },
+                                slide.bodyText && !hasBullets ? { type: "div", props: { style: { fontSize: r(26), fontWeight: 400, color: theme.body, lineHeight: 1.6, maxWidth: maxW(840) }, children: slide.bodyText } } : null,
+                                slide.bodyText && hasBullets ? bulletList(slide.bodyText) : null,
+                            ].filter(Boolean),
+                        },
+                    },
+                    footer,
+                    watermark,
+                ].filter(Boolean),
+            },
+        }
+    }
+
+    // LIST_PULL ─────────────────────────────────────────────────────────
+    if (variant === "LIST") {
+        const bgStyle = theme.bgTeachGrad ? { backgroundImage: theme.bgTeach } : { background: theme.bgTeach }
+        return {
+            type: "div",
+            props: {
+                style: { width: "100%", height: "100%", display: "flex", flexDirection: "column", ...bgStyle, position: "relative", overflow: "hidden" },
+                children: [
+                    // Left gradient accent bar (full height)
+                    { type: "div", props: { style: { position: "absolute", top: 0, left: 0, width: r(8), height: "100%", backgroundImage: GRAD_PSYCH }, children: "" } },
+                    {
+                        type: "div",
+                        props: {
+                            style: { display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", flex: 1, padding: `${pv}px ${ph}px` },
+                            children: [
+                                { type: "div", props: { style: { fontSize: r(13), fontWeight: 700, color: theme.accent, letterSpacing: 2, marginBottom: r(14) }, children: pageLabel } },
+                                { type: "div", props: { style: { fontSize: r(48), fontWeight: 800, color: theme.hl, lineHeight: 1.12, letterSpacing: "-0.025em", marginBottom: r(26), maxWidth: maxW(880) }, children: slide.headline } },
+                                slide.bodyText && hasBullets ? bulletList(slide.bodyText) : null,
+                                slide.bodyText && !hasBullets ? { type: "div", props: { style: { fontSize: r(26), fontWeight: 400, color: theme.body, lineHeight: 1.6, maxWidth: maxW(840) }, children: slide.bodyText } } : null,
+                            ].filter(Boolean),
+                        },
+                    },
+                    footer,
+                    watermark,
+                ].filter(Boolean),
+            },
+        }
+    }
+
+    // SPLIT_BAND ────────────────────────────────────────────────────────
+    // Top 38% gradient band (headline), lower 62% body area
+    const bandH    = Math.round(c.h * 0.38)
+    const bandIconSz = r(200)
+    const bandBgStyle = theme.bgTeachGrad ? { backgroundImage: theme.bgTeach } : { background: theme.bgTeach }
     return {
         type: "div",
         props: {
-            style: {
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                backgroundImage: "linear-gradient(135deg, #A855F7 0%, #6D28D9 100%)",
-                padding: "8px",
-            },
-            children: {
-                type: "div",
-                props: {
-                    style: {
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: contentAlign,
-                        justifyContent: "center",
-                        background: innerBg,
-                        position: "relative",
-                        borderRadius: "12px",
-                        padding: "100px",
+            style: { width: "100%", height: "100%", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" },
+            children: [
+                // Gradient band (top)
+                {
+                    type: "div",
+                    props: {
+                        style: { display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "flex-end", width: "100%", height: bandH, backgroundImage: theme.bgCover, padding: `0 ${ph}px ${r(32)}px`, position: "relative", overflow: "hidden", flexShrink: 0 },
+                        children: [
+                            // 50% opacity watermark inside the band (top-right corner)
+                            assets.iconBase64 ? { type: "img", props: { src: assets.iconBase64, style: { position: "absolute", top: -Math.round(bandIconSz * 0.2), right: -Math.round(bandIconSz * 0.2), width: bandIconSz, height: bandIconSz, opacity: 0.50, transform: "rotate(25deg)" } } } : null,
+                            { type: "div", props: { style: { fontSize: r(13), fontWeight: 700, color: "rgba(255,255,255,0.65)", letterSpacing: 2, marginBottom: r(10) }, children: pageLabel } },
+                            { type: "div", props: { style: { fontSize: r(50), fontWeight: 800, color: "#ffffff", lineHeight: 1.1, letterSpacing: "-0.025em", maxWidth: maxW(900) }, children: slide.headline } },
+                        ].filter(Boolean),
                     },
-                    children: innerChildren
-                }
-            }
+                },
+                // Body area (bottom)
+                {
+                    type: "div",
+                    props: {
+                        style: { display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", flex: 1, ...bandBgStyle, padding: `${r(36)}px ${ph}px` },
+                        children: [
+                            slide.bodyText && hasBullets ? bulletList(slide.bodyText) : null,
+                            slide.bodyText && !hasBullets ? { type: "div", props: { style: { fontSize: r(28), fontWeight: 400, color: theme.body, lineHeight: 1.6, maxWidth: maxW(880) }, children: slide.bodyText } } : null,
+                        ].filter(Boolean),
+                    },
+                },
+                footer,
+            ].filter(Boolean),
         },
     }
 }
 
 async function renderSlideToPng(
-    slide: CarouselSlide,
+    slide:       CarouselSlide,
+    slideIndex:  number,
     totalSlides: number,
-    boldFont: ArrayBuffer,
+    boldFont:    ArrayBuffer,
     regularFont: ArrayBuffer,
-    logoBase64: string,
-    width: number,
-    height: number
+    theme:       DeckTheme,
+    ratioKey:    RatioKey,
+    assets:      CarouselAssets,
+    emoji:       string,
 ): Promise<Buffer> {
+    const { w, h } = RATIO_CFG[ratioKey]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svg = await satori(makeSlideElement(slide, totalSlides, logoBase64) as any, {
-        width,
-        height,
+    const svg = await satori(makeSlideElement(slide, slideIndex, totalSlides, theme, ratioKey, assets, emoji) as any, {
+        width: w,
+        height: h,
         fonts: [
             { name: "Montserrat", data: boldFont, weight: 800, style: "normal" },
             { name: "Montserrat", data: regularFont, weight: 400, style: "normal" },
         ],
     })
     const Resvg = getResvg()
-    const resvg = new Resvg(svg, { fitTo: { mode: "width", value: width } })
+    const resvg = new Resvg(svg, { fitTo: { mode: "width", value: w } })
     return Buffer.from(resvg.render().asPng())
 }
 
@@ -710,64 +931,49 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
             throw new Error("AI generated an invalid or empty carousel script.")
         }
 
-        script.title = cleanText(script.title)
+        script.title    = cleanText(script.title)
         script.coverText = cleanText(script.coverText)
-        script.ctaSlide = cleanText(script.ctaSlide)
-        script.slides = script.slides.map(s => ({
+        script.ctaSlide  = cleanText(script.ctaSlide)
+        script.slides    = script.slides.map((s, i) => ({
             ...s,
-            headline: cleanText(s.headline),
-            bodyText: cleanText(s.bodyText),
+            slideNumber: Math.max(1, Math.min(Number(s.slideNumber) || (i + 1), script.slides.length)),
+            headline:    cleanText(s.headline),
+            bodyText:    cleanText(s.bodyText),
             speakerNote: s.speakerNote ? cleanText(s.speakerNote) : undefined,
         }))
 
-        const [boldFont, regularFont] = await Promise.all([
+        // Fetch fonts + brand assets in parallel
+        const [boldFont, regularFont, assets] = await Promise.all([
             loadGoogleFont("Montserrat", 800),
             loadGoogleFont("Montserrat", 400),
+            fetchCarouselAssets(),
         ])
 
-        let logoBase64 = "";
-        try {
-            // Local fallback first (safer in workers)
-            const path = await import("node:path");
-            const fs = await import("node:fs");
-            const localPath = path.join(process.cwd(), "public", "logo.png");
-            if (fs.existsSync(localPath)) {
-                logoBase64 = `data:image/png;base64,${fs.readFileSync(localPath).toString("base64")}`;
-            } else {
-                // Try remote
-                const logoRes = await fetch("https://pam-shopify.vercel.app/logo.png");
-                if (logoRes.ok) {
-                    const arr = await logoRes.arrayBuffer();
-                    logoBase64 = `data:image/png;base64,${Buffer.from(arr).toString("base64")}`;
-                }
-            }
-        } catch (e) {
-            console.error("[Carousel] Could not obtain logo:", e);
-        }
+        // Deterministic theme per content idea
+        const theme = pickDeckTheme(contentIdeaId)
+
+        // Emoji accents: pull from masterJson.scenes if available, else default sequence
+        const masterScenes = (input.masterJson as { scenes?: Array<{ emojiAccent?: string }> } | null | undefined)?.scenes ?? []
+        const defaultEmojis = ["🧠","🔬","💊","📋","⚡","🎯"]
+        const getEmoji = (i: number) => masterScenes[i]?.emojiAccent ?? defaultEmojis[i % defaultEmojis.length]
 
         const { date, slug } = makeSlug(entryDate, topic)
         const zip = new JSZip()
-        const ratioVariants: Record<string, string[]> = {
-            "1:1": [],
-            "4:5": [],
-            "9:16": []
-        }
+        const ratioVariants: Record<string, string[]> = { "1:1": [], "4:5": [], "9:16": [] }
+        const RATIOS: RatioKey[] = ["1:1", "4:5", "9:16"]
 
-        const RATIOS = [
-            { key: "1:1", w: 1080, h: 1080 },
-            { key: "4:5", w: 1080, h: 1350 },
-            { key: "9:16", w: 1080, h: 1920 },
-        ]
-
-        for (const ratio of RATIOS) {
-            for (const slide of script.slides) {
-                const png = await renderSlideToPng(slide, script.slides.length, boldFont, regularFont, logoBase64, ratio.w, ratio.h)
-                const ratioSlug = ratio.key.replace(":", "x")
-                const fileName = `PAM_CAROUSEL_${ratioSlug}_${date}_${slug}_slide${slide.slideNumber}_v1.png`
+        for (const ratioKey of RATIOS) {
+            for (let i = 0; i < script.slides.length; i++) {
+                const slide = script.slides[i]
+                const png = await renderSlideToPng(
+                    slide, i, script.slides.length,
+                    boldFont, regularFont,
+                    theme, ratioKey, assets, getEmoji(i),
+                )
+                const ratioSlug = ratioKey.replace(":", "x")
+                const fileName  = `PAM_CAROUSEL_${ratioSlug}_${date}_${slug}_slide${slide.slideNumber}_v1.png`
                 const url = await storeBlob(`production/${contentIdeaId}/CAROUSEL_PNG/${fileName}`, png, "image/png")
-                ratioVariants[ratio.key].push(url)
-                
-                // Add to zip
+                ratioVariants[ratioKey].push(url)
                 zip.folder(ratioSlug)?.file(`slide${slide.slideNumber}.png`, png)
             }
         }

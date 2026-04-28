@@ -659,8 +659,9 @@ export const RenderJobsTab: React.FC = () => {
                 <div
                     onClick={() => setPreviewAsset(null)}
                     style={{
-                        position: "absolute",
-                        inset: 0,
+                        position: "fixed",
+                        top: 0, left: 0,
+                        width: "100vw", height: "100vh", minHeight: "100dvh",
                         background: "rgba(4, 31, 80, 0.4)",
                         backdropFilter: "blur(8px)",
                         display: "flex",
@@ -869,8 +870,9 @@ function ConfirmModal({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     style={{
-                        position: "absolute",
-                        inset: 0,
+                        position: "fixed",
+                        top: 0, left: 0,
+                        width: "100vw", height: "100vh", minHeight: "100dvh",
                         background: "rgba(0,0,0,0.5)",
                         backdropFilter: "blur(2px)",
                         display: "flex",

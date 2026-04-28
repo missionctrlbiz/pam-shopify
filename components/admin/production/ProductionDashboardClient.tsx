@@ -99,7 +99,7 @@ const GenerateCycleModal: React.FC<{
                     key="modal-backdrop"
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     onClick={onClose}
-                    style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60 }}
+                    style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", minHeight: "100dvh", background: "rgba(0,0,0,0.45)", zIndex: 60 }}
                 />
                 <motion.div
                     key="modal"
@@ -108,7 +108,8 @@ const GenerateCycleModal: React.FC<{
                     exit={{ opacity: 0, scale: 0.95, y: 16 }}
                     transition={{ type: "spring", stiffness: 300, damping: 28 }}
                     style={{
-                        position: "absolute", inset: 0,
+                        position: "fixed", top: 0, left: 0,
+                        width: "100vw", height: "100vh", minHeight: "100dvh",
                         background: PROD_BRAND.white,
                         borderRadius: 0, boxShadow: "none",
                         padding: 32, zIndex: 70,

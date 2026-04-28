@@ -105,7 +105,7 @@ const VALID_TABS: Tab[] = [
   "calendar",
 ];
 
-export function AdminDashboardClient({ session }: { session: any }) {
+export function AdminDashboardClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("panel") as Tab | null;
