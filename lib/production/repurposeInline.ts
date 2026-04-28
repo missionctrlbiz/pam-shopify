@@ -16,7 +16,6 @@ import { createHash } from "node:crypto"
 import { createRequire } from "node:module"
 import { callElevenLabsWithRetry, stripESLMarkers } from "@/lib/audio/elevenLabs"
 import satori from "satori"
-import JSZip from "jszip"
 
 type ResvgRenderer = {
     render(): {
@@ -672,21 +671,19 @@ async function renderSlideToPng(
     totalSlides: number,
     boldFont: ArrayBuffer,
     regularFont: ArrayBuffer,
-    logoBase64: string,
-    width: number,
-    height: number
+    logoBase64: string
 ): Promise<Buffer> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const svg = await satori(makeSlideElement(slide, totalSlides, logoBase64) as any, {
-        width,
-        height,
+        width: 1080,
+        height: 1080,
         fonts: [
             { name: "Montserrat", data: boldFont, weight: 800, style: "normal" },
             { name: "Montserrat", data: regularFont, weight: 400, style: "normal" },
         ],
     })
     const Resvg = getResvg()
-    const resvg = new Resvg(svg, { fitTo: { mode: "width", value: width } })
+    const resvg = new Resvg(svg, { fitTo: { mode: "width", value: 1080 } })
     return Buffer.from(resvg.render().asPng())
 }
 
@@ -705,10 +702,6 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
     try {
         const raw = await callGemini(buildCarouselPrompt(input))
         const script = JSON.parse(raw) as CarouselScript
-
-        if (!script || !Array.isArray(script.slides) || script.slides.length === 0) {
-            throw new Error("AI generated an invalid or empty carousel script.")
-        }
 
         script.title = cleanText(script.title)
         script.coverText = cleanText(script.coverText)
@@ -746,38 +739,14 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
         }
 
         const { date, slug } = makeSlug(entryDate, topic)
-        const zip = new JSZip()
-        const ratioVariants: Record<string, string[]> = {
-            "1:1": [],
-            "4:5": [],
-            "9:16": []
+        const slideUrls: string[] = []
+
+        for (const slide of script.slides) {
+            const png = await renderSlideToPng(slide, script.slides.length, boldFont, regularFont, logoBase64)
+            const fileName = `PAM_CAROUSEL_${date}_${slug}_slide${slide.slideNumber}_v1.png`
+            const url = await storeBlob(`production/${contentIdeaId}/CAROUSEL_PNG/${fileName}`, png, "image/png")
+            slideUrls.push(url)
         }
-
-        const RATIOS = [
-            { key: "1:1", w: 1080, h: 1080 },
-            { key: "4:5", w: 1080, h: 1350 },
-            { key: "9:16", w: 1080, h: 1920 },
-        ]
-
-        for (const ratio of RATIOS) {
-            for (const slide of script.slides) {
-                const png = await renderSlideToPng(slide, script.slides.length, boldFont, regularFont, logoBase64, ratio.w, ratio.h)
-                const ratioSlug = ratio.key.replace(":", "x")
-                const fileName = `PAM_CAROUSEL_${ratioSlug}_${date}_${slug}_slide${slide.slideNumber}_v1.png`
-                const url = await storeBlob(`production/${contentIdeaId}/CAROUSEL_PNG/${fileName}`, png, "image/png")
-                ratioVariants[ratio.key].push(url)
-                
-                // Add to zip
-                zip.folder(ratioSlug)?.file(`slide${slide.slideNumber}.png`, png)
-            }
-        }
-
-        const primarySlideUrls = ratioVariants["1:1"]
-
-        // ── Upload ZIP archive ────────────────────────────────────────────────
-        const zipBuffer = await zip.generateAsync({ type: "nodebuffer" })
-        const zipFileName = `PAM_CAROUSEL_${date}_${slug}_batch.zip`
-        const zipUrl = await storeBlob(`production/${contentIdeaId}/CAROUSEL_PNG/${zipFileName}`, zipBuffer, "application/zip")
 
         const readable = [
             `CAROUSEL: ${script.title}`,
@@ -794,14 +763,8 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
             .from("content_assets")
             .update({
                 status: "COMPLETE",
-                storage_url: primarySlideUrls[0],
-                metadata: JSON.parse(JSON.stringify({
-                    content: readable,
-                    slideUrls: primarySlideUrls,
-                    ratioVariants,
-                    zipUrl,
-                    script
-                })),
+                storage_url: slideUrls[0],
+                metadata: JSON.parse(JSON.stringify({ content: readable, slideUrls, script })),
             })
             .eq("render_job_id", renderJobId)
             .eq("asset_type", "CAROUSEL_PNG")
