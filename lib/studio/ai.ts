@@ -31,15 +31,20 @@ function clampSlideCount(value: number) {
     return Math.max(1, Math.min(Math.round(value), 12))
 }
 
-function getRequestedSlideCount(...inputs: Array<string | null | undefined>) {
+export function getRequestedSlideCount(...inputs: Array<string | null | undefined>) {
     const message = inputs.filter(Boolean).join("\n")
-    const digitMatch = message.match(/\b(\d{1,2})\s*(?:slide|slides|carousel slides)\b/i)
+    const hyphenatedMatch = message.match(/\b(\d{1,2})\s*[- ]\s*slide\b/i)
+    if (hyphenatedMatch?.[1]) {
+        return clampSlideCount(Number(hyphenatedMatch[1]))
+    }
+
+    const digitMatch = message.match(/\b(\d{1,2})\b(?:\s+[\w-]+){0,4}\s+(?:carousel\s+)?slides?\b/i)
     if (digitMatch?.[1]) {
         return clampSlideCount(Number(digitMatch[1]))
     }
 
     const wordPattern = Object.keys(SLIDE_COUNT_WORDS).join("|")
-    const wordMatch = message.match(new RegExp(`\\b(${wordPattern})\\s+(?:slide|slides|carousel slides)\\b`, "i"))
+    const wordMatch = message.match(new RegExp(`\\b(${wordPattern})\\b(?:\\s+[\\w-]+){0,4}\\s+(?:carousel\\s+)?slides?\\b`, "i"))
     if (wordMatch?.[1]) {
         return SLIDE_COUNT_WORDS[wordMatch[1].toLowerCase()]
     }
@@ -55,8 +60,8 @@ function getRequestedSlideCount(...inputs: Array<string | null | undefined>) {
     return null
 }
 
-function getTargetSlideCount(pkg: StudioPackage, settings: StudioSettings, message: string) {
-    return getRequestedSlideCount(message, pkg.sourcePrompt, pkg.sourceText) ?? clampSlideCount(settings.defaultSlides || 5)
+export function getTargetSlideCount(pkg: StudioPackage, settings: StudioSettings, message: string) {
+    return getRequestedSlideCount(message, pkg.sourcePrompt, pkg.sourceText) ?? clampSlideCount(settings.defaultSlides || 8)
 }
 
 function getGoogleModel(modelId: string) {
@@ -137,6 +142,8 @@ Return a package with:
   - Set assets.logo to WHITE on NAVY/INK/GRADIENT and COLOR on WHITE/SLATE. Use assets.book only on the first and last slides.
 - Four captions adapted separately for Instagram, Facebook, LinkedIn, and TikTok.
 - Captions must include hashtags as separate array values, and chars must equal body length.
+- Hashtag floors: instagram must include at least 20 topic-specific hashtags, facebook at least 20, linkedin 8-10, and tiktok at least 10.
+- Hashtags must be relevant to the carousel topic, psychiatric assessment, nursing students, PMHNP/NCLEX study, clinical documentation, and the specific symptoms or interview structure being taught.
 - Quality score is a 0-5 estimate of specificity and clinical usefulness.`
 }
 
@@ -172,10 +179,11 @@ User instruction:
 ${message}
 
 Platform rules:
-- instagram: punchy, save/share language, useful hashtags.
-- facebook: warmer explanatory framing and slightly more context.
-- linkedin: professional, education-focused, fewer hashtags.
-- tiktok: direct hook, short lines, discoverability hashtags.
+- instagram: punchy, save/share language, at least 20 useful topic-specific hashtags.
+- facebook: warmer explanatory framing, slightly more context, at least 20 useful topic-specific hashtags.
+- linkedin: professional, education-focused, 8-10 useful topic-specific hashtags.
+- tiktok: direct hook, short lines, at least 10 discoverability hashtags.
+- Hashtags must be returned as separate array values, not embedded only in the body.
 
 Return one caption. chars must equal body length.`
 }

@@ -134,7 +134,7 @@ export function parseStudioSettingsRow(row: Record<string, unknown>): StudioSett
         modelStrategist: typeof row.model_strategist === "string" ? row.model_strategist : "gemini-2.5-pro",
         modelGate: typeof row.model_gate === "string" ? row.model_gate : "gemini-2.5-flash",
         gateThreshold: Number(row.gate_threshold),
-        defaultSlides: Number(row.default_slides) || 4,
+        defaultSlides: Number(row.default_slides) || 8,
         alwaysSay: typeof row.always_say === "string" ? row.always_say : null,
         neverSay: typeof row.never_say === "string" ? row.never_say : null,
         updatedAt: String(row.updated_at),

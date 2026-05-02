@@ -35,6 +35,7 @@ import {
     Sparkles,
     Star,
     TableProperties,
+    Trash2,
     Upload,
     WandSparkles,
     X,
@@ -54,8 +55,11 @@ import {
     STUDIO_RATIOS,
     type StudioSlideRenderSpec,
 } from "@/lib/studio/shared"
+import { STUDIO_FEEDBACK, formatStudioError, type StudioToast } from "@/lib/studio/feedback"
 import {
     applyStudioCarouselVariety,
+    createDefaultCaptions,
+    createDefaultCarouselJson,
     normalizeCaption,
     type StudioCaption,
     type StudioCaptionsJson,
@@ -74,7 +78,7 @@ import {
 
 type WorkspaceView = "create" | "drafts" | "library" | "settings"
 type PlatformKey = "instagram" | "facebook" | "linkedin" | "tiktok"
-type SettingsTab = "brand" | "voice" | "cta" | "platform" | "model"
+type SettingsTab = "brand" | "voice" | "cta" | "platform" | "quality"
 type ContextTab = "always" | "never"
 
 type DraftStatus = "ready" | "progress" | "draft"
@@ -86,9 +90,50 @@ type PlatformMeta = {
     icon: ComponentType<{ size?: number; className?: string }>
 }
 
+type StudioConfirmDialogState = {
+    title: string
+    message: string
+    confirmLabel: string
+    cancelLabel?: string
+    tone?: "default" | "danger"
+    onConfirm: () => void | Promise<void>
+    onCancel?: () => void
+}
+
 const GRADIENT_BG_CLASS = "bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]"
 const GRADIENT_SHADOW_CLASS = "shadow-[0_12px_32px_-8px_rgba(175,92,233,.45),0_2px_8px_rgba(237,65,91,.18)]"
 const SLIDE_BORDER_CLASS = "bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]"
+const UNSAVED_PACKAGE_PREFIX = "unsaved-studio-package"
+const PLATFORM_HASHTAG_FLOORS: Record<PlatformKey, number> = {
+    instagram: 20,
+    facebook: 20,
+    linkedin: 8,
+    tiktok: 10,
+}
+const CLIENT_FALLBACK_HASHTAGS = [
+    "#PsychiatricAssessment",
+    "#PsychNursing",
+    "#NursingStudent",
+    "#NCLEXPrep",
+    "#PMHNPStudent",
+    "#MentalHealthNursing",
+    "#ClinicalJudgment",
+    "#MentalStatusExam",
+    "#HPI",
+    "#PatientInterview",
+    "#ClinicalDocumentation",
+    "#DifferentialDiagnosis",
+    "#SafetyAssessment",
+    "#PsychRotation",
+    "#NurseEducation",
+    "#AssessmentSkills",
+    "#TherapeuticCommunication",
+    "#NursingSchool",
+    "#ClinicalReasoning",
+    "#PsychAssessmentGuide",
+    "#DSM5TR",
+    "#RiskAssessment",
+]
 const FRAME_CLASS_BY_RATIO: Record<StudioRatio, string> = {
     "1:1": "h-[380px] w-[380px]",
     "4:5": "h-[450px] w-[360px]",
@@ -96,7 +141,6 @@ const FRAME_CLASS_BY_RATIO: Record<StudioRatio, string> = {
 }
 
 const HOOK_STYLE_OPTIONS = ["STAT_LED", "QUESTION_LED", "MYTH_BUST", "CHECKLIST"]
-const MODEL_OPTIONS = ["gemini-2.5-pro", "gemini-2.5-flash"]
 
 const PLATFORM_META: Record<PlatformKey, PlatformMeta> = {
     instagram: {
@@ -134,7 +178,7 @@ const SETTINGS_TABS: Array<{ key: SettingsTab; label: string; icon: React.Compon
     { key: "voice", label: "Voice & Tone", icon: MicVocal },
     { key: "cta", label: "CTA Presets", icon: ArrowRight },
     { key: "platform", label: "Distribution", icon: LinkIcon },
-    { key: "model", label: "AI Model", icon: Brain },
+    { key: "quality", label: "Quality & Defaults", icon: ShieldCheck },
 ]
 
 const TONE_CARDS = [
@@ -161,33 +205,49 @@ function formatPackageMeta(item: StudioPackageListItem) {
     })}`
 }
 
-function toSafeCaption(caption: Partial<StudioCaption> | null | undefined) {
-    return normalizeCaption(caption?.body, caption?.hashtags)
+function toSafeCaption(caption: Partial<StudioCaption> | null | undefined, platform?: PlatformKey) {
+    const normalized = normalizeCaption(caption?.body, caption?.hashtags)
+    if (!platform || normalized.body.trim().length === 0) {
+        return normalized
+    }
+
+    const floor = PLATFORM_HASHTAG_FLOORS[platform]
+    const hashtags = Array.from(new Set([...normalized.hashtags, ...CLIENT_FALLBACK_HASHTAGS])).slice(0, Math.max(floor, normalized.hashtags.length))
+    return { ...normalized, hashtags }
 }
 
 function normalizeClientCaptions(captions: Partial<Record<PlatformKey, Partial<StudioCaption>>> | null | undefined, fallback?: StudioCaptionsJson): StudioCaptionsJson {
     return {
-        instagram: toSafeCaption(captions?.instagram ?? fallback?.instagram),
-        facebook: toSafeCaption(captions?.facebook ?? fallback?.facebook),
-        linkedin: toSafeCaption(captions?.linkedin ?? fallback?.linkedin),
-        tiktok: toSafeCaption(captions?.tiktok ?? fallback?.tiktok),
+        instagram: toSafeCaption(captions?.instagram ?? fallback?.instagram, "instagram"),
+        facebook: toSafeCaption(captions?.facebook ?? fallback?.facebook, "facebook"),
+        linkedin: toSafeCaption(captions?.linkedin ?? fallback?.linkedin, "linkedin"),
+        tiktok: toSafeCaption(captions?.tiktok ?? fallback?.tiktok, "tiktok"),
     }
 }
 
-function captionToText(caption: Partial<StudioCaption> | null | undefined) {
-    const safeCaption = toSafeCaption(caption)
+function sanitizeStudioMessage(text: string) {
+    return text
+        .replace(/Studio package generated with [^.]+[.]/gi, "Studio Package Generator: successfully reviewed.")
+        .replace(/Studio fragment updated with [^.]+[.]/gi, "Studio Package Generator: successfully reviewed.")
+        .replace(/\b(?:gemini|claude|gpt)[\w.-]*/gi, "studio generator")
+        .replace(/\bAI\s+model\b/gi, "studio generator")
+        .replace(/\bmodel\b/gi, "generator")
+}
+
+function captionToText(caption: Partial<StudioCaption> | null | undefined, platform?: PlatformKey) {
+    const safeCaption = toSafeCaption(caption, platform)
     return safeCaption.hashtags.length > 0 ? `${safeCaption.body}\n\n${safeCaption.hashtags.join(" ")}` : safeCaption.body
 }
 
-function textToCaption(text: string, existing: Partial<StudioCaption> | null | undefined) {
-    const safeExisting = toSafeCaption(existing)
+function textToCaption(text: string, existing: Partial<StudioCaption> | null | undefined, platform?: PlatformKey) {
+    const safeExisting = toSafeCaption(existing, platform)
     const hashtags = Array.from(new Set(text.match(/#[A-Za-z0-9_-]+/g) ?? safeExisting.hashtags))
     const body = text
         .replace(/#[A-Za-z0-9_-]+/g, "")
         .replace(/\n{3,}/g, "\n\n")
         .trim()
 
-    return normalizeCaption(body || safeExisting.body, hashtags)
+    return toSafeCaption(normalizeCaption(body || safeExisting.body, hashtags), platform)
 }
 
 function getPreviewBodyLines(value: unknown) {
@@ -250,18 +310,23 @@ function labelForSlideVariant(variant: StudioSlideRenderSpec["variant"]) {
     return "Insight"
 }
 
-function eyebrowForPreview(variant: StudioSlideRenderSpec["variant"], index: number) {
+function eyebrowForPreview(variant: StudioSlideRenderSpec["variant"]) {
     if (variant === "cta") return "Final Slide"
     if (variant === "cover" || variant === "heroIcon") return "Psych Mastery"
     if (variant === "featureCards") return "Clinical Tools"
     if (variant === "titleCard") return "Clinical Focus"
     if (variant === "taxonomyList") return "Types"
-    if (variant === "scienceSplit") return `Mechanism ${String(index).padStart(2, "0")}`
+    if (variant === "scienceSplit") return "Mechanism"
     if (variant === "stat") return "Clinical Signal"
     if (variant === "quote") return "Field Note"
     if (variant === "checklist") return "Checklist"
-    if (variant === "darkInsight") return `Deep Dive ${String(index).padStart(2, "0")}`
-    return `Insight ${String(index).padStart(2, "0")}`
+    if (variant === "darkInsight") return "Deep Dive"
+    return "Clinical Lens"
+}
+
+function previewFooterCue(index: number) {
+    const cues = ["Save for review", "Clinical cue", "Charting lens", "Assessment check", "Keep this step", "Field note"]
+    return cues[index % cues.length]
 }
 
 function getPreviewVariant(layout: StudioSlideLayout | undefined, kind: StudioSlideKind | undefined, bg: StudioSlideBackground, bodyLines: string[], index: number, totalSlides: number): StudioSlideRenderSpec["variant"] {
@@ -294,18 +359,18 @@ function toPreviewSlide(slide: StudioSlide, index: number, totalSlides: number):
 
     return {
         id: partialSlide.id ?? `streaming-slide-${index}`,
-        label: `${String(index + 1).padStart(2, "0")} · ${labelForSlideVariant(variant)}`,
+        label: `Slide ${index + 1} · ${labelForSlideVariant(variant)}`,
         variant,
         kind: kind ?? "INSIGHT",
         layout,
         bg,
-        eyebrow: eyebrowForPreview(variant, index),
+        eyebrow: eyebrowForPreview(variant),
         headline,
         body: bodyLines.length > 0 ? bodyLines : undefined,
         stat: partialSlide.stat?.value,
         statNote: partialSlide.stat?.label,
         cta: variant === "cta" ? "psychassessmentguide.com" : undefined,
-        footer: `${String(index + 1).padStart(2, "0")} / ${String(totalSlides).padStart(2, "0")}`,
+        footer: previewFooterCue(index),
     }
 }
 
@@ -374,6 +439,29 @@ function createBlankSlide(index: number): StudioSlide {
         bg: "WHITE",
         assets: { logo: "COLOR", book: index === 0 },
     }
+}
+
+function createUnsavedStudioPackage(): StudioPackage {
+    const now = new Date().toISOString()
+    return {
+        id: `${UNSAVED_PACKAGE_PREFIX}-${Date.now()}`,
+        ownerId: "local",
+        title: "Untitled Carousel",
+        status: "DRAFT",
+        sourceType: "PROMPT",
+        sourcePrompt: null,
+        sourceBlobPath: null,
+        sourceText: null,
+        carouselJson: createDefaultCarouselJson(),
+        captionsJson: createDefaultCaptions(),
+        qualityJson: {},
+        createdAt: now,
+        updatedAt: now,
+    }
+}
+
+function isUnsavedStudioPackage(pkg: StudioPackage | null) {
+    return Boolean(pkg?.id.startsWith(UNSAVED_PACKAGE_PREFIX))
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -612,6 +700,7 @@ function SlideFrame({
     })
     const rows = getRows(slide.body ?? [])
     const cardIcons = [Brain, Search, ShieldCheck, TableProperties, HeartPulse]
+    const footerCue = ratio === "1:1" ? null : <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
 
     return (
         <div className="relative flex flex-col items-center gap-3">
@@ -625,14 +714,14 @@ function SlideFrame({
                 <div className="absolute -bottom-3 left-1/2 z-20 h-1.5 w-12 -translate-x-1/2 rounded-full bg-slate-300" />
                 <div className={`relative overflow-hidden rounded-[14px] ${frameClass}`}>
                     {slide.variant === "heroIcon" && (
-                        <div className="relative h-full w-full overflow-hidden border-[5px] border-purple-600 bg-white text-[#232536]">
+                        <div className="relative h-full w-full overflow-hidden bg-white text-[#232536]">
                             <div className="absolute left-6 top-6 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Psych Mastery</div>
                             <div className="relative z-10 flex h-full flex-col items-center justify-center px-8 text-center">
-                                <h2 className="mb-8 text-[27px] font-black leading-[1.08] text-[#232536]">
+                                <h2 className="mb-4 text-[22px] font-black leading-[1.05] text-[#232536]">
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Hero headline" multiline ariaLabel="Slide headline" />
                                 </h2>
-                                <div className="mb-8 flex h-32 w-32 items-center justify-center rounded-full bg-purple-100 text-purple-700">
-                                    <Brain size={66} strokeWidth={1.8} />
+                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(237,65,91,.12)_0%,rgba(236,81,133,.14)_48%,rgba(175,92,233,.18)_100%)] text-[#af5ce9]">
+                                    <Brain size={34} strokeWidth={1.8} />
                                 </div>
                                 <div className="h-px w-full bg-slate-200" />
                                 <p className="mt-5 text-[13px] leading-relaxed text-slate-500">
@@ -640,25 +729,25 @@ function SlideFrame({
                                 </p>
                             </div>
                             <SlideOverlay bottom label={siteUrl.toUpperCase()}>
-                                <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
+                                {footerCue}
                             </SlideOverlay>
                         </div>
                     )}
                     {slide.variant === "featureCards" && (
-                        <div className="relative h-full w-full overflow-hidden border-[5px] border-purple-600 bg-white text-[#232536]">
+                        <div className="relative h-full w-full overflow-hidden bg-white text-[#232536]">
                             <div className="relative z-10 flex h-full flex-col px-7 pb-10 pt-10">
                                 <div className="mb-5 text-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Psych Mastery</div>
-                                <h2 className="mb-5 text-center text-[26px] font-black leading-[1.08]">
+                                <h2 className="mb-4 text-center text-[23px] font-black leading-[1.07]">
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Feature headline" multiline ariaLabel="Slide headline" />
                                 </h2>
-                                <div className="mb-4 h-0.5 w-full bg-purple-600" />
+                                <div className="mb-4 h-0.5 w-full bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]" />
                                 <div className="flex flex-1 flex-col justify-center gap-3">
                                     {(rows.length ? rows : [{ term: "Clinical Interviews", description: "Learn structured interview techniques." }]).slice(0, 3).map((row, index) => {
                                         const Icon = cardIcons[index % cardIcons.length]
                                         return (
                                             <div key={`feature-${index}`} className="flex items-center gap-4 rounded-xl bg-white px-4 py-3 shadow-[0_14px_34px_-20px_rgba(15,23,42,.35)] ring-1 ring-slate-100">
-                                                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">
-                                                    <Icon size={25} strokeWidth={2.2} />
+                                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(237,65,91,.12)_0%,rgba(236,81,133,.14)_48%,rgba(175,92,233,.18)_100%)] text-[#af5ce9]">
+                                                    <Icon size={19} strokeWidth={2.2} />
                                                 </span>
                                                 <span className="min-w-0">
                                                     <span className="block text-[14px] font-black leading-tight text-[#232536]">{row.term}</span>
@@ -672,13 +761,13 @@ function SlideFrame({
                         </div>
                     )}
                     {slide.variant === "titleCard" && (
-                        <div className="relative h-full w-full overflow-hidden border-[5px] border-purple-600 bg-white text-[#232536]">
+                        <div className="relative h-full w-full overflow-hidden bg-white text-[#232536]">
                             <div className="relative z-10 flex h-full flex-col px-8 py-10">
-                                <div className="mb-7 flex h-28 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 shadow-[0_20px_38px_-26px_rgba(15,23,42,.45)]">
-                                    <Brain size={54} strokeWidth={1.6} />
+                                <div className="mb-5 flex h-20 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(237,65,91,.10),rgba(175,92,233,.14))] text-[#af5ce9] shadow-[0_20px_38px_-26px_rgba(15,23,42,.45)]">
+                                    <Brain size={36} strokeWidth={1.6} />
                                 </div>
                                 <div className="h-px w-full bg-slate-300" />
-                                <h2 className="my-5 border-l-4 border-purple-600 pl-4 text-[25px] font-black leading-[1.08]">
+                                <h2 className="my-4 border-l-4 border-transparent bg-[linear-gradient(white,white)_padding-box,linear-gradient(135deg,#ed415b,#ec5185,#af5ce9)_border-box] pl-4 text-[23px] font-black leading-[1.07]">
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Title card headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="h-px w-full bg-slate-300" />
@@ -689,15 +778,15 @@ function SlideFrame({
                         </div>
                     )}
                     {slide.variant === "taxonomyList" && (
-                        <div className="relative h-full w-full overflow-hidden border-x-[5px] border-purple-600 bg-white text-[#232536]">
+                        <div className="relative h-full w-full overflow-hidden bg-white text-[#232536]">
                             <div className="relative z-10 flex h-full flex-col px-7 py-10">
-                                <h2 className="mb-8 text-center text-[28px] font-black uppercase leading-none tracking-[0.06em]">
+                                <h2 className="mb-6 text-center text-[24px] font-black uppercase leading-none tracking-[0.06em]">
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Types headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="space-y-0 overflow-hidden rounded-sm bg-slate-100">
                                     {(rows.length ? rows : [{ term: "Type one", description: "Short clinical definition." }]).slice(0, 4).map((row, index) => (
                                         <div key={`tax-${index}`} className="flex min-h-[74px] items-center gap-4 border-b border-slate-300/70 px-5 py-3 last:border-b-0">
-                                            <span className="h-8 w-8 shrink-0 rounded-full bg-purple-600" />
+                                            <span className="h-6 w-6 shrink-0 rounded-full bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]" />
                                             <span>
                                                 <span className="block text-[17px] font-black leading-tight text-[#232536]">{row.term}</span>
                                                 <span className="mt-1 block text-[13px] font-semibold leading-snug text-slate-500">{row.description}</span>
@@ -714,13 +803,13 @@ function SlideFrame({
                             <div className="absolute bottom-0 left-0 right-0 h-9 border-t border-slate-200" />
                             <div className="relative z-10 flex h-full flex-col px-7 pb-12 pt-12">
                                 <div className="mb-5 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500">
-                                    <Brain size={18} className="text-purple-600" />
+                                    <Brain size={18} className="text-[#af5ce9]" />
                                     <span>{slide.eyebrow}</span>
-                                    <span>{slide.footer}</span>
+                                    <span>{slide.eyebrow}</span>
                                 </div>
                                 <div className="grid flex-1 grid-cols-[1fr_1.05fr] gap-5">
-                                    <div className="flex flex-col justify-center border-l-4 border-purple-600 pl-4">
-                                        <h2 className="mb-3 text-[25px] font-black leading-[1.04]">
+                                    <div className="flex flex-col justify-center border-l-4 border-transparent bg-[linear-gradient(white,white)_padding-box,linear-gradient(135deg,#ed415b,#ec5185,#af5ce9)_border-box] pl-4">
+                                        <h2 className="mb-3 text-[22px] font-black leading-[1.04]">
                                             <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Mechanism headline" multiline ariaLabel="Slide headline" />
                                         </h2>
                                         <p className="text-[12px] font-semibold leading-relaxed text-slate-600">
@@ -728,13 +817,13 @@ function SlideFrame({
                                         </p>
                                     </div>
                                     <div className="flex flex-col justify-center rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-[0_14px_34px_-24px_rgba(15,23,42,.35)]">
-                                        <div className="mx-auto mb-3 flex h-24 w-32 items-center justify-center rounded-[48%] border-2 border-slate-400/60 bg-white text-purple-600">
-                                            <Brain size={62} strokeWidth={1.4} />
+                                        <div className="mx-auto mb-3 flex h-16 w-24 items-center justify-center rounded-[48%] border-2 border-slate-300 bg-white text-[#af5ce9]">
+                                            <Brain size={38} strokeWidth={1.4} />
                                         </div>
                                         <div className="space-y-1">
                                             {rows.slice(0, 4).map((row, index) => (
                                                 <div key={`science-${index}`} className="flex items-center gap-2 text-[9.5px] font-bold leading-tight text-slate-600">
-                                                    <span className="h-2 w-2 rounded-full bg-purple-500" />
+                                                    <span className="h-2 w-2 rounded-full bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]" />
                                                     <span>{row.term}</span>
                                                 </div>
                                             ))}
@@ -743,20 +832,20 @@ function SlideFrame({
                                 </div>
                             </div>
                             <SlideOverlay bottom label={siteUrl.toUpperCase()}>
-                                <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
+                                {footerCue}
                             </SlideOverlay>
                         </div>
                     )}
                     {slide.variant === "cover" && (
-                        <div className="relative h-full w-full overflow-hidden border-[5px] border-purple-600 bg-white text-[#232536]">
+                        <div className="relative h-full w-full overflow-hidden bg-white text-[#232536]">
                             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(175,92,233,.08),transparent_58%)]" />
                             <div className="absolute left-6 top-6 z-10 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Psych Mastery</div>
                             <div className="relative z-10 flex h-full flex-col items-center justify-center px-8 text-center">
-                                <h2 className="mb-8 text-[27px] font-black leading-[1.08] text-[#232536]">
+                                <h2 className="mb-4 text-[22px] font-black leading-[1.05] text-[#232536]">
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Carousel cover headline" multiline ariaLabel="Slide headline" />
                                 </h2>
-                                <div className="mb-8 flex h-32 w-32 items-center justify-center rounded-full bg-purple-100 text-purple-700">
-                                    <Brain size={66} strokeWidth={1.8} />
+                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(237,65,91,.12)_0%,rgba(236,81,133,.14)_48%,rgba(175,92,233,.18)_100%)] text-[#af5ce9]">
+                                    <Brain size={34} strokeWidth={1.8} />
                                 </div>
                                 <div className="h-px w-full bg-slate-200" />
                                 <p className="mt-5 text-[13px] leading-relaxed text-slate-500">
@@ -764,7 +853,7 @@ function SlideFrame({
                                 </p>
                             </div>
                             <SlideOverlay bottom label={siteUrl.toUpperCase()}>
-                                <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
+                                {footerCue}
                             </SlideOverlay>
                         </div>
                     )}
@@ -776,7 +865,7 @@ function SlideFrame({
                             </SlideOverlay>
                             <div className="relative z-10 flex h-full flex-col justify-center px-7 pb-12 pt-12">
                                 <div className="mb-5 h-1 w-9 rounded-full bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]" />
-                                <h2 className="mb-5 text-[28px] font-black leading-[1.05] text-[#041f50]">
+                                <h2 className="mb-4 text-[24px] font-black leading-[1.05] text-[#041f50]">
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Insight headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="text-[12.5px] leading-relaxed text-slate-600">
@@ -804,7 +893,7 @@ function SlideFrame({
                                 </div>
                             </div>
                             <SlideOverlay bottom label={siteUrl.toUpperCase()}>
-                                <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
+                                {footerCue}
                             </SlideOverlay>
                         </div>
                     )}
@@ -816,9 +905,9 @@ function SlideFrame({
                             </SlideOverlay>
                             <div className="relative z-10 flex h-full flex-col justify-center px-7 pb-12 pt-12">
                                 <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-[12px] font-black text-white ring-1 ring-white/10">
-                                    {String(slide.footer.split("/")[0]).trim()}
+                                    <Sparkles size={16} />
                                 </div>
-                                <h2 className="mb-4 text-[26px] font-black leading-[1.05] text-white">
+                                <h2 className="mb-4 text-[23px] font-black leading-[1.05] text-white">
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Deep dive headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="space-y-2">
@@ -830,7 +919,7 @@ function SlideFrame({
                                 </div>
                             </div>
                             <SlideOverlay bottom label={siteUrl.toUpperCase()} dark>
-                                <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
+                                {footerCue}
                             </SlideOverlay>
                         </div>
                     )}
@@ -841,13 +930,13 @@ function SlideFrame({
                                 <Image src="/favicon-white.png" alt="PAM" width={20} height={20} className="h-5 w-5 object-contain opacity-80" />
                             </SlideOverlay>
                             <div className="relative z-10 flex h-full flex-col justify-center px-7 pb-12 pt-12">
-                                <div className="mb-2 text-[58px] font-black leading-none text-white drop-shadow-sm">
+                                <div className="mb-2 text-[48px] font-black leading-none text-white drop-shadow-sm">
                                     <EditableText value={slide.stat ?? ""} onCommit={(next) => onEditField("stat", next)} placeholder="01" ariaLabel="Stat value" />
                                 </div>
                                 <p className="mb-5 max-w-[80%] text-[11px] font-bold uppercase tracking-[0.08em] text-white/70">
                                     <EditableText value={slide.statNote ?? ""} onCommit={(next) => onEditField("statNote", next)} placeholder="Clinical checkpoint" multiline ariaLabel="Stat label" />
                                 </p>
-                                <h2 className="max-w-[88%] text-[25px] font-black leading-[1.05] text-white">
+                                <h2 className="max-w-[88%] text-[22px] font-black leading-[1.05] text-white">
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Stat headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <p className="mt-4 max-w-[86%] text-[11.5px] font-semibold leading-relaxed text-white/72">
@@ -855,7 +944,7 @@ function SlideFrame({
                                 </p>
                             </div>
                             <SlideOverlay bottom label={siteUrl.toUpperCase()} dark>
-                                <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
+                                {footerCue}
                             </SlideOverlay>
                         </div>
                     )}
@@ -875,7 +964,7 @@ function SlideFrame({
                                 </p>
                             </div>
                             <SlideOverlay bottom label={siteUrl.toUpperCase()} dark>
-                                <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
+                                {footerCue}
                             </SlideOverlay>
                         </div>
                     )}
@@ -886,7 +975,7 @@ function SlideFrame({
                                 <Image src="/logo.webp" alt="PAM" width={68} height={16} className="h-4 w-auto object-contain opacity-90" />
                             </SlideOverlay>
                             <div className="relative z-10 flex h-full flex-col justify-center px-7 pb-12 pt-12">
-                                <h2 className="mb-5 text-[25px] font-black leading-[1.05] text-[#041f50]">
+                                <h2 className="mb-4 text-[22px] font-black leading-[1.05] text-[#041f50]">
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Checklist headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="space-y-2">
@@ -901,7 +990,7 @@ function SlideFrame({
                                 </div>
                             </div>
                             <SlideOverlay bottom label={siteUrl.toUpperCase()}>
-                                <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
+                                {footerCue}
                             </SlideOverlay>
                         </div>
                     )}
@@ -925,7 +1014,7 @@ function SlideFrame({
                                 </div>
                             </div>
                             <SlideOverlay bottom label={siteUrl.toUpperCase()} dark>
-                                <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
+                                {footerCue}
                             </SlideOverlay>
                         </div>
                     )}
@@ -980,6 +1069,83 @@ function SlideOverlay({ top, bottom, dark = false, label, children }: { top?: bo
     )
 }
 
+function StudioToastStack({ toasts, onDismiss }: { toasts: StudioToast[]; onDismiss: (id: string) => void }) {
+    if (toasts.length === 0) {
+        return null
+    }
+
+    return (
+        <div className="fixed bottom-5 right-5 z-[100] flex w-[min(360px,calc(100vw-2rem))] flex-col gap-2">
+            {toasts.map((toast) => (
+                <div key={toast.id} className={`rounded-2xl border bg-white p-4 shadow-[0_18px_50px_-20px_rgba(15,23,42,.45)] ${toast.type === "error" ? "border-rose-200" : toast.type === "success" ? "border-emerald-200" : "border-slate-200"}`}>
+                    <div className="flex items-start gap-3">
+                        <span className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${toast.type === "error" ? "bg-rose-500" : toast.type === "success" ? "bg-emerald-500" : "bg-purple-500"}`} />
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-black text-[#041f50]">{toast.title}</p>
+                            {toast.message ? <p className="mt-1 text-xs leading-relaxed text-slate-500">{toast.message}</p> : null}
+                        </div>
+                        <button type="button" onClick={() => onDismiss(toast.id)} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Dismiss notification">
+                            <X size={13} />
+                        </button>
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function StudioConfirmModal({ dialog, onClose }: { dialog: StudioConfirmDialogState | null; onClose: () => void }) {
+    if (!dialog) {
+        return null
+    }
+
+    const confirmClass = dialog.tone === "danger"
+        ? "bg-rose-600 text-white shadow-[0_14px_32px_-12px_rgba(225,29,72,.55)] hover:bg-rose-500"
+        : `${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS} text-white hover:opacity-95`
+
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+            <div role="dialog" aria-modal="true" aria-labelledby="studio-confirm-title" className="w-full max-w-md overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_34px_90px_-32px_rgba(15,23,42,.65)]">
+                <div className={`h-1.5 ${dialog.tone === "danger" ? "bg-rose-500" : GRADIENT_BG_CLASS}`} />
+                <div className="p-6">
+                    <div className="mb-4 flex items-start gap-3">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white ${dialog.tone === "danger" ? "bg-rose-500" : GRADIENT_BG_CLASS}`}>
+                            {dialog.tone === "danger" ? <Trash2 size={17} /> : <Check size={17} />}
+                        </div>
+                        <div className="min-w-0">
+                            <h2 id="studio-confirm-title" className="text-base font-black tracking-tight text-[#041f50]">{dialog.title}</h2>
+                            <p className="mt-2 text-sm leading-relaxed text-slate-500">{dialog.message}</p>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                dialog.onCancel?.()
+                                onClose()
+                            }}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 hover:text-[#041f50]"
+                        >
+                            {dialog.cancelLabel ?? "Cancel"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const result = dialog.onConfirm()
+                                onClose()
+                                void result
+                            }}
+                            className={`rounded-xl px-4 py-2 text-sm font-black transition ${confirmClass}`}
+                        >
+                            {dialog.confirmLabel}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 function ContentStudioCreate({
     packageItem,
     messages,
@@ -1007,6 +1173,7 @@ function ContentStudioCreate({
     onCaptionChange,
     onCaptionSave,
     onRegenerateCaption,
+    onCopyCaption,
     onQualityGate,
     onApprove,
     onEditSlideField,
@@ -1039,6 +1206,7 @@ function ContentStudioCreate({
     onCaptionChange: (platform: PlatformKey, value: string) => void
     onCaptionSave: (platform: PlatformKey) => void
     onRegenerateCaption: (platform: PlatformKey) => void
+    onCopyCaption: (platform: PlatformKey) => void
     onQualityGate: () => void
     onApprove: () => void
     onEditSlideField: (slideId: string, field: "headline" | "body" | "stat" | "statNote", next: string) => void
@@ -1058,7 +1226,7 @@ function ContentStudioCreate({
     const slidesCount = `${slides.length} slides`
     const ratioButtons = STUDIO_RATIOS
     const caption = packageCaptions[activePlatform]
-    const captionText = captionToText(caption)
+    const captionText = captionToText(caption, activePlatform)
     const [isPromptCollapsed, setIsPromptCollapsed] = useState(false)
     const [isCaptionsCollapsed, setIsCaptionsCollapsed] = useState(false)
     const [canvasZoom, setCanvasZoom] = useState(1)
@@ -1079,20 +1247,21 @@ function ContentStudioCreate({
                         <Bookmark size={13} />
                     </button>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={onSavePackage} disabled={isBusy} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[11.5px] font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-[#041f50] disabled:cursor-not-allowed disabled:opacity-60">Save</button>
-                    <button onClick={onPromptSubmit} disabled={isBusy || !promptDraft.trim()} className={`flex items-center gap-2 rounded-lg px-4 py-1.5 text-[11.5px] font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
-                        <Zap size={11} />
-                        {isBusy ? "Working…" : "Generate"}
+                <div className="flex shrink-0 items-center gap-1.5">
+                    <DockButton icon={Download} label="Export" onClick={onExport} />
+                    <DockButton icon={PencilRuler} label="Save Draft" onClick={onSavePackage} />
+                    <button onClick={onApprove} className={`flex h-8 items-center gap-1.5 rounded-[10px] px-3 text-[10.5px] font-black text-white transition hover:opacity-95 ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
+                        <Check size={10.5} />
+                        Approve
                     </button>
                 </div>
             </header>
 
             <div className="flex flex-1 flex-col overflow-hidden xl:flex-row">
                 <aside className={`w-full shrink-0 border-b border-slate-200/70 bg-white transition-[width] duration-200 xl:border-b-0 xl:border-r ${isPromptCollapsed ? "xl:w-14" : "xl:w-72"}`}>
-                    <div className="flex items-center justify-between px-4 pb-2 pt-4">
-                        <div className="flex items-center gap-2">
-                            <MessageCircleMore size={11} className="text-purple-500" />
+                    <div className={`flex px-4 pb-2 pt-4 ${isPromptCollapsed ? "flex-col items-center gap-2" : "items-start justify-between"}`}>
+                        <div className={`flex ${isPromptCollapsed ? "order-2" : "order-1 items-center gap-2"}`}>
+                            <MessageCircleMore size={isPromptCollapsed ? 13 : 11} className="text-purple-500" />
                             {!isPromptCollapsed && <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#041f50]">Prompt</span>}
                         </div>
                         <button
@@ -1100,7 +1269,7 @@ function ContentStudioCreate({
                             onClick={() => setIsPromptCollapsed((current) => !current)}
                             title={isPromptCollapsed ? "Expand prompt panel" : "Collapse prompt panel"}
                             aria-label={isPromptCollapsed ? "Expand prompt panel" : "Collapse prompt panel"}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-purple-500"
+                            className={`${isPromptCollapsed ? "order-1" : "order-2"} flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-purple-500`}
                         >
                             {isPromptCollapsed ? <PanelLeftOpen size={12} /> : <PanelLeftClose size={12} />}
                         </button>
@@ -1254,25 +1423,15 @@ function ContentStudioCreate({
                                         <WandSparkles size={20} />
                                     </div>
                                     <h3 className="text-lg font-extrabold text-[#041f50]">Start with a prompt or add a slide</h3>
-                                    <p className="mt-2 text-sm leading-relaxed text-slate-500">This package is coming from Supabase, but it does not have slides yet. Generate from the prompt panel or add the first slide manually.</p>
+                                    <p className="mt-2 text-sm leading-relaxed text-slate-500">Use the prompt panel to generate content, or add the first slide manually.</p>
                                     <div className="mt-5 flex justify-center gap-3">
                                         <button onClick={onAddSlide} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Add first slide</button>
-                                        <button onClick={onPromptSubmit} disabled={isBusy || !promptDraft.trim()} className={`rounded-xl px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60 ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>Generate from prompt</button>
                                     </div>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-2xl border border-white/60 bg-white/80 p-1.5 shadow-[0_8px_32px_-4px_rgba(15,23,42,.18),0_2px_6px_rgba(15,23,42,.06)] backdrop-blur">
-                        <DockButton icon={PencilRuler} label="Save Draft" onClick={onSavePackage} />
-                        <DockButton icon={Download} label="Export" onClick={onExport} />
-                        <span className="mx-0.5 h-5 w-px bg-slate-300/70" />
-                        <button onClick={onApprove} className={`flex items-center gap-2 rounded-xl px-4 py-2 text-[11.5px] font-bold text-white transition hover:opacity-95 ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
-                            <Check size={10.5} />
-                            Approve for Manual Publish
-                        </button>
-                    </div>
                 </section>
 
                 <aside className={`flex w-full shrink-0 border-t border-slate-200/70 bg-white transition-[width] duration-200 xl:border-l xl:border-t-0 ${isCaptionsCollapsed ? "xl:w-14" : "xl:w-[344px]"}`}>
@@ -1317,7 +1476,7 @@ function ContentStudioCreate({
                                 <button onClick={() => onRegenerateCaption(activePlatform)} title="Regenerate caption" aria-label="Regenerate caption" className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-purple-500">
                                     <RefreshCw size={11} />
                                 </button>
-                                <button onClick={() => navigator.clipboard.writeText(captionToText(packageCaptions[activePlatform]))} title="Copy caption" aria-label="Copy caption" className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-purple-500">
+                                <button onClick={() => onCopyCaption(activePlatform)} title="Copy caption" aria-label="Copy caption" className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-purple-500">
                                     <Copy size={11} />
                                 </button>
                             </div>
@@ -1388,13 +1547,23 @@ function StudioWorkspace({
     const [isLoading, setIsLoading] = useState(true)
     const [isBusy, setIsBusy] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
+    const [toasts, setToasts] = useState<StudioToast[]>([])
+    const [confirmDialog, setConfirmDialog] = useState<StudioConfirmDialogState | null>(null)
+    const manualPackageOpenRef = useRef(false)
+
+    const showToast = useCallback((toast: Omit<StudioToast, "id">) => {
+        const id = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `toast-${Date.now()}`
+        setToasts((current) => [...current.slice(-2), { ...toast, id }])
+        window.setTimeout(() => {
+            setToasts((current) => current.filter((item) => item.id !== id))
+        }, 4200)
+    }, [])
 
     const loadPackages = useCallback(async (selectedId?: string | null) => {
         const result = await fetchJson<{ items: StudioPackageListItem[] }>("/api/studio/packages")
         setPackages(result.items)
 
-        const selectedExists = selectedId ? result.items.some((item) => item.id === selectedId) : false
-        const nextId = selectedExists ? selectedId : result.items[0]?.id ?? null
+        const nextId = selectedId ?? result.items[0]?.id ?? null
         if (!nextId) {
             setActivePackageId(null)
             setActivePackage(null)
@@ -1408,7 +1577,7 @@ function StudioWorkspace({
         try {
             detail = await fetchJson<{ item: StudioPackage; messages: StudioMessage[] }>(`/api/studio/packages/${nextId}`)
         } catch (error) {
-            if (selectedExists) {
+            if (selectedId) {
                 throw error
             }
 
@@ -1433,6 +1602,19 @@ function StudioWorkspace({
         setContextTab(result.item.neverSay ? "never" : "always")
     }, [])
 
+    const startBlankSession = useCallback(() => {
+        manualPackageOpenRef.current = false
+        setActivePackageId(null)
+        setActivePackage(createUnsavedStudioPackage())
+        setMessages([])
+        setPromptDraft("")
+        setSourceDraft("")
+        setShowPasteSource(false)
+        setRatio("1:1")
+        setWorkspaceView("create")
+        setErrorMessage(null)
+    }, [])
+
     useEffect(() => {
         let cancelled = false
 
@@ -1453,6 +1635,10 @@ function StudioWorkspace({
                 setErrorMessage(failures.join(" | "))
             }
 
+            if (!cancelled && !manualPackageOpenRef.current) {
+                startBlankSession()
+            }
+
             setIsLoading(false)
         }
 
@@ -1460,17 +1646,49 @@ function StudioWorkspace({
         return () => {
             cancelled = true
         }
-    }, [loadPackages, loadSettings])
+    }, [loadPackages, loadSettings, startBlankSession])
 
     async function savePackage(nextItem?: StudioPackage) {
         const item = nextItem ?? activePackage
         if (!item) {
-            return
+            return null
         }
 
         setIsBusy(true)
         setErrorMessage(null)
         try {
+            if (isUnsavedStudioPackage(item)) {
+                const created = await fetchJson<{ item: StudioPackage }>("/api/studio/packages", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title: item.title, sourcePrompt: item.sourcePrompt }),
+                })
+                const realItem = {
+                    ...item,
+                    id: created.item.id,
+                    ownerId: created.item.ownerId,
+                    createdAt: created.item.createdAt,
+                    updatedAt: created.item.updatedAt,
+                }
+                const saved = await fetchJson<{ item: StudioPackage }>(`/api/studio/packages/${created.item.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        title: realItem.title,
+                        sourcePrompt: realItem.sourcePrompt,
+                        carouselJson: { ...realItem.carouselJson, ratio },
+                        captionsJson: realItem.captionsJson,
+                        qualityJson: realItem.qualityJson,
+                        status: realItem.status,
+                    }),
+                })
+                setActivePackageId(saved.item.id)
+                setActivePackage(saved.item)
+                await loadPackages(saved.item.id)
+                showToast(STUDIO_FEEDBACK.saved)
+                return saved.item
+            }
+
             const result = await fetchJson<{ item: StudioPackage }>(`/api/studio/packages/${item.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -1486,8 +1704,13 @@ function StudioWorkspace({
 
             setActivePackage(result.item)
             await loadPackages(result.item.id)
+            showToast(STUDIO_FEEDBACK.saved)
+            return result.item
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Failed to save studio package")
+            const message = formatStudioError(error, "Failed to save studio package")
+            setErrorMessage(message)
+            showToast({ type: "error", title: "Save failed", message })
+            return null
         } finally {
             setIsBusy(false)
         }
@@ -1500,7 +1723,20 @@ function StudioWorkspace({
 
         const message = messageOverride ?? promptDraft
         if (!message.trim()) {
+            showToast(STUDIO_FEEDBACK.needsPrompt)
             return
+        }
+
+        let workingPackage = activePackage
+        if (isUnsavedStudioPackage(workingPackage)) {
+            const saved = await savePackage({
+                ...workingPackage,
+                sourcePrompt: target ? workingPackage.sourcePrompt : message,
+            })
+            if (!saved) {
+                return
+            }
+            workingPackage = saved
         }
 
         const optimisticUserId = `optimistic-user-${Date.now()}`
@@ -1510,14 +1746,14 @@ function StudioWorkspace({
 
         setMessages((prior) => [
             ...prior,
-            { id: optimisticUserId, packageId: activePackage.id, role: "user", content: message, target: targetLabel, createdAt: nowIso },
-            { id: optimisticAssistantId, packageId: activePackage.id, role: "assistant", content: "Thinking…", target: targetLabel, createdAt: nowIso },
+            { id: optimisticUserId, packageId: workingPackage.id, role: "user", content: message, target: targetLabel, createdAt: nowIso },
+            { id: optimisticAssistantId, packageId: workingPackage.id, role: "assistant", content: "Thinking…", target: targetLabel, createdAt: nowIso },
         ])
 
         setIsBusy(true)
         setErrorMessage(null)
         try {
-            const response = await fetch(`/api/studio/packages/${activePackage.id}/chat`, {
+            const response = await fetch(`/api/studio/packages/${workingPackage.id}/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ message, target }),
@@ -1549,34 +1785,25 @@ function StudioWorkspace({
                 }
             })
 
-            await loadPackages(activePackage.id)
+            await loadPackages(workingPackage.id)
             if (!target) {
                 setPromptDraft("")
             }
+            if (target) {
+                showToast(STUDIO_FEEDBACK.regenerated)
+            }
         } catch (error) {
             setMessages((prior) => prior.filter((item) => item.id !== optimisticUserId && item.id !== optimisticAssistantId))
-            setErrorMessage(error instanceof Error ? error.message : "Failed to generate studio content")
+            const errorText = formatStudioError(error, "Failed to generate studio content")
+            setErrorMessage(errorText)
+            showToast({ type: "error", title: "Generation failed", message: errorText })
         } finally {
             setIsBusy(false)
         }
     }
 
     async function createPackage() {
-        setIsBusy(true)
-        setErrorMessage(null)
-        try {
-            const result = await fetchJson<{ item: StudioPackage }>("/api/studio/packages", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title: "Untitled Carousel" }),
-            })
-            await loadPackages(result.item.id)
-            setWorkspaceView("create")
-        } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Failed to create package")
-        } finally {
-            setIsBusy(false)
-        }
+        startBlankSession()
     }
 
     async function exportPackage() {
@@ -1585,27 +1812,35 @@ function StudioWorkspace({
         }
 
         if (activePackage.carouselJson.slides.length === 0) {
-            setErrorMessage("Add at least one slide before exporting assets")
+            const message = "Add at least one slide before exporting assets."
+            setErrorMessage(message)
+            showToast({ type: "info", title: "Nothing to export", message })
             return
         }
 
         setIsBusy(true)
         setErrorMessage(null)
         try {
-            await savePackage({ ...activePackage, carouselJson: { ...activePackage.carouselJson, ratio } })
-            await fetchJson(`/api/studio/packages/${activePackage.id}/export`, {
+            const saved = await savePackage({ ...activePackage, carouselJson: { ...activePackage.carouselJson, ratio } })
+            if (!saved) {
+                return
+            }
+            await fetchJson(`/api/studio/packages/${saved.id}/export`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ratios: STUDIO_RATIOS, mode: "ALL" }),
             })
+            showToast(STUDIO_FEEDBACK.exported)
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Failed to export studio assets")
+            const message = formatStudioError(error, "Failed to export studio assets")
+            setErrorMessage(message)
+            showToast({ type: "error", title: "Export failed", message })
         } finally {
             setIsBusy(false)
         }
     }
 
-    async function approvePackage() {
+    async function runApprovePackage() {
         if (!activePackage) {
             return
         }
@@ -1613,15 +1848,21 @@ function StudioWorkspace({
         setIsBusy(true)
         setErrorMessage(null)
         try {
-            await savePackage({ ...activePackage, status: "READY" })
-            const result = await fetchJson<{ item: StudioPackage }>(`/api/studio/packages/${activePackage.id}/approve`, {
+            const saved = await savePackage({ ...activePackage, status: "READY" })
+            if (!saved) {
+                return
+            }
+            const result = await fetchJson<{ item: StudioPackage }>(`/api/studio/packages/${saved.id}/approve`, {
                 method: "POST",
             })
             setActivePackage(result.item)
-            await loadPackages(activePackage.id)
+            await loadPackages(result.item.id)
             setWorkspaceView("library")
+            showToast(STUDIO_FEEDBACK.approved)
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Failed to approve package")
+            const message = formatStudioError(error, "Failed to approve package")
+            setErrorMessage(message)
+            showToast({ type: "error", title: "Approve failed", message })
         } finally {
             setIsBusy(false)
         }
@@ -1642,7 +1883,9 @@ function StudioWorkspace({
         }
 
         setActivePackage(nextItem)
-        await savePackage(nextItem)
+        if (!isUnsavedStudioPackage(nextItem)) {
+            await savePackage(nextItem)
+        }
     }
 
     async function addSlide() {
@@ -1675,6 +1918,7 @@ function StudioWorkspace({
         })
 
         await persistSlideUpdate(nextSlides)
+        showToast(STUDIO_FEEDBACK.duplicated)
     }
 
     async function deleteSlide(slideId: string) {
@@ -1682,8 +1926,21 @@ function StudioWorkspace({
             return
         }
 
-        const nextSlides = activePackage.carouselJson.slides.filter((slide) => slide.id !== slideId)
-        await persistSlideUpdate(nextSlides)
+        setConfirmDialog({
+            title: "Delete slide?",
+            message: "This removes the slide from the current carousel draft.",
+            confirmLabel: "Delete slide",
+            cancelLabel: "Cancel",
+            tone: "danger",
+            onConfirm: async () => {
+                if (!activePackage) {
+                    return
+                }
+                const nextSlides = activePackage.carouselJson.slides.filter((slide) => slide.id !== slideId)
+                await persistSlideUpdate(nextSlides)
+                showToast(STUDIO_FEEDBACK.deleted)
+            },
+        })
     }
 
     async function regenerateSlide(slideId: string) {
@@ -1722,6 +1979,10 @@ function StudioWorkspace({
         if (trimmed === activePackage.title) {
             return
         }
+        if (isUnsavedStudioPackage(activePackage)) {
+            setActivePackage({ ...activePackage, title: trimmed })
+            return
+        }
         await savePackage({ ...activePackage, title: trimmed })
     }
 
@@ -1735,8 +1996,11 @@ function StudioWorkspace({
                 body: JSON.stringify(nextSettings),
             })
             setSettings(result.item)
+            showToast({ type: "success", title: "Settings saved", message: "Studio settings updated." })
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Failed to save studio settings")
+            const message = formatStudioError(error, "Failed to save studio settings")
+            setErrorMessage(message)
+            showToast({ type: "error", title: "Settings failed", message })
         } finally {
             setIsBusy(false)
         }
@@ -1769,8 +2033,11 @@ function StudioWorkspace({
             setPromptDraft(result.item.sourcePrompt ?? promptDraft)
             setShowPasteSource(false)
             await loadPackages(activePackage.id)
+            showToast(STUDIO_FEEDBACK.sourceLoaded)
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Failed to ingest source")
+            const message = formatStudioError(error, "Failed to ingest source")
+            setErrorMessage(message)
+            showToast({ type: "error", title: "Source failed", message })
         } finally {
             setIsBusy(false)
         }
@@ -1789,7 +2056,9 @@ function StudioWorkspace({
             })
             setSettings(result.item)
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Failed to upload brand asset")
+            const message = formatStudioError(error, "Failed to upload brand asset")
+            setErrorMessage(message)
+            showToast({ type: "error", title: "Upload failed", message })
         } finally {
             setIsBusy(false)
         }
@@ -1808,11 +2077,28 @@ function StudioWorkspace({
             })
             setActivePackage(result.item)
             await loadPackages(result.item.id)
+            showToast(STUDIO_FEEDBACK.qualityGate)
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Failed to run quality gate")
+            const message = formatStudioError(error, "Failed to run quality gate")
+            setErrorMessage(message)
+            showToast({ type: "error", title: "Quality gate failed", message })
         } finally {
             setIsBusy(false)
         }
+    }
+
+    function approvePackage() {
+        if (!activePackage) {
+            return
+        }
+
+        setConfirmDialog({
+            title: "Approve carousel?",
+            message: "This marks the carousel approved for manual publishing. You can still export assets and copy captions after approval.",
+            confirmLabel: "Approve",
+            cancelLabel: "Keep editing",
+            onConfirm: runApprovePackage,
+        })
     }
 
     function handleCaptionChange(platform: PlatformKey, value: string) {
@@ -1824,9 +2110,84 @@ function StudioWorkspace({
             ...activePackage,
             captionsJson: {
                 ...activePackage.captionsJson,
-                [platform]: textToCaption(value, activePackage.captionsJson[platform]),
+                [platform]: textToCaption(value, activePackage.captionsJson[platform], platform),
             },
         })
+    }
+
+    const hasUnsavedSessionWork = Boolean(
+        activePackage
+        && isUnsavedStudioPackage(activePackage)
+        && (
+            promptDraft.trim()
+            || sourceDraft.trim()
+            || activePackage.carouselJson.slides.length > 0
+            || activePackage.sourceText
+            || messages.length > 0
+        ),
+    )
+
+    async function changeWorkspaceView(nextView: WorkspaceView) {
+        if (nextView === "create") {
+            if (workspaceView !== "create" || !activePackage || !isUnsavedStudioPackage(activePackage)) {
+                startBlankSession()
+            } else {
+                setWorkspaceView("create")
+            }
+            return
+        }
+
+        if (workspaceView === "create" && activePackage && isUnsavedStudioPackage(activePackage)) {
+            if (hasUnsavedSessionWork) {
+                setConfirmDialog({
+                    title: "Save this draft?",
+                    message: "This new carousel has unsaved prompt or slide work. Save it as a draft before leaving, or discard the temporary session.",
+                    confirmLabel: "Save draft",
+                    cancelLabel: "Discard",
+                    onConfirm: async () => {
+                        const saved = await savePackage({
+                            ...activePackage,
+                            sourcePrompt: activePackage.sourcePrompt ?? (promptDraft.trim() || null),
+                        })
+                        if (saved) {
+                            setWorkspaceView(nextView)
+                        }
+                    },
+                    onCancel: () => {
+                        showToast(STUDIO_FEEDBACK.blankDiscarded)
+                        setActivePackage(null)
+                        setActivePackageId(null)
+                        setMessages([])
+                        setPromptDraft("")
+                        setSourceDraft("")
+                        setWorkspaceView(nextView)
+                    },
+                })
+                return
+            } else {
+                setActivePackage(null)
+                setActivePackageId(null)
+                showToast(STUDIO_FEEDBACK.blankDiscarded)
+            }
+        }
+
+        setWorkspaceView(nextView)
+    }
+
+    async function openExistingPackage(id: string) {
+        manualPackageOpenRef.current = true
+        setIsBusy(true)
+        setErrorMessage(null)
+        try {
+            await loadPackages(id)
+            setWorkspaceView("create")
+        } catch (error) {
+            const message = formatStudioError(error, "Studio package failed to open")
+            setErrorMessage(message)
+            showToast({ type: "error", title: "Package failed to open", message })
+        } finally {
+            setIsBusy(false)
+        }
     }
 
     async function handleCaptionSave(platform: PlatformKey) {
@@ -1846,6 +2207,15 @@ function StudioWorkspace({
         })
     }
 
+    async function copyCaption(platform: PlatformKey) {
+        if (!activePackage) {
+            return
+        }
+
+        await navigator.clipboard.writeText(captionToText(activePackage.captionsJson[platform], platform))
+        showToast(STUDIO_FEEDBACK.copied)
+    }
+
     if (isLoading) {
         return <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center rounded-[28px] border border-slate-100 bg-white text-sm font-semibold text-slate-500 shadow-xl shadow-slate-200/40">Loading studio workspace…</div>
     }
@@ -1854,7 +2224,7 @@ function StudioWorkspace({
         return <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center rounded-[28px] border border-rose-100 bg-rose-50 px-6 text-sm font-semibold text-rose-600 shadow-xl shadow-slate-200/40">{errorMessage ?? "Studio package failed to load."}</div>
     }
 
-    if (!activePackage) {
+    if (!activePackage && workspaceView === "create") {
         const hasPackageRows = packages.length > 0
         const emptyTitle = hasPackageRows ? "Studio package failed to open" : "No studio packages yet"
         const emptyDescription = hasPackageRows
@@ -1874,7 +2244,7 @@ function StudioWorkspace({
                         ) : (
                             <button onClick={() => void createPackage()} className={`rounded-xl px-5 py-2.5 text-sm font-bold text-white ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>Create first package</button>
                         )}
-                        <button onClick={() => setWorkspaceView("settings")} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Open settings</button>
+                        <button onClick={() => void changeWorkspaceView("settings")} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Open settings</button>
                     </div>
                     {errorMessage ? <p className="mt-4 text-sm font-semibold text-rose-500">{errorMessage}</p> : null}
                 </div>
@@ -1883,6 +2253,7 @@ function StudioWorkspace({
     }
 
     return (
+        <>
         <div className="flex min-h-[calc(100vh-12rem)] flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-xl shadow-slate-200/40">
             <header className="flex flex-col gap-4 border-b border-slate-200/70 bg-white/90 px-6 py-5 backdrop-blur md:flex-row md:items-center md:justify-between">
                 <div>
@@ -1893,12 +2264,6 @@ function StudioWorkspace({
                     <h2 className="text-[24px] font-black tracking-tight text-[#041f50]">{title}</h2>
                     <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">{description}</p>
                     {errorMessage ? <p className="mt-2 text-sm font-semibold text-rose-500">{errorMessage}</p> : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <button onClick={exportPackage} disabled={isBusy} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">Export Assets</button>
-                    <button onClick={() => void handlePromptSubmit()} disabled={isBusy || !promptDraft.trim()} className={`rounded-xl px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60 ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
-                        {isBusy ? "Working…" : "Generate Carousel"}
-                    </button>
                 </div>
             </header>
 
@@ -1915,7 +2280,7 @@ function StudioWorkspace({
                         return (
                             <button
                                 key={item.key}
-                                onClick={() => setWorkspaceView(item.key as WorkspaceView)}
+                                onClick={() => void changeWorkspaceView(item.key as WorkspaceView)}
                                 className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${active ? `${GRADIENT_BG_CLASS} text-white shadow-md` : "border border-slate-200 bg-white text-slate-500 hover:text-slate-700"}`}
                             >
                                 <Icon size={15} />
@@ -1927,7 +2292,7 @@ function StudioWorkspace({
             </div>
 
             <div className="flex-1 overflow-hidden bg-[#f6f7fb] p-4 md:p-6">
-                {workspaceView === "create" && (
+                {workspaceView === "create" && activePackage && (
                     <ContentStudioCreate
                         packageItem={activePackage}
                         messages={messages}
@@ -1939,7 +2304,7 @@ function StudioWorkspace({
                         promptDraft={promptDraft}
                         setPromptDraft={setPromptDraft}
                         onPromptSubmit={() => void handlePromptSubmit()}
-                        onSelectDrafts={() => setWorkspaceView("drafts")}
+                        onSelectDrafts={() => void changeWorkspaceView("drafts")}
                         onSavePackage={() => void savePackage()}
                         onExport={() => void exportPackage()}
                         onAddSlide={() => void addSlide()}
@@ -1955,6 +2320,7 @@ function StudioWorkspace({
                         onCaptionChange={handleCaptionChange}
                         onCaptionSave={(platform) => void handleCaptionSave(platform)}
                         onRegenerateCaption={(platform) => void handlePromptSubmit(`CAPTION:${platform}`, `Regenerate the ${PLATFORM_META[platform].name} caption so it is sharper, clinically specific, and aligned to the current carousel.`)}
+                        onCopyCaption={(platform) => void copyCaption(platform)}
                         onQualityGate={() => void runQualityGate()}
                         onApprove={() => void approvePackage()}
                         onEditSlideField={(slideId, field, next) => void editSlideField(slideId, field, next)}
@@ -1962,8 +2328,8 @@ function StudioWorkspace({
                         siteUrl={settings.brandJson.site_url}
                     />
                 )}
-                {workspaceView === "drafts" && <DraftsView packageItems={packages} activePackageId={activePackageId} onOpenDraft={(id) => { void loadPackages(id); setWorkspaceView("create") }} onCreateNew={() => void createPackage()} />}
-                {workspaceView === "library" && <LibraryView packageItems={packages} onUseTemplate={(id) => { void loadPackages(id); setWorkspaceView("create") }} />}
+                {workspaceView === "drafts" && <DraftsView packageItems={packages} activePackageId={activePackageId} onOpenDraft={(id) => { void openExistingPackage(id) }} onCreateNew={() => void createPackage()} />}
+                {workspaceView === "library" && <LibraryView packageItems={packages} onUseTemplate={(id) => { void openExistingPackage(id) }} />}
                 {workspaceView === "settings" && (
                     <SettingsView
                         settings={settings}
@@ -1981,6 +2347,9 @@ function StudioWorkspace({
                 )}
             </div>
         </div>
+        <StudioToastStack toasts={toasts} onDismiss={(id) => setToasts((current) => current.filter((toast) => toast.id !== id))} />
+        <StudioConfirmModal dialog={confirmDialog} onClose={() => setConfirmDialog(null)} />
+        </>
     )
 }
 
@@ -2602,3 +2971,4 @@ export function CarouselStudioPanel() {
         </motion.div>
     )
 }
+

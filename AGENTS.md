@@ -18,7 +18,16 @@ The most important current constraints:
 - No social publish/scheduler/platform-token flow in Carousel Studio.
 - Partial streamed AI objects must never crash the UI.
 - Slide and caption actions must persist; no cosmetic buttons.
+- Studio generation must happen only through the prompt/chat panel. Do not add duplicate
+  Generate controls elsewhere.
+- Canvas-level actions belong together: Export before Save in the canvas action bar, with
+  visible toast/confirmation feedback.
+- Create should start a new blank unsaved session; previous work is opened from Drafts/Library.
+- Blank untouched sessions should be discarded on navigation, not saved as drafts.
 - Carousel Studio output must preserve slide-count requests and visual variety.
+- Captions must produce robust hashtag pools: IG/FB 20+, LinkedIn 8-10, TikTok 10+.
+- Carousel output should fit 1:1, 4:5, and 9:16, use PAM gradients rather than flat purple,
+  and use Montserrat/Open Sans-like typography.
 - Trigger-imported code requires Trigger.dev deploy. Use the repo-pinned CLI version
   `npx trigger.dev@4.4.3 deploy` unless all Trigger packages are upgraded together.
 - Run `npx tsc --noEmit` after code edits.

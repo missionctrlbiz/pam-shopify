@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
-import { getStudioGenerationModels, isStudioModelUnavailable, streamStudioGeneration } from "@/lib/studio/ai"
+import { getStudioGenerationModels, getTargetSlideCount, isStudioModelUnavailable, streamStudioGeneration } from "@/lib/studio/ai"
 import { ensureStudioSettings, parseStudioPackageRow, requireStudioAdmin } from "@/lib/studio/server"
 import {
     applyStudioCarouselVariety,
@@ -23,6 +23,40 @@ type StudioGeneratedObject = {
     caption?: StudioCaption
 }
 
+const HASHTAG_FLOORS: Record<keyof StudioCaptionsJson, number> = {
+    instagram: 20,
+    facebook: 20,
+    linkedin: 8,
+    tiktok: 10,
+}
+
+const FALLBACK_HASHTAGS = [
+    "#PsychiatricAssessment",
+    "#PsychNursing",
+    "#NursingStudent",
+    "#NCLEXPrep",
+    "#PMHNPStudent",
+    "#MentalHealthNursing",
+    "#ClinicalJudgment",
+    "#MentalStatusExam",
+    "#HPI",
+    "#PatientInterview",
+    "#ClinicalDocumentation",
+    "#DifferentialDiagnosis",
+    "#SafetyAssessment",
+    "#PsychRotation",
+    "#NurseEducation",
+    "#AssessmentSkills",
+    "#TherapeuticCommunication",
+    "#NursingSchool",
+    "#ClinicalReasoning",
+    "#PsychAssessmentGuide",
+    "#DSM5TR",
+    "#RiskAssessment",
+    "#PsychiatryEducation",
+    "#MedSurgToPsych",
+]
+
 function normalizeTarget(target?: string | null): StudioTarget {
     if (target?.startsWith("SLIDE:")) {
         return target as `SLIDE:${string}`
@@ -38,12 +72,22 @@ function normalizeTarget(target?: string | null): StudioTarget {
     return "CAROUSEL"
 }
 
+function normalizePlatformCaption(platform: keyof StudioCaptionsJson, caption?: StudioCaption) {
+    const normalized = normalizeCaption(caption?.body ?? "", caption?.hashtags ?? [])
+    const floor = HASHTAG_FLOORS[platform]
+    const hashtags = Array.from(new Set([...normalized.hashtags, ...FALLBACK_HASHTAGS])).slice(0, Math.max(floor, normalized.hashtags.length))
+    return {
+        ...normalized,
+        hashtags,
+    }
+}
+
 function normalizeAllCaptions(captions: StudioCaptionsJson): StudioCaptionsJson {
     return {
-        instagram: normalizeCaption(captions.instagram?.body ?? "", captions.instagram?.hashtags ?? []),
-        facebook: normalizeCaption(captions.facebook?.body ?? "", captions.facebook?.hashtags ?? []),
-        linkedin: normalizeCaption(captions.linkedin?.body ?? "", captions.linkedin?.hashtags ?? []),
-        tiktok: normalizeCaption(captions.tiktok?.body ?? "", captions.tiktok?.hashtags ?? []),
+        instagram: normalizePlatformCaption("instagram", captions?.instagram),
+        facebook: normalizePlatformCaption("facebook", captions?.facebook),
+        linkedin: normalizePlatformCaption("linkedin", captions?.linkedin),
+        tiktok: normalizePlatformCaption("tiktok", captions?.tiktok),
     }
 }
 
@@ -54,7 +98,7 @@ function mergeFinalObject(pkg: StudioPackage, target: StudioTarget, value: Studi
         return {
             captionsJson: {
                 ...pkg.captionsJson,
-                [platform]: normalizeCaption(caption?.body ?? "", caption?.hashtags ?? []),
+                [platform]: normalizePlatformCaption(platform, caption),
             },
         }
     }
@@ -146,6 +190,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                         }
 
                         const finalObject = await result.object as StudioGeneratedObject
+                        if (target === "CAROUSEL") {
+                            const targetSlideCount = getTargetSlideCount(pkg, settings, message)
+                            const generatedSlideCount = Array.isArray(finalObject.carouselJson?.slides) ? finalObject.carouselJson.slides.length : 0
+                            if (generatedSlideCount !== targetSlideCount) {
+                                throw new Error(`The model returned ${generatedSlideCount} slides, but this prompt requires ${targetSlideCount}. Regenerate with the exact requested count.`)
+                            }
+                        }
                         const merged = mergeFinalObject(pkg, target, finalObject)
                         const nextSourcePrompt = pkg.sourcePrompt && pkg.sourcePrompt.trim().length > 0
                             ? pkg.sourcePrompt

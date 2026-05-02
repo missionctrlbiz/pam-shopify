@@ -67,6 +67,17 @@ export const STUDIO_RATIO_DIMENSIONS: Record<StudioRatio, StudioRenderDimensions
     "9:16": { width: 1080, height: 1920, frameWidth: 290, frameHeight: 516 },
 }
 
+function ratioCompactness(ratio: StudioRatio) {
+    if (ratio === "1:1") return 0.7
+    if (ratio === "4:5") return 0.86
+    return 0.94
+}
+
+function footerCue(index: number) {
+    const cues = ["keep for review", "clinical cue", "save this step", "field note", "check before charting", "assessment lens"]
+    return cues[index % cues.length].toUpperCase()
+}
+
 type ResvgRenderer = {
     render(): {
         asPng(): Uint8Array
@@ -249,6 +260,7 @@ function iconPaths(name: IconName) {
 }
 
 function renderLineIcon(name: IconName, size: number, color = STUDIO_THEME.purple) {
+    const useGradient = color === STUDIO_THEME.purple
     return createElement(
         "svg",
         {
@@ -256,11 +268,18 @@ function renderLineIcon(name: IconName, size: number, color = STUDIO_THEME.purpl
             height: size,
             viewBox: "0 0 24 24",
             fill: "none",
-            stroke: color,
+            stroke: useGradient ? "url(#pam-icon-gradient)" : color,
             strokeWidth: 2.2,
             strokeLinecap: "round",
             strokeLinejoin: "round",
         },
+        useGradient ? createElement("defs", { key: "defs" },
+            createElement("linearGradient", { id: "pam-icon-gradient", x1: "0", y1: "0", x2: "24", y2: "24", gradientUnits: "userSpaceOnUse" },
+                createElement("stop", { offset: "0%", stopColor: STUDIO_THEME.red }),
+                createElement("stop", { offset: "52%", stopColor: STUDIO_THEME.pink }),
+                createElement("stop", { offset: "100%", stopColor: STUDIO_THEME.purple }),
+            ),
+        ) : null,
         ...iconPaths(name),
     )
 }
@@ -276,7 +295,8 @@ function renderIconBadge(name: IconName, size: number, soft = true) {
                 borderRadius: 999,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: soft ? "#e8ddfb" : "#ffffff",
+                backgroundImage: soft ? "linear-gradient(135deg, rgba(237,65,91,0.13), rgba(175,92,233,0.18))" : undefined,
+                backgroundColor: soft ? undefined : "#ffffff",
                 color: STUDIO_THEME.purple,
             },
         },
@@ -291,7 +311,10 @@ function eyebrowFor(slide: StudioRenderableSlide, index: number, total: number, 
     if (slide.layout === "TAXONOMY_LIST") return "TYPES"
     if (slide.layout === "SCIENCE_SPLIT") return "MECHANISM"
     if (slide.layout === "CHECKLIST") return "CHECKLIST"
-    if (slide.kind === "INSIGHT") return `INSIGHT ${String(index).padStart(2, "0")}`
+    if (slide.kind === "INSIGHT") {
+        const labels = ["CLINICAL LENS", "SAFETY CHECK", "ASSESSMENT MOVE", "DECISION POINT", "FIELD NOTE"]
+        return labels[index % labels.length]
+    }
     if (slide.kind === "QUOTE") return "QUOTE"
     if (slide.kind === "STAT") return "STAT HOOK"
     return "PAM"
@@ -300,7 +323,7 @@ function eyebrowFor(slide: StudioRenderableSlide, index: number, total: number, 
 function renderTopBar(slide: StudioRenderableSlide, brand: StudioRenderBrand, dark: boolean, eyebrow: string) {
     const eyebrowStyle = dark
         ? { backgroundColor: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.85)", border: "1px solid rgba(255,255,255,0.10)" }
-        : { color: STUDIO_THEME.purple, backgroundColor: "transparent" }
+        : { color: "transparent", backgroundImage: STUDIO_THEME.gradient, backgroundClip: "text", WebkitBackgroundClip: "text" }
 
     return createElement(
         "div",
@@ -317,8 +340,8 @@ function renderTopBar(slide: StudioRenderableSlide, brand: StudioRenderBrand, da
             "div",
             {
                 style: {
-                    fontSize: 22,
-                    letterSpacing: "0.24em",
+                    fontSize: 18,
+                    letterSpacing: "0.18em",
                     textTransform: "uppercase",
                     fontFamily: "Open Sans",
                     fontWeight: 700,
@@ -344,8 +367,8 @@ function renderFooter(siteUrl: string, footer: string, dark: boolean) {
                 alignItems: "center",
                 position: "relative",
                 zIndex: 2,
-                fontSize: 18,
-                letterSpacing: "0.24em",
+                fontSize: 16,
+                letterSpacing: "0.18em",
                 textTransform: "uppercase",
                 color,
                 fontFamily: "Open Sans",
@@ -451,8 +474,8 @@ function renderInsightBody(body: string, dark: boolean) {
             style: {
                 display: "flex",
                 flexDirection: "column",
-                gap: 18,
-                marginTop: 18,
+                gap: 14,
+                marginTop: 16,
             },
         },
         ...lines.map((line, i) => {
@@ -472,7 +495,7 @@ function renderInsightBody(body: string, dark: boolean) {
                 createElement("div", {
                     style: {
                         width: 6,
-                        height: 60,
+                        height: 42,
                         borderRadius: 999,
                         backgroundImage: STUDIO_THEME.gradient,
                         flexShrink: 0,
@@ -485,8 +508,8 @@ function renderInsightBody(body: string, dark: boolean) {
                             display: "flex",
                             flexWrap: "wrap",
                             gap: 6,
-                            fontSize: 30,
-                            lineHeight: 1.45,
+                            fontSize: 24,
+                            lineHeight: 1.36,
                             fontFamily: "Open Sans",
                             color: dark ? "rgba(255,255,255,0.78)" : "#475569",
                         },
@@ -550,8 +573,8 @@ function renderChecklistBody(body: string) {
             style: {
                 display: "flex",
                 flexDirection: "column",
-                gap: 16,
-                marginTop: 26,
+                gap: 13,
+                marginTop: 22,
             },
         },
         ...lines.map((line, i) => createElement(
@@ -562,13 +585,13 @@ function renderChecklistBody(body: string) {
                     display: "flex",
                     alignItems: "flex-start",
                     gap: 16,
-                    padding: "18px 20px",
+                    padding: "15px 18px",
                     borderRadius: 20,
                     backgroundColor: "#f8fafc",
                     border: "1px solid #e2e8f0",
                     color: "#475569",
                     fontFamily: "Open Sans",
-                    fontSize: 27,
+                    fontSize: 22,
                     fontWeight: 700,
                     lineHeight: 1.3,
                 },
@@ -578,15 +601,15 @@ function renderChecklistBody(body: string) {
                 {
                     style: {
                         display: "flex",
-                        width: 30,
-                        height: 30,
+                        width: 26,
+                        height: 26,
                         borderRadius: 999,
                         backgroundImage: STUDIO_THEME.gradient,
                         color: "#ffffff",
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
-                        fontSize: 20,
+                        fontSize: 17,
                         fontFamily: "Montserrat",
                         fontWeight: 800,
                     },
@@ -605,11 +628,11 @@ function renderCtaChip(siteUrl: string) {
             style: {
                 display: "flex",
                 marginTop: 30,
-                padding: "20px 32px",
+                padding: "17px 28px",
                 borderRadius: 24,
                 backgroundImage: STUDIO_THEME.gradient,
                 color: "#ffffff",
-                fontSize: 26,
+                fontSize: 22,
                 fontFamily: "Open Sans",
                 fontWeight: 700,
                 boxShadow: "0 18px 36px -10px rgba(175,92,233,0.55)",
@@ -620,6 +643,7 @@ function renderCtaChip(siteUrl: string) {
 }
 
 function renderMinimalFrame(children: ReactNode, options: { border?: "full" | "sides"; footer?: ReactNode } = {}) {
+    const sideBorder = options.border === "sides"
     return createElement(
         "div",
         {
@@ -629,20 +653,38 @@ function renderMinimalFrame(children: ReactNode, options: { border?: "full" | "s
                 height: "100%",
                 flexDirection: "column",
                 position: "relative",
+                backgroundImage: sideBorder ? undefined : STUDIO_THEME.gradient,
                 backgroundColor: "#ffffff",
-                border: options.border === "sides" ? undefined : `10px solid ${STUDIO_THEME.purple}`,
-                borderLeft: options.border === "sides" ? `10px solid ${STUDIO_THEME.purple}` : undefined,
-                borderRight: options.border === "sides" ? `10px solid ${STUDIO_THEME.purple}` : undefined,
+                padding: sideBorder ? 0 : 10,
                 color: "#252838",
+                overflow: "hidden",
             },
         },
-        children,
+        sideBorder ? createElement("div", { style: { position: "absolute", left: 0, top: 0, bottom: 0, width: 10, backgroundImage: STUDIO_THEME.gradient } }) : null,
+        sideBorder ? createElement("div", { style: { position: "absolute", right: 0, top: 0, bottom: 0, width: 10, backgroundImage: STUDIO_THEME.gradient } }) : null,
+        createElement(
+            "div",
+            {
+                style: {
+                    display: "flex",
+                    flex: 1,
+                    minHeight: 0,
+                    flexDirection: "column",
+                    backgroundColor: "#ffffff",
+                    position: "relative",
+                    zIndex: 1,
+                    overflow: "hidden",
+                },
+            },
+            children,
+        ),
         options.footer ?? null,
     )
 }
 
-function renderHeroIconLayout(slide: StudioRenderableSlide, brand: StudioRenderBrand, frame: StudioRenderDimensions, isCta: boolean) {
+function renderHeroIconLayout(slide: StudioRenderableSlide, brand: StudioRenderBrand, ratio: StudioRatio, isCta: boolean) {
     const dark = isCta || slide.bg !== "WHITE"
+    const compact = ratioCompactness(ratio)
     if (dark) {
         return createElement(
             "div",
@@ -654,17 +696,17 @@ function renderHeroIconLayout(slide: StudioRenderableSlide, brand: StudioRenderB
                     alignItems: "center",
                     textAlign: "center",
                     flex: 1,
-                    gap: 28,
+                    gap: Math.round(24 * compact),
                     position: "relative",
                     zIndex: 2,
                 },
             },
-            isCta && brand.bookDataUrl ? renderBookFloating(brand.bookDataUrl, "centered", 1) : renderIconBadge("brain", 250),
+            isCta && brand.bookDataUrl ? renderBookFloating(brand.bookDataUrl, "centered", compact) : renderIconBadge("brain", Math.round(156 * compact)),
             createElement("div", {
                 style: {
                     fontFamily: "Montserrat",
                     fontWeight: 800,
-                    fontSize: 60,
+                    fontSize: Math.round(48 * compact),
                     lineHeight: 1.1,
                     maxWidth: "78%",
                     color: "#ffffff",
@@ -673,7 +715,7 @@ function renderHeroIconLayout(slide: StudioRenderableSlide, brand: StudioRenderB
             slide.body ? createElement("div", {
                 style: {
                     fontFamily: "Open Sans",
-                    fontSize: 26,
+                    fontSize: Math.round(22 * compact),
                     lineHeight: 1.4,
                     color: "rgba(255,255,255,0.62)",
                     maxWidth: "70%",
@@ -694,39 +736,40 @@ function renderHeroIconLayout(slide: StudioRenderableSlide, brand: StudioRenderB
                     alignItems: "center",
                     justifyContent: "center",
                     textAlign: "center",
-                    padding: 72,
+                    padding: Math.round(58 * compact),
                 },
             },
             createElement("div", { style: { position: "absolute", left: 64, top: 52, fontSize: 28, letterSpacing: "0.16em", color: "#4b4e5f", fontFamily: "Open Sans", fontWeight: 700, textTransform: "uppercase" } }, "PSYCH MASTERY"),
-            createElement("div", { style: { fontSize: 58, lineHeight: 1.1, fontFamily: "Montserrat", fontWeight: 800, color: "#2a2d3d", maxWidth: "82%", marginBottom: 72 } }, slide.headline),
-            renderIconBadge("brain", 250),
-            createElement("div", { style: { width: "86%", height: 2, backgroundColor: "#d7d9e1", marginTop: 72, marginBottom: 26 } }),
-            slide.body ? createElement("div", { style: { fontSize: 30, lineHeight: 1.4, fontFamily: "Open Sans", color: "#626677", maxWidth: "82%" } }, getBodyLines(slide.body)[0] ?? slide.body) : null,
+            createElement("div", { style: { fontSize: Math.round(42 * compact), lineHeight: 1.1, fontFamily: "Montserrat", fontWeight: 800, color: "#2a2d3d", maxWidth: "86%", marginBottom: Math.round(34 * compact) } }, slide.headline),
+            renderIconBadge("brain", Math.round(148 * compact)),
+            createElement("div", { style: { width: "86%", height: 2, backgroundColor: "#d7d9e1", marginTop: Math.round(34 * compact), marginBottom: Math.round(20 * compact) } }),
+            slide.body ? createElement("div", { style: { fontSize: Math.round(21 * compact), lineHeight: 1.36, fontFamily: "Open Sans", color: "#626677", maxWidth: "84%" } }, getBodyLines(slide.body)[0] ?? slide.body) : null,
         ),
     )
 }
 
-function renderFeatureCardsLayout(slide: StudioRenderableSlide) {
+function renderFeatureCardsLayout(slide: StudioRenderableSlide, ratio: StudioRatio) {
+    const compact = ratioCompactness(ratio)
     const rows = getContentRows(slide.body).slice(0, 3)
     const icons: IconName[] = ["brain", "search", "clipboard"]
 
     return renderMinimalFrame(
         createElement(
             "div",
-            { style: { display: "flex", flex: 1, flexDirection: "column", padding: "58px 74px" } },
-            createElement("div", { style: { textAlign: "center", fontFamily: "Open Sans", fontWeight: 800, fontSize: 28, letterSpacing: "0.12em", color: "#2f3241", textTransform: "uppercase", marginBottom: 70 } }, "PSYCH MASTERY"),
-            createElement("div", { style: { fontFamily: "Montserrat", fontWeight: 800, fontSize: 62, lineHeight: 1.08, color: "#252838", marginBottom: 66 } }, slide.headline),
-            createElement("div", { style: { height: 5, backgroundColor: STUDIO_THEME.purple, marginBottom: 58 } }),
+            { style: { display: "flex", flex: 1, flexDirection: "column", padding: `${Math.round(48 * compact)}px ${Math.round(60 * compact)}px` } },
+            createElement("div", { style: { textAlign: "center", fontFamily: "Open Sans", fontWeight: 800, fontSize: Math.round(22 * compact), letterSpacing: "0.12em", color: "#2f3241", textTransform: "uppercase", marginBottom: Math.round(46 * compact) } }, "PSYCH MASTERY"),
+            createElement("div", { style: { fontFamily: "Montserrat", fontWeight: 800, fontSize: Math.round(48 * compact), lineHeight: 1.08, color: "#252838", marginBottom: Math.round(34 * compact) } }, slide.headline),
+            createElement("div", { style: { height: 5, backgroundImage: STUDIO_THEME.gradient, marginBottom: Math.round(38 * compact) } }),
             createElement(
                 "div",
-                { style: { display: "flex", flexDirection: "column", gap: 34 } },
+                { style: { display: "flex", flexDirection: "column", gap: Math.round(22 * compact) } },
                 ...rows.map((row, index) => createElement(
                     "div",
-                    { key: `feature-${index}`, style: { display: "flex", alignItems: "center", gap: 34, padding: "34px 38px", backgroundColor: "#ffffff", borderRadius: 18, boxShadow: "0 24px 54px rgba(15,23,42,0.11)" } },
-                    renderIconBadge(icons[index % icons.length], 92),
+                    { key: `feature-${index}`, style: { display: "flex", alignItems: "center", gap: Math.round(24 * compact), padding: `${Math.round(24 * compact)}px ${Math.round(30 * compact)}px`, backgroundColor: "#ffffff", borderRadius: 18, boxShadow: "0 24px 54px rgba(15,23,42,0.11)" } },
+                    renderIconBadge(icons[index % icons.length], Math.round(72 * compact)),
                     createElement("div", { style: { display: "flex", flexDirection: "column" } },
-                        createElement("div", { style: { fontSize: 32, fontFamily: "Montserrat", fontWeight: 800, color: "#252838", marginBottom: 10 } }, row.term),
-                        createElement("div", { style: { fontSize: 26, fontFamily: "Open Sans", color: "#5f6372" } }, row.description),
+                        createElement("div", { style: { fontSize: Math.round(26 * compact), fontFamily: "Montserrat", fontWeight: 800, color: "#252838", marginBottom: 8 } }, row.term),
+                        createElement("div", { style: { fontSize: Math.round(21 * compact), lineHeight: 1.35, fontFamily: "Open Sans", color: "#5f6372" } }, row.description),
                     ),
                 )),
             ),
@@ -734,38 +777,40 @@ function renderFeatureCardsLayout(slide: StudioRenderableSlide) {
     )
 }
 
-function renderTitleCardLayout(slide: StudioRenderableSlide) {
+function renderTitleCardLayout(slide: StudioRenderableSlide, ratio: StudioRatio) {
+    const compact = ratioCompactness(ratio)
     return renderMinimalFrame(
         createElement(
             "div",
-            { style: { display: "flex", flex: 1, flexDirection: "column", padding: "108px 98px" } },
-            createElement("div", { style: { display: "flex", height: 250, borderRadius: 24, backgroundColor: "#f0f1f5", alignItems: "center", justifyContent: "center", marginBottom: 52, boxShadow: "0 20px 42px rgba(15,23,42,0.10)" } }, renderLineIcon("brain", 106, "#9aa0aa")),
+            { style: { display: "flex", flex: 1, flexDirection: "column", padding: `${Math.round(62 * compact)}px ${Math.round(70 * compact)}px` } },
+            createElement("div", { style: { display: "flex", height: Math.round(122 * compact), borderRadius: 24, backgroundImage: "linear-gradient(135deg, rgba(237,65,91,0.10), rgba(175,92,233,0.14))", alignItems: "center", justifyContent: "center", marginBottom: Math.round(32 * compact), boxShadow: "0 20px 42px rgba(15,23,42,0.10)" } }, renderLineIcon("brain", Math.round(62 * compact), STUDIO_THEME.purple)),
             createElement("div", { style: { height: 2, backgroundColor: "#cfd3dc" } }),
-            createElement("div", { style: { display: "flex", alignItems: "center", gap: 22, margin: "40px 0" } },
-                createElement("div", { style: { width: 9, height: 68, backgroundColor: STUDIO_THEME.purple } }),
-                createElement("div", { style: { fontSize: 56, fontFamily: "Montserrat", fontWeight: 800, color: "#333645", lineHeight: 1.08 } }, slide.headline),
+            createElement("div", { style: { display: "flex", alignItems: "center", gap: 18, margin: `${Math.round(30 * compact)}px 0` } },
+                createElement("div", { style: { width: 9, height: Math.round(56 * compact), backgroundImage: STUDIO_THEME.gradient } }),
+                createElement("div", { style: { fontSize: Math.round(38 * compact), fontFamily: "Montserrat", fontWeight: 800, color: "#333645", lineHeight: 1.08 } }, slide.headline),
             ),
-            createElement("div", { style: { height: 2, backgroundColor: "#cfd3dc", marginBottom: 40 } }),
-            createElement("div", { style: { fontFamily: "Open Sans", fontSize: 32, lineHeight: 1.48, color: "#626777" } }, slide.body),
+            createElement("div", { style: { height: 2, backgroundColor: "#cfd3dc", marginBottom: Math.round(30 * compact) } }),
+            createElement("div", { style: { fontFamily: "Open Sans", fontSize: Math.round(21 * compact), lineHeight: 1.38, color: "#626777" } }, slide.body),
         ),
     )
 }
 
-function renderTaxonomyListLayout(slide: StudioRenderableSlide) {
+function renderTaxonomyListLayout(slide: StudioRenderableSlide, ratio: StudioRatio) {
+    const compact = ratioCompactness(ratio)
     const rows = getContentRows(slide.body).slice(0, 4)
     return renderMinimalFrame(
         createElement(
             "div",
-            { style: { display: "flex", flex: 1, flexDirection: "column", padding: "120px 92px" } },
-            createElement("div", { style: { textAlign: "center", fontFamily: "Montserrat", fontWeight: 800, fontSize: 64, letterSpacing: "0.06em", color: "#202637", textTransform: "uppercase", marginBottom: 78 } }, slide.headline),
+            { style: { display: "flex", flex: 1, flexDirection: "column", padding: `${Math.round(70 * compact)}px ${Math.round(76 * compact)}px` } },
+            createElement("div", { style: { textAlign: "center", fontFamily: "Montserrat", fontWeight: 800, fontSize: Math.round(46 * compact), letterSpacing: "0.06em", color: "#202637", textTransform: "uppercase", marginBottom: Math.round(54 * compact) } }, slide.headline),
             createElement("div", { style: { display: "flex", flexDirection: "column", backgroundColor: "#f1f3f7" } },
                 ...rows.map((row, index) => createElement(
                     "div",
-                    { key: `row-${index}`, style: { display: "flex", minHeight: 150, alignItems: "center", gap: 46, padding: "30px 52px", borderBottom: index === rows.length - 1 ? undefined : "2px solid #d6dae2" } },
-                    createElement("div", { style: { width: 78, height: 78, borderRadius: 999, backgroundColor: "#6d2ff2", flexShrink: 0 } }),
+                    { key: `row-${index}`, style: { display: "flex", minHeight: Math.round(118 * compact), alignItems: "center", gap: Math.round(32 * compact), padding: `${Math.round(24 * compact)}px ${Math.round(38 * compact)}px`, borderBottom: index === rows.length - 1 ? undefined : "2px solid #d6dae2" } },
+                    createElement("div", { style: { width: Math.round(58 * compact), height: Math.round(58 * compact), borderRadius: 999, backgroundImage: STUDIO_THEME.gradient, flexShrink: 0 } }),
                     createElement("div", { style: { display: "flex", flexDirection: "column" } },
-                        createElement("div", { style: { fontFamily: "Montserrat", fontWeight: 800, fontSize: 38, color: "#202637", marginBottom: 10 } }, row.term),
-                        createElement("div", { style: { fontFamily: "Open Sans", fontSize: 32, lineHeight: 1.28, color: "#656b76" } }, row.description),
+                        createElement("div", { style: { fontFamily: "Montserrat", fontWeight: 800, fontSize: Math.round(30 * compact), color: "#202637", marginBottom: 8 } }, row.term),
+                        createElement("div", { style: { fontFamily: "Open Sans", fontSize: Math.round(24 * compact), lineHeight: 1.28, color: "#656b76" } }, row.description),
                     ),
                 )),
             ),
@@ -774,41 +819,72 @@ function renderTaxonomyListLayout(slide: StudioRenderableSlide) {
     )
 }
 
-function renderScienceSplitLayout(slide: StudioRenderableSlide, totalSlides: number, index: number) {
+function renderScienceSplitLayout(slide: StudioRenderableSlide, ratio: StudioRatio, index: number) {
+    const compact = ratioCompactness(ratio)
     const rows = getContentRows(slide.body)
     const lines = getBodyLines(slide.body)
     const subtitle = rows[0]?.term && rows[0]?.description ? rows[0].term : lines[0] ?? "Clinical mechanism"
     const explanation = rows[0]?.description || lines[1] || lines.slice(1, 3).join(" ")
-    const labels = rows.slice(rows[0]?.description ? 1 : 0, 6)
+    const labels = rows.slice(rows[0]?.description ? 1 : 0, ratio === "1:1" ? 4 : 6)
+
+    if (ratio === "1:1") {
+        return renderMinimalFrame(
+            createElement(
+                "div",
+                { style: { display: "flex", flex: 1, flexDirection: "column", padding: "46px 54px", color: "#1f2430" } },
+                createElement("div", { style: { display: "flex", alignItems: "center", gap: 16, marginBottom: 26 } },
+                    renderLineIcon("brain", 36, STUDIO_THEME.purple),
+                    createElement("div", { style: { fontFamily: "Montserrat", fontWeight: 800, fontSize: 32, color: "#1f2430", lineHeight: 1.08 } }, slide.headline),
+                ),
+                createElement("div", { style: { display: "flex", gap: 24, marginBottom: 22 } },
+                    createElement("div", { style: { width: 10, borderRadius: 999, backgroundImage: STUDIO_THEME.gradient, flexShrink: 0 } }),
+                    createElement("div", { style: { display: "flex", flexDirection: "column" } },
+                        createElement("div", { style: { fontFamily: "Montserrat", fontSize: 34, fontWeight: 800, lineHeight: 1.04, color: "#1f2430", marginBottom: 12 } }, subtitle),
+                        createElement("div", { style: { fontFamily: "Open Sans", fontSize: 19, lineHeight: 1.34, color: "#3f4652" } }, explanation),
+                    ),
+                ),
+                createElement("div", { style: { display: "flex", flexDirection: "column", gap: 11 } },
+                    ...labels.map((row, labelIndex) => createElement("div", { key: `compact-label-${labelIndex}`, style: { display: "flex", alignItems: "flex-start", gap: 12, fontFamily: "Open Sans", fontWeight: 700, fontSize: 17, lineHeight: 1.28, color: "#1f2430" } },
+                        createElement("div", { style: { width: 13, height: 13, marginTop: 7, borderRadius: 999, backgroundImage: STUDIO_THEME.gradient, flexShrink: 0 } }),
+                        createElement("div", null, `${row.term}${row.description ? `: ${row.description}` : ""}`),
+                    )),
+                ),
+            ),
+            { border: "sides" },
+        )
+    }
 
     return createElement(
         "div",
         { style: { display: "flex", flex: 1, flexDirection: "column", backgroundColor: "#ffffff", color: "#1f2430" } },
-        createElement("div", { style: { display: "flex", height: 94, alignItems: "center", justifyContent: "space-between", padding: "0 56px", borderBottom: "2px solid #dce0e7" } },
-            renderLineIcon("brain", 44, STUDIO_THEME.purple),
-            createElement("div", { style: { fontFamily: "Montserrat", fontWeight: 800, fontSize: 40, color: "#1f2430" } }, slide.headline),
-            createElement("div", { style: { fontFamily: "Open Sans", fontSize: 34, color: "#6a6e77" } }, `${String(index + 1).padStart(2, "0")}/${String(totalSlides).padStart(2, "0")}`),
+        createElement("div", { style: { display: "flex", height: Math.round(76 * compact), alignItems: "center", justifyContent: "space-between", padding: `0 ${Math.round(50 * compact)}px`, borderBottom: "2px solid #dce0e7" } },
+            renderLineIcon("brain", Math.round(36 * compact), STUDIO_THEME.purple),
+            createElement("div", { style: { fontFamily: "Montserrat", fontWeight: 800, fontSize: Math.round(30 * compact), color: "#1f2430", maxWidth: "68%" } }, slide.headline),
+            createElement("div", { style: { fontFamily: "Open Sans", fontSize: Math.round(18 * compact), color: "#6a6e77", letterSpacing: "0.12em", textTransform: "uppercase" } }, footerCue(index)),
         ),
-        createElement("div", { style: { display: "flex", flex: 1, padding: "82px 70px 76px", gap: 58 } },
-            createElement("div", { style: { display: "flex", width: "44%", flexDirection: "column", justifyContent: "center", borderLeft: `10px solid ${STUDIO_THEME.purple}`, paddingLeft: 40 } },
-                createElement("div", { style: { fontFamily: "Montserrat", fontSize: 62, fontWeight: 800, lineHeight: 1.06, color: "#1f2430", marginBottom: 26 } }, subtitle),
-                createElement("div", { style: { fontFamily: "Open Sans", fontSize: 32, lineHeight: 1.55, color: "#3f4652" } }, explanation),
+        createElement("div", { style: { display: "flex", flex: 1, padding: `${Math.round(52 * compact)}px ${Math.round(52 * compact)}px ${Math.round(50 * compact)}px`, gap: Math.round(34 * compact) } },
+            createElement("div", { style: { display: "flex", width: "44%", justifyContent: "center", gap: Math.round(28 * compact) } },
+                createElement("div", { style: { width: 10, borderRadius: 999, backgroundImage: STUDIO_THEME.gradient, flexShrink: 0 } }),
+                createElement("div", { style: { display: "flex", flexDirection: "column", justifyContent: "center" } },
+                    createElement("div", { style: { fontFamily: "Montserrat", fontSize: Math.round(44 * compact), fontWeight: 800, lineHeight: 1.06, color: "#1f2430", marginBottom: Math.round(18 * compact) } }, subtitle),
+                    createElement("div", { style: { fontFamily: "Open Sans", fontSize: Math.round(22 * compact), lineHeight: 1.4, color: "#3f4652" } }, explanation),
+                ),
             ),
-            createElement("div", { style: { display: "flex", flex: 1, flexDirection: "column", justifyContent: "center", border: "2px solid #d7dce5", borderRadius: 26, padding: 44, boxShadow: "0 18px 44px rgba(15,23,42,0.10)" } },
-                createElement("div", { style: { display: "flex", height: 250, alignItems: "center", justifyContent: "center", marginBottom: 28 } },
-                    createElement("div", { style: { display: "flex", width: 330, height: 210, border: "5px solid #8d9aaa", borderRadius: "50%", alignItems: "center", justifyContent: "center", backgroundColor: "#f8fbff" } },
-                        renderLineIcon("brain", 142, "#7f8a99"),
+            createElement("div", { style: { display: "flex", flex: 1, flexDirection: "column", justifyContent: "center", border: "2px solid #d7dce5", borderRadius: 26, padding: Math.round(28 * compact), boxShadow: "0 18px 44px rgba(15,23,42,0.10)" } },
+                createElement("div", { style: { display: "flex", height: Math.round(132 * compact), alignItems: "center", justifyContent: "center", marginBottom: Math.round(20 * compact) } },
+                    createElement("div", { style: { display: "flex", width: Math.round(194 * compact), height: Math.round(126 * compact), border: "4px solid #8d9aaa", borderRadius: "50%", alignItems: "center", justifyContent: "center", backgroundColor: "#f8fbff" } },
+                        renderLineIcon("brain", Math.round(78 * compact), "#7f8a99"),
                     ),
                 ),
-                createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16 } },
-                    ...labels.map((row, labelIndex) => createElement("div", { key: `label-${labelIndex}`, style: { display: "flex", alignItems: "center", gap: 16, fontFamily: "Open Sans", fontWeight: 700, fontSize: 24, color: "#1f2430" } },
-                        createElement("div", { style: { width: 16, height: 16, borderRadius: 999, backgroundColor: STUDIO_THEME.purple } }),
+                createElement("div", { style: { display: "flex", flexDirection: "column", gap: Math.round(13 * compact) } },
+                    ...labels.map((row, labelIndex) => createElement("div", { key: `label-${labelIndex}`, style: { display: "flex", alignItems: "center", gap: 14, fontFamily: "Open Sans", fontWeight: 700, fontSize: Math.round(20 * compact), color: "#1f2430" } },
+                        createElement("div", { style: { width: 13, height: 13, borderRadius: 999, backgroundImage: STUDIO_THEME.gradient } }),
                         createElement("div", null, `${row.term}${row.description ? ` (${row.description})` : ""}`),
                     )),
                 ),
             ),
         ),
-        createElement("div", { style: { display: "flex", height: 76, alignItems: "center", justifyContent: "center", borderTop: "2px solid #dce0e7", fontFamily: "Open Sans", fontSize: 24, letterSpacing: "0.18em", color: "#646a73", textTransform: "uppercase" } }, "Psychiatric Assessment Mastery"),
+        createElement("div", { style: { display: "flex", height: Math.round(64 * compact), alignItems: "center", justifyContent: "center", borderTop: "2px solid #dce0e7", fontFamily: "Open Sans", fontSize: Math.round(18 * compact), letterSpacing: "0.16em", color: "#646a73", textTransform: "uppercase" } }, "Psychiatric Assessment Mastery"),
     )
 }
 
@@ -820,7 +896,7 @@ function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand
     const dark = !(slide.bg === "WHITE")
     const eyebrow = eyebrowFor(slide, index, totalSlides, isLast)
 
-    const fontScale = isVertical ? 1.18 : isPortrait ? 1.06 : 1
+    const fontScale = isVertical ? 1.02 : isPortrait ? 0.9 : 0.72
     const headlineSize = Math.round((slide.kind === "CTA" ? 64 : 72) * fontScale)
     const statSize = Math.round((isVertical ? 200 : 160) * fontScale)
     const labelSize = Math.round(28 * fontScale)
@@ -839,23 +915,23 @@ function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand
     const useGradientStat = !!heroStat && slide.bg !== "WHITE"
 
     if (layout === "HERO_ICON" && slide.kind !== "CTA") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderHeroIconLayout(slide, brand, frame, false))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderHeroIconLayout(slide, brand, ratio, false))
     }
 
     if (layout === "FEATURE_CARDS") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderFeatureCardsLayout(slide))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderFeatureCardsLayout(slide, ratio))
     }
 
     if (layout === "TITLE_CARD") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderTitleCardLayout(slide))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderTitleCardLayout(slide, ratio))
     }
 
     if (layout === "TAXONOMY_LIST") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderTaxonomyListLayout(slide))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderTaxonomyListLayout(slide, ratio))
     }
 
     if (layout === "SCIENCE_SPLIT") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderScienceSplitLayout(slide, totalSlides, index))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderScienceSplitLayout(slide, ratio, index))
     }
 
     const main = (() => {
@@ -875,7 +951,7 @@ function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand
                         gap: 16,
                     },
                 },
-                showBook ? renderBookFloating(brand.bookDataUrl ?? null, "centered", isVertical ? 1.15 : 1) : null,
+                showBook ? renderBookFloating(brand.bookDataUrl ?? null, "centered", isVertical ? 1.1 : 0.86) : null,
                 createElement(
                     "div",
                     {
@@ -885,7 +961,7 @@ function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand
                             fontWeight: 800,
                             color: "#ffffff",
                             textAlign: "center",
-                            maxWidth: "80%",
+                            maxWidth: isVertical ? "82%" : "88%",
                             lineHeight: 1.1,
                         },
                     },
@@ -900,7 +976,7 @@ function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand
                                 fontFamily: "Open Sans",
                                 color: "rgba(255,255,255,0.55)",
                                 marginTop: 8,
-                                maxWidth: "70%",
+                                maxWidth: isVertical ? "72%" : "82%",
                                 textAlign: "center",
                                 lineHeight: 1.4,
                             },
@@ -934,16 +1010,19 @@ function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            width: 118,
-                            height: 118,
+                            width: Math.round(104 * fontScale),
+                            height: Math.round(104 * fontScale),
                             borderRadius: 999,
                             backgroundColor: dark ? "rgba(255,255,255,0.08)" : "#f8fafc",
                             border: dark ? "1px solid rgba(255,255,255,0.10)" : "1px solid #e2e8f0",
-                            color: dark ? "rgba(255,255,255,0.72)" : STUDIO_THEME.purple,
-                            fontSize: 76,
+                            color: dark ? "rgba(255,255,255,0.72)" : "transparent",
+                            backgroundImage: dark ? undefined : STUDIO_THEME.gradient,
+                            backgroundClip: dark ? undefined : "text",
+                            WebkitBackgroundClip: dark ? undefined : "text",
+                            fontSize: Math.round(66 * fontScale),
                             fontFamily: "Montserrat",
                             fontWeight: 800,
-                            marginBottom: 38,
+                            marginBottom: Math.round(30 * fontScale),
                         },
                     },
                     "“",
@@ -1175,7 +1254,7 @@ function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand
         }),
         renderTopBar(slide, brand, dark, eyebrow),
         main,
-        renderFooter(brand.siteUrl, `${String(index + 1).padStart(2, "0")} / ${String(totalSlides).padStart(2, "0")}`, dark),
+        renderFooter(brand.siteUrl, footerCue(index), dark),
     )
 }
 

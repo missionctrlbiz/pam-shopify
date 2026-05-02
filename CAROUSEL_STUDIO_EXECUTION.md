@@ -212,6 +212,13 @@ Key principles:
   passthroughs to Gemini via the AI SDK.
 - **Client owns the working copy.** Zustand holds `package`, `messages`, `dirty`. The DB
   is the slow side; the canvas is the fast side.
+- **Prompt is the only generation entry point.** Do not create separate Generate buttons in
+  Studio headers or canvas action bars. Regeneration of a slide/caption is a targeted prompt
+  action and must show toast feedback when complete.
+- **Create is a blank unsaved session.** Entering Create should not reopen the previous
+  package. Save only when the user explicitly saves or confirms saving a dirty session.
+- **Canvas actions are consolidated.** Export belongs before Save in the canvas action bar.
+  Approve/export/save/delete/copy/regenerate actions need confirmation or success/error toasts.
 - **Partial-object streaming is the canvas update.** Use `streamObject` with a partial Zod
   schema; the AI SDK delivers `{ partial }` events that we merge slide-by-slide. No diffing.
 - **Targeted prompts** carry a `target` field (`SLIDE:<id>` or `CAPTION:<platform>`) so the
@@ -219,6 +226,11 @@ Key principles:
   that key.
 - **Captions and slides are independent endpoints.** Regenerating one caption never re-runs
   carousel generation.
+- **Caption hashtag floors:** Instagram >=20, Facebook >=20, LinkedIn >=8, TikTok >=10,
+  with all hashtags related to the carousel topic.
+- **Renderer quality bar:** output must fit 1:1, 4:5, and 9:16; use PAM gradient accents
+  rather than flat purple; scale typography/icons/diagrams per ratio; avoid repeated footer
+  pagination and generic Swipe arrows.
 
 ---
 

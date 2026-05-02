@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { MotionIcon } from "motion-icons-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,10 +31,18 @@ import {
 } from "lucide-react";
 import { ContentEditor } from "./ContentEditor";
 import Link from "next/link";
-import ProductionPanel from "./production/ProductionPanel";
 import {
   CarouselStudioPanel,
 } from "./studio/ContentManagementPanel";
+
+const ProductionPanel = dynamic(() => import("./production/ProductionPanel"), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-[28px] border border-slate-100 bg-white p-8 text-sm font-semibold text-slate-500 shadow-xl shadow-slate-200/40">
+      Loading content management...
+    </div>
+  ),
+});
 
 interface DashboardStats {
   totalBuyers: number;

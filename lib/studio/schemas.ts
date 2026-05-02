@@ -36,7 +36,7 @@ export const StudioSlideSchema = z.object({
     headline: z.string().describe("Main on-slide headline. Specific, scannable, and clinically useful."),
     body: z.string().describe("Supporting text. Use newline-separated short lines. For FEATURE_CARDS/TAXONOMY_LIST use 'Label — description' rows. For CHECKLIST prefix lines with ✓. For SCIENCE_SPLIT include one subtitle line, one explanation line, then 3-5 'Label — annotation' diagram labels."),
     stat: z.object({
-        value: z.string().describe("Large visual anchor, e.g. 01, 3 checks, Red flag, 74%."),
+        value: z.string().describe("Large visual anchor, e.g. 01, 3 checks, Red flag. Use percentages only when the source supports them."),
         label: z.string().describe("Small label explaining the stat/checkpoint."),
     }).optional().describe("Required for STAT slides; optional elsewhere."),
     bg: StudioSlideBackgroundSchema.describe("Visual background. Prefer WHITE, SLATE, or GRADIENT unless the user explicitly asks for dark/navy/ink styling."),

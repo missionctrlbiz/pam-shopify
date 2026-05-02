@@ -26,11 +26,25 @@ generation, rendering, exports, admin UI, or Trigger.dev, follow the relevant wo
   fields while generation is in progress.
 - Slide controls must be live persisted actions. Regenerate, duplicate, delete, edit, copy,
   save, export, approve, and caption actions cannot be cosmetic.
+- Carousel Studio generation must happen only from the prompt/chat panel. Do not place
+  duplicate Generate / Generate Carousel controls in the header or canvas action bar.
+- Keep canvas actions consolidated: Export belongs beside Save in the canvas action bar, before
+  Save. Avoid duplicated header actions.
+- Create flow means a new blank working session. Do not reopen the previous package when the
+  user intentionally enters Create; existing work lives in Drafts/Library.
+- Do not persist untouched blank Studio sessions as drafts. Prompt the user before leaving a
+  dirty blank session; save only on explicit confirmation or Save to Draft.
+- All Studio actions need toast/confirmation feedback for success, failure, and destructive or
+  publishing actions.
 - Generated carousels must have visual variety. Middle slides must rotate `kind`, `bg`,
   layout treatment, and body structure. Do not collapse inner slides into one repeated
   white insight block.
 - If a prompt asks for a slide count, honor it exactly unless it is outside the supported
   range. Do not silently shorten an 8-slide request to 4 slides.
+- Captions need useful hashtag pools: IG and FB at least 20, LinkedIn around 8-10, TikTok at
+  least 10, all topic-specific.
+- Carousel visuals must use PAM gradient accents and PAM typography. Avoid flat purple borders
+  and oversized 1:1 text/icons that overflow.
 - If code runs in Trigger.dev cloud, local edits do nothing until deployed. For this repo,
   prefer `npx trigger.dev@4.4.3 deploy` until package versions are upgraded together.
 - Every batch of code edits must pass `npx tsc --noEmit`. Run targeted lint/build when the

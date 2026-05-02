@@ -367,7 +367,7 @@ export function createDefaultStudioSettings(ownerId: string): StudioSettings {
         modelStrategist: "gemini-2.5-pro",
         modelGate: "gemini-2.5-flash",
         gateThreshold: 3,
-        defaultSlides: 4,
+        defaultSlides: 8,
         alwaysSay: "Pocket Guide PDF · NCLEX prep · psychassessmentguide.com as the destination for free clinical references.",
         neverSay: "Never imply diagnosis · never use cure · never replace clinical judgment.",
         updatedAt: new Date().toISOString(),
@@ -376,8 +376,12 @@ export function createDefaultStudioSettings(ownerId: string): StudioSettings {
 
 export function normalizeCaption(body: unknown, hashtags: unknown): StudioCaption {
     const cleanBody = typeof body === "string" ? body.trim() : ""
+    const bodyHashtags = cleanBody.match(/#[\p{L}\p{N}_]+/gu) ?? []
     const cleanHashtags = Array.isArray(hashtags)
-        ? Array.from(new Set(hashtags.filter((tag): tag is string => typeof tag === "string" && tag.trim().startsWith("#")).map((tag) => tag.trim())))
+        ? Array.from(new Set([
+            ...hashtags.filter((tag): tag is string => typeof tag === "string" && tag.trim().startsWith("#")).map((tag) => tag.trim()),
+            ...bodyHashtags,
+        ]))
         : []
 
     return {

@@ -8,5 +8,7 @@ Use it for:
 - `/ui-bug`
 - `/studio-generation`
 - `/studio-actions`
+- `/studio-create-flow`
+- `/studio-render-quality`
 - `/trigger-deploy`
 - `/verification`

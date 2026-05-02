@@ -51,7 +51,11 @@ Use for prompt, AI output, slide/caption structure, or streaming bugs.
 5. Preserve visual variety: rotate `kind`, `bg`, stat, quote, checklist, dark insight,
    cover, and CTA treatments.
 6. Keep captions platform-specific and normalized.
-7. Do not add mock data to mask empty or failed generation.
+7. Enforce hashtag floors: Instagram >=20, Facebook >=20, LinkedIn 8-10, TikTok >=10.
+8. Do not add mock data to mask empty or failed generation.
+
+Current Studio generation invariant: the prompt/chat panel is the only generation entrypoint.
+Do not add broad Generate buttons in the header or canvas controls.
 
 ## Skill: `/studio-actions`
 
@@ -63,7 +67,35 @@ Use when touching buttons or editor commands.
 4. Slide `Delete` removes a slide and persists it.
 5. Caption copy writes the current normalized caption to clipboard.
 6. Export dispatches the Studio export API and, through Trigger.dev, renders real assets.
-7. Disable controls while work is in progress where double-submit would corrupt state.
+7. Export belongs in the canvas action bar before Save Draft; do not duplicate it in the
+   Studio header.
+8. Save, export, copy, duplicate, regenerate, delete, approve, and model/API failures must
+   produce toast or confirmation feedback.
+9. Disable controls while work is in progress where double-submit would corrupt state.
+
+## Skill: `/studio-create-flow`
+
+Use when touching Carousel Studio navigation, tabs, or draft lifecycle.
+
+1. Clicking Create starts a new blank unsaved working session.
+2. Do not automatically reopen the previous package in Create.
+3. Untouched blank sessions are discarded and never written to Supabase.
+4. Dirty new sessions require a save/discard confirmation before leaving.
+5. Existing packages are opened only from Drafts or Library.
+
+## Skill: `/studio-render-quality`
+
+Use when touching Satori/Gemini slide output, visual variants, or export rendering.
+
+1. Use PAM gradient accents for borders, icons, dividers, bullets, chips, and highlights.
+2. Avoid flat purple borders in exported PNGs.
+3. Use Montserrat-like headings and Open Sans-like body copy.
+4. Fit content inside 1:1, 4:5, and 9:16 by scaling headings, icons, lists, diagrams,
+   footers, and body copy per ratio.
+5. Favor white or slate-grey gradient carousel backgrounds unless the prompt explicitly asks
+   for another background.
+6. Avoid repeated `01/08` pagination and generic `Swipe ->` footers; vary cues or omit them
+   when space is tight.
 
 ## Skill: `/trigger-deploy`
 
