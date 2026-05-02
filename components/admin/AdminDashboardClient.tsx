@@ -12,7 +12,10 @@ import {
   Mail,
   BarChart3,
   LogOut,
+  Menu,
   Plus,
+  PanelLeftClose,
+  PanelLeftOpen,
   Trash2,
   Search,
   Activity,
@@ -22,12 +25,15 @@ import {
   CalendarDays,
   Globe,
   ExternalLink,
-  Zap,
+  WandSparkles,
+  X,
 } from "lucide-react";
 import { ContentEditor } from "./ContentEditor";
 import Link from "next/link";
-import { ProductionPanel } from "./production/ProductionPanel";
-import { StandaloneCalendar } from "./production/StandaloneCalendar";
+import ProductionPanel from "./production/ProductionPanel";
+import {
+  CarouselStudioPanel,
+} from "./studio/ContentManagementPanel";
 
 interface DashboardStats {
   totalBuyers: number;
@@ -54,8 +60,8 @@ type Tab =
   | "leads"
   | "analytics"
   | "content"
-  | "production"
-  | "calendar";
+  | "carouselStudio"
+  | "contentManagement";
 
 const BRAND = {
   red: "#ed415b",
@@ -67,6 +73,48 @@ const BRAND = {
     "linear-gradient(135deg, rgba(237,65,91,0.1), rgba(236,81,133,0.1), rgba(175,92,233,0.1))",
   glow: "0 8px 24px rgba(175, 92, 233, 0.25)",
 };
+
+const BRAND_GRADIENT_CLASS =
+  "bg-[linear-gradient(135deg,#ed415b,#ec5185,#af5ce9)]";
+const ADMIN_SIDEBAR_COLLAPSED_KEY = "pam-admin-sidebar-collapsed";
+
+function getIconColorClass(color?: string) {
+  switch (color) {
+    case BRAND.red:
+      return "text-[#ed415b]";
+    case BRAND.pink:
+      return "text-[#ec5185]";
+    case BRAND.purple:
+      return "text-[#af5ce9]";
+    case BRAND.navy:
+      return "text-[#041f50]";
+    default:
+      return "";
+  }
+}
+
+function getStatAccentClasses(color: string) {
+  switch (color) {
+    case BRAND.red:
+      return {
+        radialClass:
+          "bg-[radial-gradient(circle_at_top_right,rgba(237,65,91,1),transparent)]",
+        chipClass: "bg-[#ed415b]/15 text-[#ed415b]",
+      };
+    case BRAND.pink:
+      return {
+        radialClass:
+          "bg-[radial-gradient(circle_at_top_right,rgba(236,81,133,1),transparent)]",
+        chipClass: "bg-[#ec5185]/15 text-[#ec5185]",
+      };
+    default:
+      return {
+        radialClass:
+          "bg-[radial-gradient(circle_at_top_right,rgba(175,92,233,1),transparent)]",
+        chipClass: "bg-[#af5ce9]/15 text-[#af5ce9]",
+      };
+  }
+}
 
 const POLL_INTERVAL = 30000; // 30 s — frugal: stats don't change fast enough to justify 10 s
 
@@ -82,7 +130,7 @@ function AnimatedIcon({
   animation?: any;
 }) {
   return (
-    <span style={color ? { color } : {}} className="inline-flex">
+    <span className={`inline-flex ${getIconColorClass(color)}`}>
       <MotionIcon
         name={iconName as any}
         size={size}
@@ -98,21 +146,37 @@ const VALID_TABS: Tab[] = [
   "leads",
   "analytics",
   "content",
-  "production",
-  "calendar",
+  "carouselStudio",
+  "contentManagement",
 ];
 
+function normalizeTab(tab: string | null): Tab {
+  if (tab === "production") {
+    return "contentManagement";
+  }
+
+  return tab && VALID_TABS.includes(tab as Tab) ? (tab as Tab) : "overview";
+}
+
 export function AdminDashboardClient({ session }: { session: any }) {
+  void session;
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("panel") as Tab | null;
-  const [activeTab, setActiveTab] = useState<Tab>(
-    initialTab && VALID_TABS.includes(initialTab) ? initialTab : "overview",
-  );
+  const [activeTab, setActiveTab] = useState<Tab>(normalizeTab(initialTab));
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.localStorage.getItem(ADMIN_SIDEBAR_COLLAPSED_KEY) === "true";
+  });
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const switchTab = useCallback(
     (tab: Tab) => {
       setActiveTab(tab);
+      setIsMobileSidebarOpen(false);
       const params = new URLSearchParams(searchParams.toString());
       params.set("panel", tab);
       router.replace(`/admin?${params.toString()}`, { scroll: false });
@@ -157,6 +221,13 @@ export function AdminDashboardClient({ session }: { session: any }) {
     const interval = setInterval(() => fetchData(false), POLL_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      ADMIN_SIDEBAR_COLLAPSED_KEY,
+      String(isSidebarCollapsed),
+    );
+  }, [isSidebarCollapsed]);
 
   async function handleAddBuyer(e: React.FormEvent) {
     e.preventDefault();
@@ -222,8 +293,14 @@ export function AdminDashboardClient({ session }: { session: any }) {
       iconName: "FileEdit",
     },
     {
-      key: "production",
-      label: "Internal CMS",
+      key: "carouselStudio",
+      label: "Carousel Studio",
+      icon: WandSparkles,
+      iconName: "WandSparkles",
+    },
+    {
+      key: "contentManagement",
+      label: "Content Management",
       icon: CalendarDays,
       iconName: "KanbanSquare",
     },
@@ -255,6 +332,11 @@ export function AdminDashboardClient({ session }: { session: any }) {
     b.email.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  async function handleLogout() {
+    await supabaseBrowser().auth.signOut();
+    router.push("/");
+  }
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -268,68 +350,91 @@ export function AdminDashboardClient({ session }: { session: any }) {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col md:sticky md:top-0 md:h-screen z-40 hidden md:flex">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-center">
-          <Link href="/">
-            <Image
-              src="/logo.webp"
-              alt="Logo"
-              width={140}
-              height={45}
-              className="h-10 w-auto object-contain cursor-pointer"
-            />
+  const renderSidebarNav = (compact = false) => (
+    <>
+      <div className={`border-b border-slate-100 ${compact ? "px-2 py-4" : "px-4 py-5"}`}>
+        <div className={`flex items-center ${compact ? "flex-col justify-center gap-3" : "justify-between gap-3"}`}>
+          <Link href="/" className="flex min-w-0 items-center justify-center">
+            {compact ? (
+              <Image
+                src="/favicon.webp"
+                alt="Logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain cursor-pointer"
+              />
+            ) : (
+              <Image
+                src="/logo.webp"
+                alt="Logo"
+                width={140}
+                height={45}
+                className="h-10 w-auto object-contain cursor-pointer"
+              />
+            )}
           </Link>
+          <button
+            type="button"
+            title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={() => setIsSidebarCollapsed((current) => !current)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-[#041f50]"
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
         </div>
+      </div>
 
-        <div className="flex flex-col gap-1 p-4 flex-grow overflow-y-auto">
+      <div className={`flex flex-col gap-1 flex-grow overflow-y-auto ${compact ? "p-2" : "p-4"}`}>
+        {!compact && (
           <p className="px-3 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 mt-4">
             Menu
           </p>
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => switchTab(tab.key)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all w-full text-left relative ${
-                  isActive
-                    ? "text-[#041f50] bg-slate-50 shadow-sm border border-slate-100"
-                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-50/50"
+        )}
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => switchTab(tab.key)}
+              title={compact ? tab.label : undefined}
+              aria-label={tab.label}
+              className={`flex items-center rounded-xl text-sm font-semibold transition-all w-full text-left relative ${compact ? "justify-center px-2 py-3" : "gap-3 px-4 py-3"} ${isActive
+                ? "text-[#041f50] bg-slate-50 shadow-sm border border-slate-100"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50/50"
                 }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="sidebarActive"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 rounded-r-full"
-                    style={{ background: BRAND.gradient }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  />
-                )}
-                <AnimatedIcon
-                  iconName={tab.iconName}
-                  size={18}
-                  color={isActive ? BRAND.purple : "currentColor"}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId={compact ? "sidebarActiveCompact" : "sidebarActive"}
+                  className={`absolute top-1/2 -translate-y-1/2 h-8 ${compact ? "left-0 w-1 rounded-r-full" : "left-0 w-1.5 rounded-r-full"}`}
+                  style={{ background: BRAND.gradient }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="p-4 border-t border-slate-100 mt-auto space-y-3">
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 overflow-hidden shadow-inner">
-              <Image
-                src="/favicon-white.png"
-                alt="Avatar"
-                width={32}
-                height={32}
-                className="object-cover"
+              )}
+              <AnimatedIcon
+                iconName={tab.iconName}
+                size={18}
+                color={isActive ? BRAND.purple : "currentColor"}
               />
-            </div>
+              {!compact && tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className={`border-t border-slate-100 mt-auto space-y-3 ${compact ? "p-2" : "p-4"}`}>
+        <div className={`flex items-center ${compact ? "justify-center" : "gap-3 px-2"}`}>
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 overflow-hidden shadow-inner">
+            <Image
+              src="/favicon.webp"
+              alt="Avatar"
+              width={32}
+              height={32}
+              className="object-cover"
+            />
+          </div>
+          {!compact && (
             <div className="overflow-hidden">
               <p className="text-xs font-bold text-slate-700 truncate">
                 Anthonia Ojomo
@@ -338,58 +443,88 @@ export function AdminDashboardClient({ session }: { session: any }) {
                 Administrator
               </p>
             </div>
-          </div>
-
-          <button
-            onClick={async () => {
-              await supabaseBrowser().auth.signOut();
-              router.push("/");
-            }}
-            className="flex w-full items-center justify-center gap-2 px-4 py-2.5 mt-2 text-sm font-bold text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-sm"
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
+          )}
         </div>
+
+        <button
+          onClick={handleLogout}
+          title={compact ? "Logout" : undefined}
+          aria-label="Logout"
+          className={`flex items-center text-sm font-bold text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-sm ${compact ? "w-full justify-center px-2 py-2.5" : "w-full justify-center gap-2 px-4 py-2.5 mt-2"}`}
+        >
+          <LogOut size={16} />
+          {!compact && "Logout"}
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+      {/* Sidebar Navigation */}
+      <aside className={`hidden md:flex bg-white border-r border-slate-200 flex-shrink-0 flex-col md:sticky md:top-0 md:h-screen z-40 transition-[width] duration-300 ${isSidebarCollapsed ? "md:w-20" : "md:w-64"}`}>
+        {renderSidebarNav(isSidebarCollapsed)}
       </aside>
+
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close navigation menu"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="fixed inset-0 z-40 bg-slate-950/45 md:hidden"
+            />
+            <motion.aside
+              initial={{ x: -320, opacity: 0.8 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -320, opacity: 0.8 }}
+              transition={{ type: "spring", stiffness: 260, damping: 28 }}
+              className="fixed inset-y-0 left-0 z-50 flex w-[88vw] max-w-[288px] flex-col bg-white shadow-2xl md:hidden"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4">
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Navigation</p>
+                <button
+                  type="button"
+                  aria-label="Close navigation menu"
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-[#041f50]"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {renderSidebarNav(false)}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Header (shown only on small screens) */}
       <div className="md:hidden bg-white border-b border-slate-200 p-4 sticky top-0 z-50 flex items-center justify-between">
-        <Image
-          src="/logo.webp"
-          alt="Logo"
-          width={120}
-          height={35}
-          className="h-8 w-auto object-contain"
-        />
+        <div className="flex min-w-0 items-center gap-3">
+          <Image
+            src="/logo.webp"
+            alt="Logo"
+            width={120}
+            height={35}
+            className="h-8 w-auto shrink-0 object-contain"
+          />
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Admin</p>
+            <p className="truncate text-sm font-extrabold text-[#041f50]">{tabs.find((t) => t.key === activeTab)?.label}</p>
+          </div>
+        </div>
         <button
           type="button"
-          aria-label="Logout"
-          onClick={async () => {
-            await supabaseBrowser().auth.signOut();
-            router.push("/");
-          }}
-          className="p-2 text-slate-500 bg-slate-100 rounded-lg"
+          aria-label="Open navigation menu"
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-[#041f50]"
         >
-          <LogOut size={18} />
+          <Menu size={18} />
         </button>
-      </div>
-
-      {/* Mobile Tab Scroller */}
-      <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex overflow-x-auto gap-2 no-scrollbar">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => switchTab(tab.key)}
-              className={`flex whitespace-nowrap items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${isActive ? "text-white shadow-md" : "text-slate-500 bg-slate-50 border border-slate-100"}`}
-              style={isActive ? { background: BRAND.gradient } : {}}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
       </div>
 
       {/* Main Content Area */}
@@ -397,6 +532,14 @@ export function AdminDashboardClient({ session }: { session: any }) {
         <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 hidden md:block">
           <div className="px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <button
+                type="button"
+                aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                onClick={() => setIsSidebarCollapsed((current) => !current)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-[#041f50] md:hidden"
+              >
+                {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+              </button>
               <h1 className="text-xl font-extrabold text-[#041f50] tracking-tight">
                 {tabs.find((t) => t.key === activeTab)?.label}
               </h1>
@@ -444,46 +587,40 @@ export function AdminDashboardClient({ session }: { session: any }) {
               >
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
                   {statCards.map((s, i) => (
-                    <motion.div
-                      key={s.label}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.08 }}
-                      className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100 relative overflow-hidden"
-                    >
-                      <div
-                        className="absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-10"
-                        style={{
-                          background: `radial-gradient(circle at top right, ${s.color}, transparent)`,
-                        }}
-                      />
-                      <div className="relative z-10 flex flex-col h-full justify-between">
-                        <div className="flex items-start justify-between mb-8">
-                          <div
-                            className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner"
-                            style={{
-                              background: `${s.color}15`,
-                              color: s.color,
-                            }}
-                          >
-                            <AnimatedIcon iconName={s.iconName} size={24} />
+                    (() => {
+                      const accent = getStatAccentClasses(s.color);
+                      return (
+                        <motion.div
+                          key={s.label}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: i * 0.08 }}
+                          className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100 relative overflow-hidden"
+                        >
+                          <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-10 ${accent.radialClass}`} />
+                          <div className="relative z-10 flex flex-col h-full justify-between">
+                            <div className="flex items-start justify-between mb-8">
+                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${accent.chipClass}`}>
+                                <AnimatedIcon iconName={s.iconName} size={24} />
+                              </div>
+                            </div>
+                            <div>
+                              <h3 className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">
+                                {s.label}
+                              </h3>
+                              <motion.p
+                                key={s.value}
+                                initial={{ scale: 1.1, opacity: 0.7 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="text-4xl font-extrabold text-[#041f50] tracking-tight"
+                              >
+                                {s.value}
+                              </motion.p>
+                            </div>
                           </div>
-                        </div>
-                        <div>
-                          <h3 className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">
-                            {s.label}
-                          </h3>
-                          <motion.p
-                            key={s.value}
-                            initial={{ scale: 1.1, opacity: 0.7 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="text-4xl font-extrabold text-[#041f50] tracking-tight"
-                          >
-                            {s.value}
-                          </motion.p>
-                        </div>
-                      </div>
-                    </motion.div>
+                        </motion.div>
+                      );
+                    })()
                   ))}
                 </div>
 
@@ -526,12 +663,20 @@ export function AdminDashboardClient({ session }: { session: any }) {
                         color: BRAND.red,
                       },
                       {
-                        tab: "production" as Tab,
+                        tab: "carouselStudio" as Tab,
+                        iconName: "WandSparkles",
+                        icon: WandSparkles,
+                        label: "Carousel Studio",
+                        desc: "Prompt-to-canvas workspace",
+                        color: BRAND.purple,
+                      },
+                      {
+                        tab: "contentManagement" as Tab,
                         iconName: "KanbanSquare",
                         icon: CalendarDays,
-                        label: "Internal CMS",
-                        desc: "Build & Deploy Content",
-                        color: BRAND.purple,
+                        label: "Content Management",
+                        desc: "Current content workflow",
+                        color: BRAND.pink,
                       },
                       // { tab: "calendar" as Tab, iconName: "CalendarDays", icon: CalendarDays, label: "Calendar", desc: "Content calendar", color: BRAND.pink },
                     ].map((action) => (
@@ -584,11 +729,7 @@ export function AdminDashboardClient({ session }: { session: any }) {
                     <button
                       type="submit"
                       disabled={addingBuyer}
-                      className="px-8 py-3.5 text-white text-sm font-bold rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
-                      style={{
-                        background: BRAND.gradient,
-                        boxShadow: BRAND.glow,
-                      }}
+                      className={`px-8 py-3.5 text-white text-sm font-bold rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg ${BRAND_GRADIENT_CLASS}`}
                     >
                       <AnimatedIcon
                         iconName="Plus"
@@ -847,10 +988,9 @@ export function AdminDashboardClient({ session }: { session: any }) {
               </motion.div>
             )}
 
-            {/* Production Pipeline Tab */}
-            {activeTab === "production" && (
+            {activeTab === "contentManagement" && (
               <motion.div
-                key="production"
+                key="contentManagement"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -859,15 +999,14 @@ export function AdminDashboardClient({ session }: { session: any }) {
               </motion.div>
             )}
 
-            {/* Production Calendar Tab */}
-            {activeTab === "calendar" && (
+            {activeTab === "carouselStudio" && (
               <motion.div
-                key="calendar"
+                key="carouselStudio"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
               >
-                <StandaloneCalendar />
+                <CarouselStudioPanel />
               </motion.div>
             )}
           </AnimatePresence>

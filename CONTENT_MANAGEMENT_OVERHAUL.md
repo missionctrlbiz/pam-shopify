@@ -17,7 +17,7 @@ The main job is:
 - structure the material with AI
 - generate a carousel and four platform-specific caption variants
 - edit the output directly in a canvas-style UI
-- export or disperse to Facebook, Instagram, TikTok, and LinkedIn without reload friction
+- export assets and copy Facebook, Instagram, TikTok, and LinkedIn captions without reload friction
 
 ## Naming
 
@@ -108,7 +108,7 @@ It should feel like:
 - `Regenerate Captions`
 - `Save Draft`
 - `Export Assets`
-- `Approve for Publish`
+- `Approve for Manual Publish`
 
 ## Current Problems in the Existing Repo
 
@@ -153,7 +153,7 @@ Current model in the repo and code references includes:
 - `render_jobs`
 - `video_scripts`
 - `audio_cache`
-- `publish_jobs`
+- no `publish_jobs` in Carousel Studio v1
 
 That is too much surface area for the job of building carousels and matched captions quickly.
 
@@ -206,7 +206,7 @@ This keeps the user focused on one post bundle at a time.
 4. Generate the first carousel draft and four caption variants
 5. Edit by typing directly or by issuing targeted prompt edits
 6. Save draft without leaving the workspace
-7. Export assets or approve for publishing
+7. Export assets or approve for manual publishing
 
 This should happen in one page-level workspace, not across multiple admin layers.
 
@@ -242,7 +242,7 @@ Stores reusable approved ideas and successful carousel packages.
 - caption style rules
 - output presets
 - CTA presets
-- publishing integrations
+- manual distribution notes
 - brand guardrails
 
 ## Schema Direction
@@ -251,7 +251,7 @@ Stores reusable approved ideas and successful carousel packages.
 
 - `content_packages`
 - `content_assets`
-- `publish_jobs`
+- no `publish_jobs` in Carousel Studio v1
 
 ### Merge into `content_packages`
 
@@ -300,7 +300,7 @@ Target shape:
 - `GET /api/content-packages/[id]`
 - `PATCH /api/content-packages/[id]`
 - `POST /api/content-packages/[id]/generate`
-- `POST /api/content-packages/[id]/publish`
+- `POST /api/content-packages/[id]/approve`
 
 Important notes:
 
@@ -386,7 +386,7 @@ It is a structural reset:
 
 The fastest path should be:
 
-- prompt or upload -> generate -> edit -> export -> approve for publish
+- prompt or upload -> generate -> edit -> export -> approve for manual publish
 
 That is the product this system is supposed to become.
 

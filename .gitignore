@@ -67,3 +67,13 @@ ElevenLabs/*
 PAM_VIDEO_20260401_MentalHealthAwareness_v1.mp4
 
 workers\video-renderer\build
+carousel_studio_prototype.html
+.trigger/
+.claude/*
+!.claude/
+!.claude/README.md
+!.claude/CLAUDE.md
+!.claude/AGENT.md
+!.claude/SKILLS.md
+!.claude/MEMORY.md
+.claude/worktrees/

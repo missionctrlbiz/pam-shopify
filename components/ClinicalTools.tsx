@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, Sparkles, FileText, Mail, Lock } from "lucide-react";
 import { motion } from "framer-motion";
-import { ResponseModal } from "./ResponseModal";
+import { ResponseModal } from "@/components/ResponseModal";
 
 export function SoapArchitect() {
     const [soapInput, setSoapInput] = useState("");

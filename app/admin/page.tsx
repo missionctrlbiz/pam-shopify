@@ -4,10 +4,15 @@ import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient"
 
 export const dynamic = "force-dynamic"
 
+type AdminSessionUser = {
+    role?: string | null
+}
+
 export default async function AdminDashboardPage() {
     const session = await auth()
+    const user = session?.user as AdminSessionUser | undefined
 
-    if (!session || (session.user as any)?.role !== "ADMIN") {
+    if (!session || user?.role !== "ADMIN") {
         redirect("/admin/login")
     }
 

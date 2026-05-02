@@ -20,7 +20,6 @@ import {
   Download,
   Layers,
   CheckCircle2,
-  Send,
   RefreshCw,
 } from "lucide-react";
 import type {
@@ -46,6 +45,50 @@ const BRAND = {
   glow: "0 8px 24px rgba(175, 92, 233, 0.25)",
 };
 
+const BRAND_GRADIENT_CLASS = "bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]";
+const BRAND_GLOW_CLASS = "shadow-[0_8px_24px_rgba(175,92,233,0.25)]";
+
+function getStatCardTone(color: string) {
+  switch (color) {
+    case BRAND.navy:
+      return {
+        orbClass: "bg-[radial-gradient(circle_at_top_right,#041f50,transparent_70%)]",
+        iconClass: "bg-[#041f5014] text-[#041f50]",
+        valueClass: "text-[#041f50]",
+      };
+    case BRAND.purple:
+      return {
+        orbClass: "bg-[radial-gradient(circle_at_top_right,#af5ce9,transparent_70%)]",
+        iconClass: "bg-[#af5ce922] text-[#af5ce9]",
+        valueClass: "text-[#041f50]",
+      };
+    case "#10B981":
+      return {
+        orbClass: "bg-[radial-gradient(circle_at_top_right,#10B981,transparent_70%)]",
+        iconClass: "bg-emerald-100 text-emerald-600",
+        valueClass: "text-[#041f50]",
+      };
+    case "#F59E0B":
+      return {
+        orbClass: "bg-[radial-gradient(circle_at_top_right,#F59E0B,transparent_70%)]",
+        iconClass: "bg-amber-100 text-amber-600",
+        valueClass: "text-[#041f50]",
+      };
+    case "#6B7280":
+      return {
+        orbClass: "bg-[radial-gradient(circle_at_top_right,#6B7280,transparent_70%)]",
+        iconClass: "bg-slate-200 text-slate-600",
+        valueClass: "text-[#041f50]",
+      };
+    default:
+      return {
+        orbClass: "bg-[radial-gradient(circle_at_top_right,#ed415b,transparent_70%)]",
+        iconClass: "bg-rose-100 text-[#ed415b]",
+        valueClass: "text-[#041f50]",
+      };
+  }
+}
+
 type ProdView = "overview" | "table" | "import" | "renderjobs";
 
 const VIEWS: {
@@ -54,26 +97,26 @@ const VIEWS: {
   iconName: string;
   Icon: React.ElementType;
 }[] = [
-  {
-    key: "overview",
-    label: "Overview",
-    iconName: "LayoutDashboard",
-    Icon: BarChart3,
-  },
-  { key: "table", label: "Data Table", iconName: "Table", Icon: LayoutList },
-  {
-    key: "import",
-    label: "Import & Generate",
-    iconName: "Upload",
-    Icon: Upload,
-  },
-  {
-    key: "renderjobs",
-    label: "Assets Queue",
-    iconName: "Layers",
-    Icon: Layers,
-  },
-];
+    {
+      key: "overview",
+      label: "Content Overview",
+      iconName: "LayoutDashboard",
+      Icon: BarChart3,
+    },
+    { key: "table", label: "Content Packages", iconName: "Table", Icon: LayoutList },
+    {
+      key: "import",
+      label: "Load & Generate",
+      iconName: "Upload",
+      Icon: Upload,
+    },
+    {
+      key: "renderjobs",
+      label: "Asset Exports",
+      iconName: "Layers",
+      Icon: Layers,
+    },
+  ];
 
 // ─── Post Type Config Types ───────────────────────────────────────────────────
 
@@ -141,10 +184,10 @@ export const RATIO_OPTIONS: {
   label: string;
   desc: string;
 }[] = [
-  { key: "1:1", label: "1:1", desc: "Square" },
-  { key: "4:5", label: "4:5", desc: "Portrait" },
-  { key: "9:16", label: "9:16", desc: "Vertical" },
-];
+    { key: "1:1", label: "1:1", desc: "Square" },
+    { key: "4:5", label: "4:5", desc: "Portrait" },
+    { key: "9:16", label: "9:16", desc: "Vertical" },
+  ];
 
 function defaultSelections(): Record<PostTypeKey, PostTypeSelection> {
   return {
@@ -179,23 +222,16 @@ function StatCard({
   sublabel?: string;
   iconName: string;
 }) {
+  const tone = getStatCardTone(color);
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100 relative overflow-hidden flex-1 min-w-[140px]"
     >
-      <div
-        className="absolute top-0 right-0 w-28 h-28 rounded-bl-full opacity-10"
-        style={{
-          background: `radial-gradient(circle at top right, ${color}, transparent)`,
-        }}
-      />
+      <div className={`absolute top-0 right-0 h-28 w-28 rounded-bl-full opacity-10 ${tone.orbClass}`} />
       <div className="relative z-10 flex flex-col h-full justify-between">
-        <div
-          className="w-10 h-10 rounded-2xl flex items-center justify-center mb-4 shadow-inner"
-          style={{ background: `${color}22`, color }}
-        >
+        <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-2xl shadow-inner ${tone.iconClass}`}>
           <MotionIcon name={iconName as any} size={20} animation="pulse" />
         </div>
         <div>
@@ -206,8 +242,7 @@ function StatCard({
             key={String(value)}
             initial={{ scale: 1.1, opacity: 0.7 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="text-3xl font-extrabold tracking-tight"
-            style={{ color: BRAND.navy }}
+            className={`text-3xl font-extrabold tracking-tight ${tone.valueClass}`}
           >
             {value}
           </motion.p>
@@ -238,8 +273,7 @@ function ViewTabs({
           <button
             key={v.key}
             onClick={() => onChange(v.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all relative ${isActive ? "text-white shadow-md" : "text-slate-500 hover:text-slate-700 hover:bg-white/60"}`}
-            style={isActive ? { background: BRAND.gradient } : {}}
+            className={`relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all ${isActive ? `text-white shadow-md ${BRAND_GRADIENT_CLASS}` : "text-slate-500 hover:bg-white/60 hover:text-slate-700"}`}
           >
             <v.Icon size={15} />
             {v.label}
@@ -336,15 +370,12 @@ function GenerateModal({
             {/* Header */}
             <div className="flex items-start justify-between p-7 pb-5 border-b border-slate-100">
               <div>
-                <h3
-                  className="text-xl font-extrabold tracking-tight mb-1"
-                  style={{ color: BRAND.navy }}
-                >
-                  {isComplete ? "✅ Content Generated" : "Generate Content"}
+                <h3 className="mb-1 text-xl font-extrabold tracking-tight text-[#041f50]">
+                  {isComplete ? "✅ Content Packages Ready" : "Generate Content Packages"}
                 </h3>
                 <p className="text-sm text-slate-500 leading-relaxed">
                   {isComplete
-                    ? "Your content is ready in the Data Table. Review each post and approve when ready to render."
+                    ? "Your content is ready in Content Packages. Review each item and approve when ready to render."
                     : `Choose up to 5 post formats — ${5 - enabledCount} remaining`}
                 </p>
               </div>
@@ -388,7 +419,7 @@ function GenerateModal({
                   </div>
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
                     <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                      Your content is now in the Data Table with{" "}
+                      Your content is now in Content Packages with{" "}
                       <strong className="text-purple-600">DRAFT</strong> status. Review each post, make
                       edits as needed, and mark them as{" "}
                       <strong className="text-emerald-600">Approved</strong> when ready.
@@ -419,13 +450,9 @@ function GenerateModal({
                         onClose();
                         onViewTable();
                       }}
-                      className="flex-1 py-3.5 rounded-2xl text-sm font-bold text-white shadow-lg transition"
-                      style={{
-                        background: BRAND.gradient,
-                        boxShadow: BRAND.glow,
-                      }}
+                      className={`flex-1 rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg transition ${BRAND_GRADIENT_CLASS} ${BRAND_GLOW_CLASS}`}
                     >
-                      View Data Table
+                      View Content Packages
                     </button>
                     <button
                       onClick={onClose}
@@ -439,15 +466,8 @@ function GenerateModal({
                 /* PROGRESS STATE */
                 <div className="space-y-5 py-4">
                   <div className="flex flex-col items-center gap-4">
-                    <div
-                      className="w-16 h-16 rounded-full flex items-center justify-center"
-                      style={{ background: `${BRAND.purple}15` }}
-                    >
-                      <Loader2
-                        size={28}
-                        className="animate-spin"
-                        style={{ color: BRAND.purple }}
-                      />
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#af5ce915]">
+                      <Loader2 size={28} className="animate-spin text-[#af5ce9]" />
                     </div>
                     <div className="text-center">
                       <p className="font-bold text-slate-700">
@@ -469,8 +489,7 @@ function GenerateModal({
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 0.6, ease: "easeOut" }}
-                        className="h-full rounded-full"
-                        style={{ background: BRAND.gradient }}
+                        className={`h-full rounded-full ${BRAND_GRADIENT_CLASS}`}
                       />
                     </div>
                   </div>
@@ -503,19 +522,17 @@ function GenerateModal({
                     return (
                       <div
                         key={key}
-                        className={`rounded-2xl border-2 transition-all overflow-hidden ${
-                          isEnabled
-                            ? "border-[#af5ce9] shadow-lg"
-                            : "border-slate-100 hover:border-slate-200"
-                        }`}
+                        className={`rounded-2xl border-2 transition-all overflow-hidden ${isEnabled
+                          ? "border-[#af5ce9] shadow-lg"
+                          : "border-slate-100 hover:border-slate-200"
+                          }`}
                       >
                         {/* Toggle header row */}
                         <div
-                          className={`flex items-center gap-4 p-4 cursor-pointer transition-colors ${
-                            isEnabled
-                              ? "bg-purple-50"
-                              : "bg-white hover:bg-slate-50"
-                          }`}
+                          className={`flex items-center gap-4 p-4 cursor-pointer transition-colors ${isEnabled
+                            ? "bg-purple-50"
+                            : "bg-white hover:bg-slate-50"
+                            }`}
                           onClick={() => toggleType(key)}
                         >
                           <span className="text-2xl">{cfg.emoji}</span>
@@ -541,6 +558,7 @@ function GenerateModal({
                                 type="number"
                                 min={1}
                                 max={5}
+                                title="Quantity"
                                 value={sel.count}
                                 onChange={(e) =>
                                   updateField(
@@ -555,22 +573,14 @@ function GenerateModal({
                                     ),
                                   )
                                 }
-                                className="w-14 px-2 py-1.5 text-sm font-bold text-center rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-300"
-                                style={{ color: BRAND.navy }}
+                                className="w-14 rounded-xl border border-slate-200 px-2 py-1.5 text-center text-sm font-bold text-[#041f50] focus:outline-none focus:ring-2 focus:ring-purple-300"
                               />
                             </div>
                           )}
 
                           {/* Toggle pill */}
                           <div
-                            className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 shrink-0 ${
-                              isEnabled
-                                ? "justify-end"
-                                : "justify-start bg-slate-200"
-                            }`}
-                            style={
-                              isEnabled ? { background: BRAND.gradient } : {}
-                            }
+                            className={`flex h-6 w-11 shrink-0 items-center rounded-full px-1 transition-colors ${isEnabled ? `justify-end ${BRAND_GRADIENT_CLASS}` : "justify-start bg-slate-200"}`}
                           >
                             <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
                           </div>
@@ -600,6 +610,7 @@ function GenerateModal({
                                         type="number"
                                         min={2}
                                         max={10}
+                                        title="Slides per carousel"
                                         value={sel.slides ?? 5}
                                         onChange={(e) =>
                                           updateField(
@@ -637,11 +648,10 @@ function GenerateModal({
                                             onClick={() =>
                                               toggleRatio(key, r.key)
                                             }
-                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${
-                                              isSelected
-                                                ? "border-[#af5ce9] bg-purple-50 text-[#af5ce9]"
-                                                : "border-slate-200 text-slate-500 hover:border-slate-300"
-                                            }`}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${isSelected
+                                              ? "border-[#af5ce9] bg-purple-50 text-[#af5ce9]"
+                                              : "border-slate-200 text-slate-500 hover:border-slate-300"
+                                              }`}
                                           >
                                             {r.label}{" "}
                                             <span className="text-[10px] opacity-60">
@@ -661,6 +671,7 @@ function GenerateModal({
                                       Primary platform:
                                     </label>
                                     <select
+                                      title="Primary platform"
                                       value={sel.platform ?? "IG"}
                                       onChange={(e) =>
                                         updateField(
@@ -690,11 +701,10 @@ function GenerateModal({
                                         onClick={() =>
                                           updateField(key, "tone", t.key)
                                         }
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${
-                                          sel.tone === t.key
-                                            ? "border-[#af5ce9] bg-purple-50 text-[#af5ce9]"
-                                            : "border-slate-200 text-slate-500 hover:border-slate-300"
-                                        }`}
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${sel.tone === t.key
+                                          ? "border-[#af5ce9] bg-purple-50 text-[#af5ce9]"
+                                          : "border-slate-200 text-slate-500 hover:border-slate-300"
+                                          }`}
                                       >
                                         {t.label}
                                       </button>
@@ -730,8 +740,7 @@ function GenerateModal({
                 <button
                   onClick={() => onConfirm(selections)}
                   disabled={!canGenerate}
-                  className="px-6 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-40 shadow-lg transition"
-                  style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
+                  className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-40 ${BRAND_GRADIENT_CLASS} ${BRAND_GLOW_CLASS}`}
                 >
                   <Zap size={14} />
                   Generate{" "}
@@ -788,10 +797,7 @@ function ConfirmModal({
           >
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3
-                  className="text-xl font-extrabold tracking-tight mb-1"
-                  style={{ color: BRAND.navy }}
-                >
+                <h3 className="mb-1 text-xl font-extrabold tracking-tight text-[#041f50]">
                   {title}
                 </h3>
                 <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
@@ -816,8 +822,7 @@ function ConfirmModal({
               <button
                 onClick={onConfirm}
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-50 shadow-lg"
-                style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
+                className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-lg disabled:opacity-50 ${BRAND_GRADIENT_CLASS} ${BRAND_GLOW_CLASS}`}
               >
                 {loading && <Loader2 size={14} className="animate-spin" />}
                 {actionLabel}
@@ -830,7 +835,7 @@ function ConfirmModal({
   );
 }
 
-// ─── Import & Generate Tab ────────────────────────────────────────────────────
+// ─── Load & Generate Tab ──────────────────────────────────────────────────────
 function ImportTab({
   onGenerate,
   generating,
@@ -891,7 +896,7 @@ function ImportTab({
         setFieldsCount(d.total);
         setSeedMsg({
           ok: true,
-          text: `✅ ${d.total} topics ready — you can now generate content.`,
+          text: `✅ ${d.total} topics ready — you can now generate content packages.`,
         });
       } else {
         setSeedMsg({
@@ -972,8 +977,7 @@ function ImportTab({
           <button
             onClick={handleSeedFields}
             disabled={seeding}
-            className="px-5 py-2 rounded-xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-50 shrink-0"
-            style={{ background: fieldsCount === 0 ? "#EF4444" : "#10B981" }}
+            className={`shrink-0 rounded-xl px-5 py-2 text-sm font-bold text-white disabled:opacity-50 ${fieldsCount === 0 ? "bg-red-500" : "bg-emerald-500"}`}
           >
             {seeding ? (
               <>
@@ -996,27 +1000,16 @@ function ImportTab({
         )}
       </div>
 
-      {/* Generate Content card */}
+      {/* Generate Content Packages card */}
       <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/40 border border-slate-100 relative overflow-hidden">
-        <div
-          className="absolute top-0 right-0 w-40 h-40 rounded-bl-full opacity-10"
-          style={{
-            background: `radial-gradient(circle at top right, ${BRAND.purple}, transparent)`,
-          }}
-        />
+        <div className="absolute top-0 right-0 h-40 w-40 rounded-bl-full bg-[radial-gradient(circle_at_top_right,#af5ce9,transparent_70%)] opacity-10" />
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner shrink-0"
-            style={{ background: `${BRAND.purple}20`, color: BRAND.purple }}
-          >
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#af5ce920] text-[#af5ce9] shadow-inner">
             <Zap size={28} />
           </div>
           <div className="flex-1">
-            <h3
-              className="text-xl font-extrabold tracking-tight mb-1"
-              style={{ color: BRAND.navy }}
-            >
-              Build Content Cycle
+            <h3 className="mb-1 text-xl font-extrabold tracking-tight text-[#041f50]">
+              Generate Content Packages
             </h3>
             <p className="text-slate-500 text-sm leading-relaxed">
               Create a fresh set of content from your topic library. Approved
@@ -1027,8 +1020,7 @@ function ImportTab({
             onClick={onGenerate}
             disabled={generating || fieldsCount === 0}
             title={fieldsCount === 0 ? "Load topics first" : undefined}
-            className="px-7 py-3.5 rounded-2xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-50 shadow-xl shrink-0"
-            style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
+            className={`flex shrink-0 items-center gap-2 rounded-2xl px-7 py-3.5 text-sm font-bold text-white shadow-xl disabled:opacity-50 ${BRAND_GRADIENT_CLASS} ${BRAND_GLOW_CLASS}`}
           >
             {generating ? (
               <>
@@ -1047,10 +1039,7 @@ function ImportTab({
 
       {/* CSV Import card */}
       <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/40 border border-slate-100">
-        <h3
-          className="text-xl font-extrabold tracking-tight mb-1"
-          style={{ color: BRAND.navy }}
-        >
+        <h3 className="mb-1 text-xl font-extrabold tracking-tight text-[#041f50]">
           Import from CSV
         </h3>
         <p className="text-slate-500 text-sm mb-6 leading-relaxed">
@@ -1109,11 +1098,7 @@ function ImportTab({
           />
           {uploading ? (
             <div className="flex flex-col items-center gap-3">
-              <Loader2
-                size={32}
-                className="animate-spin"
-                style={{ color: BRAND.purple }}
-              />
+              <Loader2 size={32} className="animate-spin text-[#af5ce9]" />
               <p className="text-slate-500 font-medium">Importing…</p>
             </div>
           ) : uploadMsg?.ok ? (
@@ -1194,7 +1179,7 @@ function ImportTab({
   );
 }
 
-// ─── Main ProductionPanel ─────────────────────────────────────────────────────
+// ─── Main Content Management Panel ────────────────────────────────────────────
 export function ProductionPanel() {
   const [view, setView] = useState<ProdView>("overview");
   const [entries, setEntries] = useState<CalendarEntryRow[]>([]);
@@ -1607,7 +1592,7 @@ export function ProductionPanel() {
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
         >
-          <Loader2 size={32} style={{ color: BRAND.purple }} />
+          <Loader2 size={32} className="text-[#af5ce9]" />
         </motion.div>
       </div>
     );
@@ -1621,28 +1606,7 @@ export function ProductionPanel() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            style={{
-              position: "fixed",
-              bottom: "24px",
-              right: "24px",
-              background:
-                toast.type === "success"
-                  ? BRAND.purple
-                  : toast.type === "error"
-                    ? BRAND.red
-                    : BRAND.navy,
-              color: "white",
-              padding: "12px 24px",
-              borderRadius: "12px",
-              boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
-              zIndex: 9999,
-              fontFamily: "var(--font-montserrat)",
-              fontWeight: 600,
-              fontSize: "14px",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-            }}
+            className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 rounded-xl px-6 py-3 font-montserrat text-sm font-semibold text-white shadow-[0_8px_30px_rgba(0,0,0,0.15)] ${toast.type === "success" ? "bg-[#af5ce9]" : toast.type === "error" ? "bg-[#ed415b]" : "bg-[#041f50]"}`}
           >
             {toast.type === "success" ? (
               <CheckCircle2 size={18} />
@@ -1664,8 +1628,7 @@ export function ProductionPanel() {
               setGenerateResult(null);
               setGenerateModalOpen(true);
             }}
-            className="flex items-center gap-2 px-5 py-2 text-white rounded-xl text-sm font-bold shadow-lg font-montserrat tracking-wide"
-            style={{ background: BRAND.gradient, boxShadow: BRAND.glow }}
+            className={`flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold tracking-wide text-white shadow-lg font-montserrat ${BRAND_GRADIENT_CLASS} ${BRAND_GLOW_CLASS}`}
           >
             <Zap size={14} /> Generate 5
           </button>
@@ -1699,10 +1662,7 @@ export function ProductionPanel() {
 
             {/* Status breakdown */}
             <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100">
-              <h3
-                className="text-lg font-extrabold tracking-tight mb-5"
-                style={{ color: BRAND.navy }}
-              >
+              <h3 className="mb-5 text-lg font-extrabold tracking-tight text-[#041f50]">
                 Status Breakdown
               </h3>
               <div className="flex flex-col gap-3">
@@ -1728,10 +1688,7 @@ export function ProductionPanel() {
                             ease: "easeOut",
                             delay: 0.2,
                           }}
-                          className="h-full rounded-full"
-                          style={{
-                            background: count > 0 ? BRAND.gradient : "#E5E7EB",
-                          }}
+                          className={`h-full rounded-full ${count > 0 ? BRAND_GRADIENT_CLASS : "bg-slate-200"}`}
                         />
                       </div>
                       <div className="w-8 text-xs font-extrabold text-slate-600 text-right shrink-0">
@@ -1745,10 +1702,7 @@ export function ProductionPanel() {
 
             {/* Shortcuts */}
             <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100">
-              <h3
-                className="text-lg font-extrabold tracking-tight mb-5 font-montserrat"
-                style={{ color: BRAND.navy }}
-              >
+              <h3 className="mb-5 text-lg font-extrabold tracking-tight text-[#041f50] font-montserrat">
                 Shortcuts
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1781,10 +1735,7 @@ export function ProductionPanel() {
                         className="text-slate-600 group-hover:text-[#af5ce9]"
                       />
                     </div>
-                    <p
-                      className="text-sm font-bold font-montserrat"
-                      style={{ color: BRAND.navy }}
-                    >
+                    <p className="text-sm font-bold text-[#041f50] font-montserrat">
                       {action.label}
                     </p>
                     <p className="text-slate-500 text-xs mt-1 font-medium font-sans">
@@ -1845,12 +1796,12 @@ export function ProductionPanel() {
                 onChange={(e) => {
                   setSortOrder(
                     e.target.value as
-                      | "latest"
-                      | "oldest"
-                      | "day_desc"
-                      | "day_asc"
-                      | "status_asc"
-                      | "status_desc",
+                    | "latest"
+                    | "oldest"
+                    | "day_desc"
+                    | "day_asc"
+                    | "status_asc"
+                    | "status_desc",
                   );
                 }}
                 className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#af5ce9]/40"
@@ -2031,9 +1982,12 @@ export function ProductionPanel() {
         title={confirmModal?.title ?? ""}
         desc={confirmModal?.desc ?? ""}
         actionLabel={confirmModal?.actionLabel ?? ""}
-        onConfirm={confirmModal?.onConfirm ?? (() => {})}
+        onConfirm={confirmModal?.onConfirm ?? (() => { })}
         loading={deletingBulk}
       />
     </div>
   );
 }
+
+export const ContentManagementPanel = ProductionPanel
+export default ProductionPanel

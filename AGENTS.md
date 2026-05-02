@@ -1,40 +1,27 @@
-# Psychiatric Assessment Mastery (PAM) — Claude Reference
+# Psychiatric Assessment Mastery (PAM) — Codex Reference
 
-## READ FIRST: Non-Negotiable Operating Rules
+## READ FIRST: Shared Agent Contract
 
-Before changing this repo, read these files in this order:
+This repo also has Claude-facing guidance. Keep agent behavior aligned across tools.
+Before changing code, read:
 
-1. `CLAUDE.md` - project and deployment rules
-2. `MEMORY.md` - durable decisions and recent traps
-3. `SKILLS.md` - required workflows for UI bugs, Studio work, Trigger deploys, and verification
-4. `CAROUSEL_STUDIO_EXECUTION.md` - Carousel Studio technical contract
-5. `CONTENT_MANAGEMENT_OVERHAUL.md` - product direction and UX contract
-6. `carousel_studio_prototype.html` - visual reference when present locally
+1. `CLAUDE.md`
+2. `MEMORY.md`
+3. `SKILLS.md`
+4. `CAROUSEL_STUDIO_EXECUTION.md`
+5. `CONTENT_MANAGEMENT_OVERHAUL.md`
+6. `carousel_studio_prototype.html` when present locally
 
-Claude must not improvise against these documents. If a request touches Carousel Studio,
-generation, rendering, exports, admin UI, or Trigger.dev, follow the relevant workflow in
-`SKILLS.md` before editing.
+The most important current constraints:
 
-### Current Critical Guardrails
-
-- Do not add mock data to the real Studio UI. Empty states are allowed; fake generated
-  packages, fake slides, and hardcoded demo captions are not.
-- Do not reintroduce social publishing, platform credentials, publish jobs, or scheduler
-  workflows into Carousel Studio. Studio ends at manual export/copy/approve.
-- Streaming AI output is partial by design. Every UI reader of `carouselJson`,
-  `captionsJson`, `qualityJson`, slide body, hashtags, and arrays must tolerate missing
-  fields while generation is in progress.
-- Slide controls must be live persisted actions. Regenerate, duplicate, delete, edit, copy,
-  save, export, approve, and caption actions cannot be cosmetic.
-- Generated carousels must have visual variety. Middle slides must rotate `kind`, `bg`,
-  layout treatment, and body structure. Do not collapse inner slides into one repeated
-  white insight block.
-- If a prompt asks for a slide count, honor it exactly unless it is outside the supported
-  range. Do not silently shorten an 8-slide request to 4 slides.
-- If code runs in Trigger.dev cloud, local edits do nothing until deployed. For this repo,
-  prefer `npx trigger.dev@4.4.3 deploy` until package versions are upgraded together.
-- Every batch of code edits must pass `npx tsc --noEmit`. Run targeted lint/build when the
-  touched surface warrants it, and say exactly what was not run.
+- No mock data in real Carousel Studio surfaces.
+- No social publish/scheduler/platform-token flow in Carousel Studio.
+- Partial streamed AI objects must never crash the UI.
+- Slide and caption actions must persist; no cosmetic buttons.
+- Carousel Studio output must preserve slide-count requests and visual variety.
+- Trigger-imported code requires Trigger.dev deploy. Use the repo-pinned CLI version
+  `npx trigger.dev@4.4.3 deploy` unless all Trigger packages are upgraded together.
+- Run `npx tsc --noEmit` after code edits.
 
 ## Project Overview
 
