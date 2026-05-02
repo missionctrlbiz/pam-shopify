@@ -6,7 +6,6 @@ import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { createCheckout, getProducts } from "@/lib/shopify";
-import { SoapArchitect } from "@/components/ClinicalTools";
 import { LeadMagnet } from "@/components/LeadMagnet";
 // Dynamically import PDFPreview to avoid SSR issues
 const PDFPreview = dynamic(
@@ -17,7 +16,6 @@ const PDFPreview = dynamic(
 import {
   CheckCircle2,
   AlertCircle,
-  Quote,
   Flag,
   PenTool,
   CheckSquare,
@@ -29,10 +27,7 @@ import {
   BookOpen,
   Menu,
   X,
-  Target,
-  Tag,
   Send,
-  User,
   Facebook,
   Instagram,
   Linkedin,
@@ -547,7 +542,7 @@ export default function Home() {
                   </div>
 
                   <ul className="space-y-4 mb-4 grow">
-                    {card.items.map((item: any, idx: number) => (
+                        {card.items.map((item: any) => (
                       <li
                         key={item.text}
                         className={`flex items-start ${item.highlight ? "border border-amber-200 bg-amber-50 rounded-lg px-3 py-2" : ""}`}

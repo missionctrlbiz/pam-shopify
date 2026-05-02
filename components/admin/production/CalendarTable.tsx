@@ -4,8 +4,8 @@ import React from "react"
 import { motion } from "framer-motion"
 import {
     Instagram, Facebook, Linkedin, Mail, Video,
-    FileText, Film, Presentation, Layers, BookOpen,
-    CheckCircle2, XCircle, Clock, Zap, Archive,
+    FileText, Layers, BookOpen,
+    CheckCircle2, Clock, Zap, Archive,
     Calendar, Send, ChevronRight,
 } from "lucide-react"
 import type { CalendarEntryRow, PublishStatus, Platform, PostType, QualityGateStatus } from "./types"

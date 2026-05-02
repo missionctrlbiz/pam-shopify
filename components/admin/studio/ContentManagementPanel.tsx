@@ -1393,7 +1393,8 @@ function StudioWorkspace({
         const result = await fetchJson<{ items: StudioPackageListItem[] }>("/api/studio/packages")
         setPackages(result.items)
 
-        const nextId = selectedId ?? result.items[0]?.id ?? null
+        const selectedExists = selectedId ? result.items.some((item) => item.id === selectedId) : false
+        const nextId = selectedExists ? selectedId : result.items[0]?.id ?? null
         if (!nextId) {
             setActivePackageId(null)
             setActivePackage(null)
@@ -1403,7 +1404,21 @@ function StudioWorkspace({
         }
 
         setActivePackageId(nextId)
-        const detail = await fetchJson<{ item: StudioPackage; messages: StudioMessage[] }>(`/api/studio/packages/${nextId}`)
+        let detail: { item: StudioPackage; messages: StudioMessage[] }
+        try {
+            detail = await fetchJson<{ item: StudioPackage; messages: StudioMessage[] }>(`/api/studio/packages/${nextId}`)
+        } catch (error) {
+            if (selectedExists) {
+                throw error
+            }
+
+            setActivePackageId(null)
+            setActivePackage(null)
+            setMessages([])
+            setPromptDraft("")
+            setSourceDraft("")
+            throw error
+        }
         setActivePackage(detail.item)
         setMessages(detail.messages)
         setRatio(detail.item.carouselJson.ratio)
@@ -1840,16 +1855,25 @@ function StudioWorkspace({
     }
 
     if (!activePackage) {
+        const hasPackageRows = packages.length > 0
+        const emptyTitle = hasPackageRows ? "Studio package failed to open" : "No studio packages yet"
+        const emptyDescription = hasPackageRows
+            ? "Supabase returned studio packages, but the selected package detail could not be loaded. Reload the list or create a fresh package."
+            : "Supabase is live and the studio is reading from the database. Create the first package to start generating, editing, and exporting carousel assets."
         return (
             <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center rounded-[28px] border border-slate-100 bg-white p-8 shadow-xl shadow-slate-200/40">
                 <div className="max-w-lg text-center">
                     <div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl text-white ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
                         <Library size={24} />
                     </div>
-                    <h2 className="text-2xl font-black tracking-tight text-[#041f50]">No studio packages yet</h2>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-500">Supabase is live and the studio is reading from the database. Create the first package to start generating, editing, and exporting carousel assets.</p>
+                    <h2 className="text-2xl font-black tracking-tight text-[#041f50]">{emptyTitle}</h2>
+                    <p className="mt-3 text-sm leading-relaxed text-slate-500">{emptyDescription}</p>
                     <div className="mt-6 flex justify-center gap-3">
-                        <button onClick={() => void createPackage()} className={`rounded-xl px-5 py-2.5 text-sm font-bold text-white ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>Create first package</button>
+                        {hasPackageRows ? (
+                            <button onClick={() => void loadPackages()} className={`rounded-xl px-5 py-2.5 text-sm font-bold text-white ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>Reload packages</button>
+                        ) : (
+                            <button onClick={() => void createPackage()} className={`rounded-xl px-5 py-2.5 text-sm font-bold text-white ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>Create first package</button>
+                        )}
                         <button onClick={() => setWorkspaceView("settings")} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Open settings</button>
                     </div>
                     {errorMessage ? <p className="mt-4 text-sm font-semibold text-rose-500">{errorMessage}</p> : null}

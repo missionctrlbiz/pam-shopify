@@ -20,11 +20,8 @@ import {
     X,
     Loader2,
     Copy,
-    Package,
-    ArrowUpRight,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useRouter } from "next/navigation"
 import { CarouselPreview } from "./CarouselPreview"
 import { CarouselViewInline } from "./CarouselViewInline"
 import { PROD_BRAND, PLATFORM_META, POST_TYPE_META } from "./CalendarTable"
@@ -101,13 +98,6 @@ const JOB_TYPE_ICON: Record<JobType, React.ReactNode> = {
     REPURPOSE: <Image size={14} />,
 }
 
-const JOB_TYPE_LABEL: Record<JobType, string> = {
-    CAROUSEL: "Carousel",
-    VIDEO: "Video",
-    AUDIO: "Audio",
-    REPURPOSE: "Repurpose",
-}
-
 const ASSET_TYPE_ICON: Record<string, React.ReactNode> = {
     CAROUSEL_PNG: <Image size={12} />,
     AUDIO_MP3: <Music size={12} />,
@@ -163,10 +153,6 @@ function isVisibleJob(job: JobRow): boolean {
     return job.jobType !== "VIDEO" && job.jobType !== "REPURPOSE"
 }
 
-function isVisibleAsset(asset: JobAsset): boolean {
-    return asset.assetType !== "VIDEO_MP4"
-}
-
 export const RenderJobsTab: React.FC = () => {
     const [filter, setFilter] = useState<FilterTab>("all")
     const [data, setData] = useState<JobsApiResponse | null>(null)
@@ -185,7 +171,6 @@ export const RenderJobsTab: React.FC = () => {
         onConfirm: () => void
     } | null>(null)
 
-    const router = useRouter()
     const pollRef = useRef<NodeJS.Timeout | null>(null)
 
     const showToast = (msg: string, type: "ok" | "err" = "ok") => {

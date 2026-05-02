@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState, useCallback, useEffect } from "react"
+import React, { useMemo, useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     BookOpen, LayoutGrid, LayoutList, Search, Filter, RefreshCw,

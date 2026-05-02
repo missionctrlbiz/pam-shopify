@@ -6,7 +6,7 @@ import {
     ChevronDown, ChevronUp, Copy, Check, Loader2,
     Mic, Music, Wand2, Eye, EyeOff,
 } from "lucide-react"
-import type { CalendarEntryRow, CalendarEntryDetail, Platform } from "./types"
+import type { CalendarEntryRow, CalendarEntryDetail } from "./types"
 import type {
     ContentIdeaMasterJson,
     PAMScene,
@@ -359,7 +359,7 @@ export function IdeaCard({ entry, onRefresh }: IdeaCardProps) {
                 onRefresh?.()
             }
             setTimeout(() => setToast(null), 4000)
-        } catch (err) {
+        } catch {
             setToast({ msg: "Failed to queue generation. Network error.", type: "err" })
             setTimeout(() => setToast(null), 4000)
         } finally {

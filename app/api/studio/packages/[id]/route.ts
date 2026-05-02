@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
-import { parseStudioPackageRow, requireStudioAdmin } from "@/lib/studio/server"
+import { getStudioHandledError, parseStudioPackageRow, requireStudioAdmin } from "@/lib/studio/server"
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -45,12 +45,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
             })),
         })
     } catch (error) {
-        if (error instanceof Error && error.message === "UNAUTHORIZED") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
-
         console.error("[studio/packages/:id] GET failed", error)
-        return NextResponse.json({ error: "Failed to load studio package" }, { status: 500 })
+        const handled = getStudioHandledError(error, "Failed to load studio package")
+        return NextResponse.json({ error: handled.message }, { status: handled.status })
     }
 }
 
@@ -87,12 +84,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
         return NextResponse.json({ item: parseStudioPackageRow(data) })
     } catch (error) {
-        if (error instanceof Error && error.message === "UNAUTHORIZED") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
-
         console.error("[studio/packages/:id] PATCH failed", error)
-        return NextResponse.json({ error: "Failed to update studio package" }, { status: 500 })
+        const handled = getStudioHandledError(error, "Failed to update studio package")
+        return NextResponse.json({ error: handled.message }, { status: handled.status })
     }
 }
 
@@ -113,11 +107,8 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
 
         return NextResponse.json({ archived: true })
     } catch (error) {
-        if (error instanceof Error && error.message === "UNAUTHORIZED") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        }
-
         console.error("[studio/packages/:id] DELETE failed", error)
-        return NextResponse.json({ error: "Failed to archive studio package" }, { status: 500 })
+        const handled = getStudioHandledError(error, "Failed to archive studio package")
+        return NextResponse.json({ error: handled.message }, { status: handled.status })
     }
 }

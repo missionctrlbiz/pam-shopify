@@ -7,7 +7,7 @@ import { getServerAuth } from "./supabase.server"
  * Custom auth() wrapper replacing NextAuth for backward compatibility.
  * Fetches the user from Supabase and packs it into the expected Session structure.
  */
-export const auth = async () => {
+export async function auth() {
     try {
         const supabase = await getServerAuth()
         const { data: { user }, error } = await supabase.auth.getUser()
@@ -36,6 +36,8 @@ export const auth = async () => {
         return null
     }
 }
+
+export default auth
 
 export const signIn = () => {
     throw new Error("signIn() is disabled from back, use supabaseBrowser.auth.signInWithPassword client-side.")

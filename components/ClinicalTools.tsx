@@ -1,6 +1,7 @@
 
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Loader2, Sparkles, FileText, Mail, Lock } from "lucide-react";
 import { motion } from "framer-motion";
@@ -73,7 +74,7 @@ export function SoapArchitect() {
             } else {
                 setUnlockError("Email not found in our purchase list. Check your spelling or grab the Digital Edition below!");
             }
-        } catch (error) {
+        } catch {
             setUnlockError("Verification failed. Please try again later.");
         } finally {
             setIsUnlocking(false);
@@ -330,7 +331,7 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
 
                     {!isUnlocked && usesLeft <= 0 && (
                         <p className="text-center text-sm text-red-500 mt-3 font-semibold">
-                            You&apos;ve used all 2 free notes. <a href="/#pricing" className="underline hover:text-red-700">Get the Digital Edition</a> to keep going.
+                            You&apos;ve used all 2 free notes. <Link href="/#pricing" className="underline hover:text-red-700">Get the Digital Edition</Link> to keep going.
                         </p>
                     )}
 

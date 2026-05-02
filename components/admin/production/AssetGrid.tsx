@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useEffect, useCallback } from "react"
+import React, { useEffect } from "react"
 import {
-    Image, FileText, Video, Music, ExternalLink,
-    RefreshCw, AlertCircle, Clock, Zap, CheckCircle2, Copy, Check, X,
+    Image, FileText, Video, Music,
+    RefreshCw, Zap, Copy, Check, X,
     Download, Eye, Package
 } from "lucide-react"
-import type { ContentAsset, RenderJob, AssetStatus, AssetType } from "./types"
+import type { ContentAsset, RenderJob, AssetType } from "./types"
 import { PROD_BRAND } from "./CalendarTable"
 import { CarouselPreview } from "./CarouselPreview"
 import { CarouselViewInline } from "./CarouselViewInline"
@@ -18,13 +18,6 @@ const ASSET_ICON: Record<AssetType, React.ReactNode> = {
     EMAIL_HTML: <FileText size={16} />,
     AUDIO_MP3: <Music size={16} />,
     VIDEO_SCRIPT_JSON: <FileText size={16} />,
-}
-
-const ASSET_STATUS_STYLE: Record<AssetStatus, { icon: React.ReactNode; color: string; label: string }> = {
-    PENDING: { icon: <Clock size={12} />, color: PROD_BRAND.gray, label: "Pending" },
-    GENERATING: { icon: <Zap size={12} />, color: PROD_BRAND.blue, label: "Rendering…" },
-    COMPLETE: { icon: <CheckCircle2 size={12} />, color: PROD_BRAND.green, label: "Complete" },
-    FAILED: { icon: <AlertCircle size={12} />, color: PROD_BRAND.red, label: "Failed" },
 }
 
 interface AssetGridProps {
@@ -140,7 +133,7 @@ function AssetPreviewModal({ asset, onClose }: { asset: ContentAsset, onClose: (
 }
 
 export const AssetGrid: React.FC<AssetGridProps> = ({
-    assets, renderJobs, entryId, onGenerateAssets, generating,
+    assets, renderJobs, onGenerateAssets, generating,
 }) => {
     const hasActiveJobs = renderJobs.some(j => j.status === "QUEUED" || j.status === "RUNNING")
     const hasAnyAssets = assets.length > 0
@@ -258,7 +251,6 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
             ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
                     {assets.map(asset => {
-                        const style = ASSET_STATUS_STYLE[asset.assetStatus] || ASSET_STATUS_STYLE.PENDING
                         const isImage = asset.assetType === "CAROUSEL_PNG"
                         const isVideo = asset.assetType === "VIDEO_MP4"
 

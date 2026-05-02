@@ -6,14 +6,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Share2,
   Layout,
   ArrowLeft,
   Loader2,
   ExternalLink,
   Smartphone,
-  Tablet,
-  Monitor,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -92,7 +89,6 @@ export default function CarouselViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const fetchAsset = async () => {
