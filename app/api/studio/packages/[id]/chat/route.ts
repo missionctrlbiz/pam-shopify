@@ -174,8 +174,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                             send({
                                 type: "status",
                                 target,
-                                message: `${modelIds[index - 1]} is unavailable; retrying with ${modelId}.`,
-                                model: modelId,
+                                message: "Studio Package Generator: retrying review.",
                             })
                         }
 
@@ -183,7 +182,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
                         for await (const part of result.fullStream) {
                             if (part.type === "object") {
-                                send({ type: "partial", target, object: part.object, model: modelId })
+                                send({ type: "partial", target, object: part.object })
                             } else if (part.type === "error") {
                                 throw part.error
                             }
@@ -194,7 +193,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                             const targetSlideCount = getTargetSlideCount(pkg, settings, message)
                             const generatedSlideCount = Array.isArray(finalObject.carouselJson?.slides) ? finalObject.carouselJson.slides.length : 0
                             if (generatedSlideCount !== targetSlideCount) {
-                                throw new Error(`The model returned ${generatedSlideCount} slides, but this prompt requires ${targetSlideCount}. Regenerate with the exact requested count.`)
+                                throw new Error(`The studio generator returned ${generatedSlideCount} slides, but this prompt requires ${targetSlideCount}. Regenerate with the exact requested count.`)
                             }
                         }
                         const merged = mergeFinalObject(pkg, target, finalObject)
@@ -226,12 +225,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                             {
                                 package_id: pkg.id,
                                 role: "assistant",
-                                content: target === "CAROUSEL" ? `Studio package generated with ${modelId}.` : `Studio fragment updated with ${modelId}.`,
+                                content: "Studio Package Generator: successfully reviewed.",
                                 target,
                             },
                         ])
 
-                        send({ type: "finish", target, item: parseStudioPackageRow(updated), model: modelId })
+                        send({ type: "finish", target, item: parseStudioPackageRow(updated) })
                         controller.close()
                         return
                     } catch (streamError) {

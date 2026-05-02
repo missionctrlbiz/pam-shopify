@@ -3,8 +3,9 @@ import "server-only"
 import { readFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { join } from "node:path"
-import { createElement, type ReactNode } from "react"
+import { createElement, isValidElement, type ReactElement, type ReactNode } from "react"
 import satori from "satori"
+import { STUDIO_PAM_GRADIENT, STUDIO_TYPOGRAPHY } from "@/lib/studio/shared"
 import type { StudioRatio, StudioSlideLayout } from "@/lib/studio/types"
 
 export interface StudioRenderDimensions {
@@ -53,7 +54,7 @@ export interface StudioRenderBrandLegacy {
 }
 
 export const STUDIO_THEME: StudioRenderTheme = {
-    gradient: "linear-gradient(135deg, #ed415b 0%, #ec5185 50%, #af5ce9 100%)",
+    gradient: STUDIO_PAM_GRADIENT,
     navy: "#041f50",
     ink: "#0a0e1f",
     purple: "#af5ce9",
@@ -65,6 +66,56 @@ export const STUDIO_RATIO_DIMENSIONS: Record<StudioRatio, StudioRenderDimensions
     "1:1": { width: 1080, height: 1080, frameWidth: 380, frameHeight: 380 },
     "4:5": { width: 1080, height: 1350, frameWidth: 360, frameHeight: 450 },
     "9:16": { width: 1080, height: 1920, frameWidth: 290, frameHeight: 516 },
+}
+
+function safeText(value: unknown, fallback = "") {
+    return typeof value === "string" ? value : fallback
+}
+
+function sanitizeSatoriStyle(style: unknown) {
+    if (!style || typeof style !== "object" || Array.isArray(style)) {
+        return undefined
+    }
+
+    const next: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(style)) {
+        if (value !== undefined && value !== null && value !== false) {
+            next[key] = value
+        }
+    }
+
+    return Object.keys(next).length > 0 ? next : undefined
+}
+
+function sanitizeSatoriNode(node: ReactNode): ReactNode {
+    if (Array.isArray(node)) {
+        return node.map(sanitizeSatoriNode).filter((child) => child !== undefined && child !== null && child !== false)
+    }
+
+    if (!isValidElement(node)) {
+        return node === false ? null : node
+    }
+
+    const props = node.props as Record<string, unknown> & { children?: ReactNode; style?: unknown }
+    const sanitizedProps: Record<string, unknown> = {}
+
+    for (const [key, value] of Object.entries(props)) {
+        if (key === "children" || key === "style") {
+            continue
+        }
+
+        if (value !== undefined && value !== null && value !== false) {
+            sanitizedProps[key] = value
+        }
+    }
+
+    const style = sanitizeSatoriStyle(props.style)
+    if (style) {
+        sanitizedProps.style = style
+    }
+
+    const children = sanitizeSatoriNode(props.children)
+    return createElement(node.type, sanitizedProps, children)
 }
 
 function ratioCompactness(ratio: StudioRatio) {
@@ -388,7 +439,7 @@ function renderGradientStat(value: string, fontSize: number) {
             style: {
                 fontSize,
                 lineHeight: 1,
-                fontFamily: "Montserrat",
+                fontFamily: STUDIO_TYPOGRAPHY.headingFamily,
                 fontWeight: 800,
                 color: "transparent",
                 backgroundImage: STUDIO_THEME.gradient,
@@ -465,7 +516,7 @@ function renderBookFloating(bookDataUrl: string | null, layout: "cover" | "cente
 
 /** Multi-row insight body — splits "Term — description" lines into accent-bar rows. */
 function renderInsightBody(body: string, dark: boolean) {
-    const lines = body.split(/\n+/).map((line) => line.trim()).filter(Boolean)
+    const lines = safeText(body).split(/\n+/).map((line) => line.trim()).filter(Boolean)
     if (lines.length === 0) return null
 
     return createElement(
@@ -533,7 +584,7 @@ function renderInsightBody(body: string, dark: boolean) {
 }
 
 function getBodyLines(body: string) {
-    return body.split(/\n+/).map((line) => line.trim()).filter(Boolean)
+    return safeText(body).split(/\n+/).map((line) => line.trim()).filter(Boolean)
 }
 
 function getContentRows(body: string) {
@@ -890,6 +941,20 @@ function renderScienceSplitLayout(slide: StudioRenderableSlide, ratio: StudioRat
 
 function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand, ratio: StudioRatio, index: number, totalSlides: number) {
     const frame = STUDIO_RATIO_DIMENSIONS[ratio]
+    const normalizedSlide: StudioRenderableSlide = {
+        ...slide,
+        id: safeText(slide.id, `slide-${index + 1}`),
+        kind: slide.kind ?? (index === totalSlides - 1 ? "CTA" : index === 0 ? "COVER" : "INSIGHT"),
+        headline: safeText(slide.headline, index === 0 ? "Psychiatric Assessment Mastery" : "Clinical Assessment Point"),
+        body: safeText(slide.body),
+        stat: slide.stat ? {
+            value: safeText(slide.stat.value),
+            label: safeText(slide.stat.label),
+        } : undefined,
+        bg: slide.bg ?? (index === 0 || index === totalSlides - 1 ? "SLATE" : "WHITE"),
+        assets: slide.assets,
+    }
+    slide = normalizedSlide
     const isVertical = ratio === "9:16"
     const isPortrait = ratio === "4:5"
     const isLast = index === totalSlides - 1
@@ -1291,13 +1356,14 @@ export async function renderStudioSlideToPng(
     const normalizedBrand = normalizeBrand(brand)
     const frame = getStudioFrameSize(ratio)
     const fonts = await getFonts()
-    const svg = await satori(makeSlideElement(slide, normalizedBrand, ratio, index, totalSlides) as unknown as React.ReactElement, {
+    const element = sanitizeSatoriNode(makeSlideElement(slide, normalizedBrand, ratio, index, totalSlides)) as ReactElement
+    const svg = await satori(element, {
         width: frame.width,
         height: frame.height,
         fonts: [
-            { name: "Montserrat", data: fonts.heading, weight: 800, style: "normal" },
-            { name: "Open Sans", data: fonts.body, weight: 400, style: "normal" },
-            { name: "Open Sans", data: fonts.bodyBold, weight: 700, style: "normal" },
+            { name: STUDIO_TYPOGRAPHY.headingFamily, data: fonts.heading, weight: 800, style: "normal" },
+            { name: STUDIO_TYPOGRAPHY.bodyFamily, data: fonts.body, weight: 400, style: "normal" },
+            { name: STUDIO_TYPOGRAPHY.bodyFamily, data: fonts.bodyBold, weight: 700, style: "normal" },
         ],
     })
 

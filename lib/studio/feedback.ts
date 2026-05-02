@@ -34,7 +34,7 @@ export function formatStudioError(error: unknown, fallback: string) {
         .replace(/^Request failed$/i, fallback)
 
     if (/high demand|503|unavailable|maxRetriesExceeded/i.test(cleaned)) {
-        return "The AI model is temporarily unavailable. Try again in a moment, or switch to the fallback model in settings."
+        return "The studio generator is temporarily busy. Try again in a moment."
     }
 
     return cleaned || fallback

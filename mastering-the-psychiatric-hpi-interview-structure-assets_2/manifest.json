@@ -1,0 +1,263 @@
+{
+  "packageId": "26ad2641-eb93-47c7-aa80-afbc2b1ac5fc",
+  "exportRequestId": "7a5f5450-da6c-45ae-8361-c22624df76e5",
+  "exportJobId": "run_cmoooy9a24l3d0on11341ja9o",
+  "requestedAt": "2026-05-02T18:44:24.697Z",
+  "exportStartedAt": "2026-05-02T18:44:46.184Z",
+  "exportCompletedAt": "2026-05-02T18:45:23.477Z",
+  "renderer": {
+    "name": "satori-resvg",
+    "version": "satori-resvg-v2026.05.02",
+    "typography": {
+      "headingFamily": "Montserrat",
+      "bodyFamily": "Open Sans"
+    }
+  },
+  "mode": "ALL",
+  "ratios": [
+    "1:1",
+    "4:5",
+    "9:16"
+  ],
+  "slideIdsByRatio": {
+    "1:1": [
+      "pam_hpi_01",
+      "pam_hpi_02",
+      "pam_hpi_03",
+      "pam_hpi_04",
+      "pam_hpi_05",
+      "pam_hpi_06",
+      "pam_hpi_07",
+      "pam_hpi_08"
+    ],
+    "4:5": [
+      "pam_hpi_01",
+      "pam_hpi_02",
+      "pam_hpi_03",
+      "pam_hpi_04",
+      "pam_hpi_05",
+      "pam_hpi_06",
+      "pam_hpi_07",
+      "pam_hpi_08"
+    ],
+    "9:16": [
+      "pam_hpi_01",
+      "pam_hpi_02",
+      "pam_hpi_03",
+      "pam_hpi_04",
+      "pam_hpi_05",
+      "pam_hpi_06",
+      "pam_hpi_07",
+      "pam_hpi_08"
+    ]
+  },
+  "snapshot": {
+    "package": {
+      "packageId": "26ad2641-eb93-47c7-aa80-afbc2b1ac5fc",
+      "ownerId": "e397e1c2-7317-44f1-895a-ad97b219ef71",
+      "title": "Mastering the Psychiatric HPI Interview Structure",
+      "status": "APPROVED",
+      "packageUpdatedAt": "2026-05-02T18:44:25.977623+00:00",
+      "carouselRatio": "1:1",
+      "slideCount": 8,
+      "slideIds": [
+        "pam_hpi_01",
+        "pam_hpi_02",
+        "pam_hpi_03",
+        "pam_hpi_04",
+        "pam_hpi_05",
+        "pam_hpi_06",
+        "pam_hpi_07",
+        "pam_hpi_08"
+      ],
+      "slideKinds": [
+        "COVER",
+        "STAT",
+        "INSIGHT",
+        "INSIGHT",
+        "INSIGHT",
+        "QUOTE",
+        "INSIGHT",
+        "CTA"
+      ],
+      "layouts": [
+        "HERO_ICON",
+        "STAT_CARD",
+        "FEATURE_CARDS",
+        "TITLE_CARD",
+        "TAXONOMY_LIST",
+        "QUOTE_CARD",
+        "SCIENCE_SPLIT",
+        "HERO_ICON"
+      ],
+      "backgrounds": [
+        "WHITE",
+        "GRADIENT",
+        "WHITE",
+        "WHITE",
+        "WHITE",
+        "SLATE",
+        "WHITE",
+        "SLATE"
+      ],
+      "typography": {
+        "headingFamily": "Montserrat",
+        "bodyFamily": "Open Sans",
+        "metaFont": "Inter"
+      },
+      "slides": [
+        {
+          "id": "pam_hpi_01",
+          "kind": "COVER",
+          "layout": "HERO_ICON",
+          "bg": "WHITE",
+          "headlineLength": 70,
+          "bodyLength": 134,
+          "bodyLineCount": 1
+        },
+        {
+          "id": "pam_hpi_02",
+          "kind": "STAT",
+          "layout": "STAT_CARD",
+          "bg": "GRADIENT",
+          "stat": {
+            "value": "02",
+            "label": "Clinical checkpoint"
+          },
+          "headlineLength": 36,
+          "bodyLength": 219,
+          "bodyLineCount": 3
+        },
+        {
+          "id": "pam_hpi_03",
+          "kind": "INSIGHT",
+          "layout": "FEATURE_CARDS",
+          "bg": "WHITE",
+          "headlineLength": 29,
+          "bodyLength": 317,
+          "bodyLineCount": 7
+        },
+        {
+          "id": "pam_hpi_04",
+          "kind": "INSIGHT",
+          "layout": "TITLE_CARD",
+          "bg": "WHITE",
+          "headlineLength": 34,
+          "bodyLength": 295,
+          "bodyLineCount": 5
+        },
+        {
+          "id": "pam_hpi_05",
+          "kind": "INSIGHT",
+          "layout": "TAXONOMY_LIST",
+          "bg": "WHITE",
+          "headlineLength": 37,
+          "bodyLength": 314,
+          "bodyLineCount": 4
+        },
+        {
+          "id": "pam_hpi_06",
+          "kind": "QUOTE",
+          "layout": "QUOTE_CARD",
+          "bg": "SLATE",
+          "headlineLength": 39,
+          "bodyLength": 212,
+          "bodyLineCount": 1
+        },
+        {
+          "id": "pam_hpi_07",
+          "kind": "INSIGHT",
+          "layout": "SCIENCE_SPLIT",
+          "bg": "WHITE",
+          "headlineLength": 36,
+          "bodyLength": 293,
+          "bodyLineCount": 4
+        },
+        {
+          "id": "pam_hpi_08",
+          "kind": "CTA",
+          "layout": "HERO_ICON",
+          "bg": "SLATE",
+          "headlineLength": 35,
+          "bodyLength": 177,
+          "bodyLineCount": 2
+        }
+      ]
+    },
+    "packageSnapshotHash": "fb28b7aa97825494e6d6692a3a03ac03d73137b48d35ff4a40821d76168ea423",
+    "canvasAtClick": {
+      "capturedAt": "2026-05-02T18:44:24.696Z",
+      "ratio": "1:1",
+      "slideCount": 8,
+      "typography": {
+        "headingFamily": "Montserrat",
+        "bodyFamily": "Open Sans",
+        "metaFont": "Inter"
+      },
+      "slides": [
+        {
+          "id": "pam_hpi_01",
+          "kind": "COVER",
+          "layout": "HERO_ICON",
+          "bg": "WHITE",
+          "variant": "heroIcon"
+        },
+        {
+          "id": "pam_hpi_02",
+          "kind": "STAT",
+          "layout": "STAT_CARD",
+          "bg": "GRADIENT",
+          "variant": "stat"
+        },
+        {
+          "id": "pam_hpi_03",
+          "kind": "INSIGHT",
+          "layout": "FEATURE_CARDS",
+          "bg": "WHITE",
+          "variant": "featureCards"
+        },
+        {
+          "id": "pam_hpi_04",
+          "kind": "INSIGHT",
+          "layout": "TITLE_CARD",
+          "bg": "WHITE",
+          "variant": "titleCard"
+        },
+        {
+          "id": "pam_hpi_05",
+          "kind": "INSIGHT",
+          "layout": "TAXONOMY_LIST",
+          "bg": "WHITE",
+          "variant": "taxonomyList"
+        },
+        {
+          "id": "pam_hpi_06",
+          "kind": "QUOTE",
+          "layout": "QUOTE_CARD",
+          "bg": "SLATE",
+          "variant": "quote"
+        },
+        {
+          "id": "pam_hpi_07",
+          "kind": "INSIGHT",
+          "layout": "SCIENCE_SPLIT",
+          "bg": "WHITE",
+          "variant": "scienceSplit"
+        },
+        {
+          "id": "pam_hpi_08",
+          "kind": "CTA",
+          "layout": "HERO_ICON",
+          "bg": "SLATE",
+          "variant": "cta"
+        }
+      ]
+    },
+    "canvasSnapshotHash": "3f2512f06ffc54d711e06fd844455262bb45094735e416758845cc9ec076329e"
+  },
+  "parity": {
+    "slideCountMatches": true,
+    "ratioMatches": true,
+    "slideIdMatches": true
+  }
+}

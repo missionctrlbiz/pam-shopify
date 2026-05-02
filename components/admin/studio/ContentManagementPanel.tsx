@@ -61,6 +61,7 @@ import {
     createDefaultCaptions,
     createDefaultCarouselJson,
     normalizeCaption,
+    type StudioAsset,
     type StudioCaption,
     type StudioCaptionsJson,
     type StudioMessage,
@@ -98,6 +99,51 @@ type StudioConfirmDialogState = {
     tone?: "default" | "danger"
     onConfirm: () => void | Promise<void>
     onCancel?: () => void
+}
+
+type StudioExportState = {
+    title: string
+    detail: string
+}
+
+type StudioExportCanvasSnapshot = {
+    capturedAt: string
+    ratio: StudioRatio
+    slideCount: number
+    typography: {
+        headingFamily: string
+        bodyFamily: string
+        metaFont: string
+    }
+    slides: Array<{
+        id: string
+        kind: StudioSlideKind
+        layout: StudioSlideLayout
+        bg: StudioSlideBackground
+        variant: StudioSlideRenderSpec["variant"]
+    }>
+}
+
+type StudioExportResult = {
+    dispatched: boolean
+    taskId: string
+    inline: boolean
+    status?: "pending" | "complete"
+    asset?: StudioAsset
+    assets?: StudioAsset[]
+    downloadUrl?: string
+    filename?: string
+    exportRequestId?: string
+    requestedAt?: string
+    packageUpdatedAt?: string
+}
+
+type StudioExportStatus = {
+    status: "pending" | "complete"
+    asset?: StudioAsset
+    downloadUrl?: string
+    filename?: string
+    exportRequestId?: string
 }
 
 const GRADIENT_BG_CLASS = "bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]"
@@ -227,8 +273,8 @@ function normalizeClientCaptions(captions: Partial<Record<PlatformKey, Partial<S
 
 function sanitizeStudioMessage(text: string) {
     return text
-        .replace(/Studio package generated with [^.]+[.]/gi, "Studio Package Generator: successfully reviewed.")
-        .replace(/Studio fragment updated with [^.]+[.]/gi, "Studio Package Generator: successfully reviewed.")
+        .replace(/Studio package generated with[\s\S]*$/gi, "Studio Package Generator: successfully reviewed.")
+        .replace(/Studio fragment updated with[\s\S]*$/gi, "Studio Package Generator: successfully reviewed.")
         .replace(/\b(?:gemini|claude|gpt)[\w.-]*/gi, "studio generator")
         .replace(/\bAI\s+model\b/gi, "studio generator")
         .replace(/\bmodel\b/gi, "generator")
@@ -374,6 +420,31 @@ function toPreviewSlide(slide: StudioSlide, index: number, totalSlides: number):
     }
 }
 
+function createCanvasExportSnapshot(item: StudioPackage, ratio: StudioRatio): StudioExportCanvasSnapshot {
+    const slides = item.carouselJson.slides.map((slide, index) => {
+        const preview = toPreviewSlide(slide, index, item.carouselJson.slides.length)
+        return {
+            id: slide.id,
+            kind: preview.kind,
+            layout: preview.layout,
+            bg: preview.bg,
+            variant: preview.variant,
+        }
+    })
+
+    return {
+        capturedAt: new Date().toISOString(),
+        ratio,
+        slideCount: slides.length,
+        typography: {
+            headingFamily: "Montserrat",
+            bodyFamily: "Open Sans",
+            metaFont: item.carouselJson.meta.font,
+        },
+        slides,
+    }
+}
+
 type DraftCardItem = {
     id: string
     title: string
@@ -477,10 +548,24 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     return data as T
 }
 
+function sleep(ms: number) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+function downloadStudioExport(url: string, filename = "carousel-assets.zip") {
+    const link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    link.rel = "noopener"
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+}
+
 type StudioStreamEvent =
     | { type: "partial"; target: string; object: Partial<StudioPackage> | { slide?: Partial<StudioSlide> } | { caption?: Partial<StudioCaption> } }
-    | { type: "finish"; target: string; item: StudioPackage; model?: string }
-    | { type: "status"; target: string; message: string; model?: string }
+    | { type: "finish"; target: string; item: StudioPackage }
+    | { type: "status"; target: string; message: string }
     | { type: "error"; error: string }
 
 async function readStudioStream(response: Response, onEvent: (event: StudioStreamEvent) => void) {
@@ -1146,6 +1231,27 @@ function StudioConfirmModal({ dialog, onClose }: { dialog: StudioConfirmDialogSt
     )
 }
 
+function StudioExportOverlay({ state }: { state: StudioExportState | null }) {
+    if (!state) {
+        return null
+    }
+
+    return (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-[#041f50]/35 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-[24px] border border-white/70 bg-white p-6 text-center shadow-[0_24px_80px_-24px_rgba(15,23,42,.55)]">
+                <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-white ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
+                    <RefreshCw size={24} className="animate-spin" />
+                </div>
+                <h2 className="mt-5 text-[16px] font-black tracking-tight text-[#041f50]">{state.title}</h2>
+                <p className="mt-2 text-[12.5px] leading-relaxed text-slate-500">{state.detail}</p>
+                <div className="mt-5 overflow-hidden rounded-full bg-slate-100">
+                    <div className={`h-1.5 w-2/3 animate-pulse rounded-full ${GRADIENT_BG_CLASS}`} />
+                </div>
+            </div>
+        </div>
+    )
+}
+
 function ContentStudioCreate({
     packageItem,
     messages,
@@ -1189,7 +1295,7 @@ function ContentStudioCreate({
     setActivePlatform: (platform: PlatformKey) => void
     promptDraft: string
     setPromptDraft: (value: string) => void
-    onPromptSubmit: () => void
+    onPromptSubmit: (message?: string) => void
     onSelectDrafts: () => void
     onSavePackage: () => void
     onExport: () => void
@@ -1216,6 +1322,7 @@ function ContentStudioCreate({
     const platform = PLATFORM_META[activePlatform]
     const pdfInputRef = useRef<HTMLInputElement>(null)
     const csvInputRef = useRef<HTMLInputElement>(null)
+    const promptInputRef = useRef<HTMLTextAreaElement>(null)
     const packageSlides = Array.isArray(packageItem.carouselJson?.slides) ? packageItem.carouselJson.slides : []
     const packageCaptions = normalizeClientCaptions(packageItem.captionsJson)
     const slides = packageSlides.map((slide, index) => ({
@@ -1298,7 +1405,7 @@ function ContentStudioCreate({
                                 key={message.id}
                                 user={message.role === "user"}
                                 assistant={message.role === "assistant"}
-                                text={message.content}
+                                text={message.role === "assistant" ? sanitizeStudioMessage(message.content) : message.content}
                             />
                         ))}
                     </div>
@@ -1339,8 +1446,22 @@ function ContentStudioCreate({
                             </div>
                         ) : null}
                         <div className="flex items-end rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 transition focus-within:border-purple-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-purple-100">
-                            <textarea value={promptDraft} onChange={(event) => setPromptDraft(event.target.value)} title="Prompt composer" rows={1} placeholder="Tell PAM what to make…" className="min-h-[38px] flex-1 resize-none bg-transparent px-2 py-1.5 text-[12.5px] leading-snug text-slate-700 outline-none placeholder:text-slate-400" />
-                            <button onClick={onPromptSubmit} disabled={isBusy || !promptDraft.trim()} title="Send prompt" aria-label="Send prompt" className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
+                            <textarea
+                                ref={promptInputRef}
+                                value={promptDraft}
+                                onChange={(event) => setPromptDraft(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                                        event.preventDefault()
+                                        onPromptSubmit(promptInputRef.current?.value ?? promptDraft)
+                                    }
+                                }}
+                                title="Prompt composer"
+                                rows={7}
+                                placeholder="Tell PAM what to make…"
+                                className="min-h-[154px] max-h-[230px] flex-1 resize-y bg-transparent px-2 py-2 text-[12.5px] leading-relaxed text-slate-700 outline-none placeholder:text-slate-400"
+                            />
+                            <button onClick={() => onPromptSubmit(promptInputRef.current?.value ?? promptDraft)} disabled={isBusy || !promptDraft.trim()} title="Send prompt" aria-label="Send prompt" className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
                                 <ArrowRight size={11} className="-rotate-45" />
                             </button>
                         </div>
@@ -1549,6 +1670,7 @@ function StudioWorkspace({
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [toasts, setToasts] = useState<StudioToast[]>([])
     const [confirmDialog, setConfirmDialog] = useState<StudioConfirmDialogState | null>(null)
+    const [exportState, setExportState] = useState<StudioExportState | null>(null)
     const manualPackageOpenRef = useRef(false)
 
     const showToast = useCallback((toast: Omit<StudioToast, "id">) => {
@@ -1721,8 +1843,8 @@ function StudioWorkspace({
             return
         }
 
-        const message = messageOverride ?? promptDraft
-        if (!message.trim()) {
+        const message = (messageOverride ?? promptDraft).trim()
+        if (!message) {
             showToast(STUDIO_FEEDBACK.needsPrompt)
             return
         }
@@ -1747,7 +1869,7 @@ function StudioWorkspace({
         setMessages((prior) => [
             ...prior,
             { id: optimisticUserId, packageId: workingPackage.id, role: "user", content: message, target: targetLabel, createdAt: nowIso },
-            { id: optimisticAssistantId, packageId: workingPackage.id, role: "assistant", content: "Thinking…", target: targetLabel, createdAt: nowIso },
+            { id: optimisticAssistantId, packageId: workingPackage.id, role: "assistant", content: "Studio Package Generator: reviewing…", target: targetLabel, createdAt: nowIso },
         ])
 
         setIsBusy(true)
@@ -1764,7 +1886,7 @@ function StudioWorkspace({
                     setActivePackage((current) => current ? mergeStudioPartial(current, event) : current)
                     setMessages((prior) => prior.map((item) => item.id === optimisticAssistantId ? {
                         ...item,
-                        content: target ? "Updating targeted fragment…" : "Streaming carousel structure…",
+                        content: target ? "Studio Package Generator: updating selected item…" : "Studio Package Generator: structuring carousel…",
                     } : item))
                 }
 
@@ -1796,7 +1918,7 @@ function StudioWorkspace({
             setMessages((prior) => prior.filter((item) => item.id !== optimisticUserId && item.id !== optimisticAssistantId))
             const errorText = formatStudioError(error, "Failed to generate studio content")
             setErrorMessage(errorText)
-            showToast({ type: "error", title: "Generation failed", message: errorText })
+            showToast({ type: "error", title: "Review failed", message: errorText })
         } finally {
             setIsBusy(false)
         }
@@ -1804,6 +1926,28 @@ function StudioWorkspace({
 
     async function createPackage() {
         startBlankSession()
+    }
+
+    async function waitForExportBundle(packageId: string) {
+        const maxAttempts = 240
+
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            await sleep(attempt < 3 ? 1500 : 2500)
+            const status = await fetchJson<StudioExportStatus>(`/api/studio/packages/${packageId}/export`)
+
+            if (status.status === "complete" && status.downloadUrl) {
+                return status
+            }
+
+            if (attempt === 8) {
+                setExportState({
+                    title: "Exporting…",
+                    detail: "Rendering all carousel ratios and building the ZIP bundle. This can take a few minutes for larger carousels.",
+                })
+            }
+        }
+
+        throw new Error("Export is still running. Please try Export again in a moment to check for the finished ZIP.")
     }
 
     async function exportPackage() {
@@ -1819,23 +1963,68 @@ function StudioWorkspace({
         }
 
         setIsBusy(true)
+        setExportState({
+            title: "Exporting…",
+            detail: "Rendering all carousel formats, collecting captions, and preparing the ZIP download.",
+        })
         setErrorMessage(null)
         try {
+            const canvasSnapshot = createCanvasExportSnapshot({
+                ...activePackage,
+                carouselJson: { ...activePackage.carouselJson, ratio },
+            }, ratio)
+            const exportRequestId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                ? crypto.randomUUID()
+                : `export-${Date.now()}`
+            const requestedAt = new Date().toISOString()
             const saved = await savePackage({ ...activePackage, carouselJson: { ...activePackage.carouselJson, ratio } })
             if (!saved) {
                 return
             }
-            await fetchJson(`/api/studio/packages/${saved.id}/export`, {
+
+            setIsBusy(true)
+            setExportState({
+                title: "Exporting…",
+                detail: "Export job started. Waiting for the ZIP bundle to finish.",
+            })
+
+            const result = await fetchJson<StudioExportResult>(`/api/studio/packages/${saved.id}/export`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ratios: STUDIO_RATIOS, mode: "ALL" }),
+                body: JSON.stringify({
+                    ratios: STUDIO_RATIOS,
+                    mode: "ALL",
+                    exportRequestId,
+                    requestedAt,
+                    canvasSnapshot,
+                }),
             })
-            showToast(STUDIO_FEEDBACK.exported)
+            if (result.exportRequestId) {
+                setExportState({
+                    title: "Exporting…",
+                    detail: `Export job is running. Trace ID: ${result.exportRequestId}`,
+                })
+            }
+
+            const finished = result.downloadUrl ? result : await waitForExportBundle(saved.id)
+            if (!finished.downloadUrl) {
+                throw new Error("Export completed but no ZIP download was returned.")
+            }
+
+            downloadStudioExport(finished.downloadUrl, finished.filename)
+            showToast({
+                type: "success",
+                title: "Export done",
+                message: finished.exportRequestId
+                    ? `ZIP bundle downloaded. Trace ID: ${finished.exportRequestId}`
+                    : "ZIP bundle downloaded with all carousel formats and captions.",
+            })
         } catch (error) {
             const message = formatStudioError(error, "Failed to export studio assets")
             setErrorMessage(message)
             showToast({ type: "error", title: "Export failed", message })
         } finally {
+            setExportState(null)
             setIsBusy(false)
         }
     }
@@ -2303,7 +2492,7 @@ function StudioWorkspace({
                         setActivePlatform={setActivePlatform}
                         promptDraft={promptDraft}
                         setPromptDraft={setPromptDraft}
-                        onPromptSubmit={() => void handlePromptSubmit()}
+                        onPromptSubmit={(message) => void handlePromptSubmit(undefined, message)}
                         onSelectDrafts={() => void changeWorkspaceView("drafts")}
                         onSavePackage={() => void savePackage()}
                         onExport={() => void exportPackage()}
@@ -2349,6 +2538,7 @@ function StudioWorkspace({
         </div>
         <StudioToastStack toasts={toasts} onDismiss={(id) => setToasts((current) => current.filter((toast) => toast.id !== id))} />
         <StudioConfirmModal dialog={confirmDialog} onClose={() => setConfirmDialog(null)} />
+        <StudioExportOverlay state={exportState} />
         </>
     )
 }
@@ -2731,7 +2921,7 @@ function SettingsView({
                                 </SurfaceCard>
                                 <SurfaceCard className="space-y-3 p-5">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="flex items-center gap-2 text-[13px] font-bold text-[#041f50]"><MessageCircleMore size={11} className="text-purple-500" />AI Context</h3>
+                                        <h3 className="flex items-center gap-2 text-[13px] font-bold text-[#041f50]"><MessageCircleMore size={11} className="text-purple-500" />Studio Context</h3>
                                         <div className="inline-flex gap-1 rounded-xl border border-slate-200 bg-white p-[3px]">
                                             <button onClick={() => setContextTab("always")} className={`rounded-lg px-2.5 py-1 text-[10.5px] font-semibold transition ${contextTab === "always" ? "bg-[#0a0e1f] text-white" : "text-slate-500"}`}>Always say</button>
                                             <button onClick={() => setContextTab("never")} className={`rounded-lg px-2.5 py-1 text-[10.5px] font-semibold transition ${contextTab === "never" ? "bg-[#0a0e1f] text-white" : "text-slate-500"}`}>Never say</button>
@@ -2822,13 +3012,9 @@ function SettingsView({
                                 </div>
                             </SurfaceCard>
                         )}
-                        {settingsTab === "model" && (
+                        {settingsTab === "quality" && (
                             <SurfaceCard className="space-y-5 p-5">
-                                <h3 className="text-[13px] font-bold text-[#041f50]">Model Configuration</h3>
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <Field label="Strategist" value={settings.modelStrategist} asSelect options={MODEL_OPTIONS} onChange={(value) => setSettings({ ...settings, modelStrategist: value })} />
-                                    <Field label="Quality Gate" value={settings.modelGate} asSelect options={MODEL_OPTIONS} onChange={(value) => setSettings({ ...settings, modelGate: value })} />
-                                </div>
+                                <h3 className="text-[13px] font-bold text-[#041f50]">Quality & Defaults</h3>
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
                                         <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Gate Threshold</label>

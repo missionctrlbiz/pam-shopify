@@ -8,23 +8,32 @@ export const studioExportPackageTask = task({
     retry: {
         maxAttempts: 2,
     },
-    run: async (payload: StudioExportPackageInput) => {
+    run: async (payload: StudioExportPackageInput, { ctx }) => {
+        const payloadWithRunContext: StudioExportPackageInput = {
+            ...payload,
+            exportJobId: payload.exportJobId ?? ctx.run.id,
+            requestedAt: payload.requestedAt ?? ctx.run.createdAt.toISOString(),
+        }
+
         logger.info("Starting studio package export", {
-            packageId: payload.packageId,
-            ratios: payload.ratios,
-            mode: payload.mode,
+            packageId: payloadWithRunContext.packageId,
+            exportJobId: payloadWithRunContext.exportJobId,
+            ratios: payloadWithRunContext.ratios,
+            mode: payloadWithRunContext.mode,
         })
 
-        const assets = await runStudioExportPackage(payload)
+        const assets = await runStudioExportPackage(payloadWithRunContext)
 
         logger.info("Completed studio package export", {
-            packageId: payload.packageId,
+            packageId: payloadWithRunContext.packageId,
+            exportJobId: payloadWithRunContext.exportJobId,
             assets: assets.length,
         })
 
         return {
             ok: true,
-            packageId: payload.packageId,
+            packageId: payloadWithRunContext.packageId,
+            exportJobId: payloadWithRunContext.exportJobId,
             assets,
         }
     },
