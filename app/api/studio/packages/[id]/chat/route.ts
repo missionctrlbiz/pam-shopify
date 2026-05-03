@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
-import { getStudioGenerationModels, getTargetSlideCount, isStudioModelUnavailable, streamStudioGeneration } from "@/lib/studio/ai"
+import {
+    getSlideCountMismatchMessage,
+    getStudioGenerationModels,
+    getTargetSlideCount,
+    isStudioModelUnavailable,
+    isStudioSlideCountMismatchError,
+    streamStudioGeneration,
+} from "@/lib/studio/ai"
 import { ensureStudioSettings, parseStudioPackageRow, requireStudioAdmin } from "@/lib/studio/server"
 import {
     applyStudioCarouselVariety,
@@ -128,6 +135,36 @@ function mergeFinalObject(pkg: StudioPackage, target: StudioTarget, value: Studi
     }
 }
 
+function getGeneratedSlideCount(value: StudioGeneratedObject) {
+    return Array.isArray(value.carouselJson?.slides) ? value.carouselJson.slides.length : 0
+}
+
+function isStructuredGenerationRetryable(error: unknown) {
+    if (!(error instanceof Error)) {
+        return false
+    }
+
+    return isStudioSlideCountMismatchError(error)
+        || /No object generated/i.test(error.message)
+        || /could not parse/i.test(error.message)
+        || /invalid json/i.test(error.message)
+        || /schema/i.test(error.message)
+}
+
+function buildStructuredRetryMessage(message: string, expectedSlideCount: number | null, error: unknown) {
+    const countMatch = error instanceof Error
+        ? error.message.match(/returned\s+(\d+)\s+slides/i)
+        : null
+    const actual = countMatch?.[1] ? Number(countMatch[1]) : 0
+
+    if (expectedSlideCount) {
+        return getSlideCountMismatchMessage(message, expectedSlideCount, actual)
+            + "\nReturn only the structured object that matches the schema. No markdown. No prose before or after the object."
+    }
+
+    return `${message}\n\nReturn only the structured object that matches the schema. No markdown. No prose before or after the object.`
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const ownerId = await requireStudioAdmin()
@@ -167,75 +204,106 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 }
 
                 let lastError: unknown
+                const targetSlideCount = target === "CAROUSEL" ? getTargetSlideCount(pkg, settings, message) : null
 
                 for (const [index, modelId] of modelIds.entries()) {
-                    try {
-                        if (index > 0) {
-                            send({
-                                type: "status",
-                                target,
-                                message: "Studio Package Generator: retrying review.",
-                            })
-                        }
+                    const maxAttempts = target === "CAROUSEL" ? 3 : 1
+                    let attemptMessage = message
 
-                        const result = streamStudioGeneration(pkg, settings, message, target, modelId)
-
-                        for await (const part of result.fullStream) {
-                            if (part.type === "object") {
-                                send({ type: "partial", target, object: part.object })
-                            } else if (part.type === "error") {
-                                throw part.error
+                    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+                        try {
+                            if (index > 0 || attempt > 0) {
+                                send({
+                                    type: "status",
+                                    target,
+                                    message: attempt > 0
+                                        ? "Rebuilding with the exact requested slide count…"
+                                        : "Trying a stronger generation pass to improve the result…",
+                                })
                             }
-                        }
 
-                        const finalObject = await result.object as StudioGeneratedObject
-                        if (target === "CAROUSEL") {
-                            const targetSlideCount = getTargetSlideCount(pkg, settings, message)
-                            const generatedSlideCount = Array.isArray(finalObject.carouselJson?.slides) ? finalObject.carouselJson.slides.length : 0
-                            if (generatedSlideCount !== targetSlideCount) {
-                                throw new Error(`The studio generator returned ${generatedSlideCount} slides, but this prompt requires ${targetSlideCount}. Regenerate with the exact requested count.`)
+                            const result = streamStudioGeneration(pkg, settings, attemptMessage, target, modelId)
+                            const bufferedPartials: StudioGeneratedObject[] = []
+
+                            for await (const part of result.fullStream) {
+                                if (part.type === "object") {
+                                    if (target === "CAROUSEL") {
+                                        bufferedPartials.push(part.object as StudioGeneratedObject)
+                                    } else {
+                                        send({ type: "partial", target, object: part.object })
+                                    }
+                                } else if (part.type === "error") {
+                                    throw part.error
+                                }
                             }
-                        }
-                        const merged = mergeFinalObject(pkg, target, finalObject)
-                        const nextSourcePrompt = pkg.sourcePrompt && pkg.sourcePrompt.trim().length > 0
-                            ? pkg.sourcePrompt
-                            : target === "CAROUSEL" ? message : pkg.sourcePrompt
 
-                        const patch: Record<string, unknown> = {}
-                        if (merged.title) patch.title = merged.title
-                        if (merged.carouselJson) patch.carousel_json = merged.carouselJson
-                        if (merged.captionsJson) patch.captions_json = merged.captionsJson
-                        if (merged.qualityJson) patch.quality_json = merged.qualityJson
-                        if (nextSourcePrompt !== pkg.sourcePrompt) patch.source_prompt = nextSourcePrompt
+                            const finalObject = await result.object as StudioGeneratedObject
+                            if (target === "CAROUSEL" && targetSlideCount) {
+                                const generatedSlideCount = getGeneratedSlideCount(finalObject)
+                                if (generatedSlideCount !== targetSlideCount) {
+                                    throw new Error(`The studio generator returned ${generatedSlideCount} slides, but this prompt requires ${targetSlideCount}. Regenerate with the exact requested count.`)
+                                }
+                            }
 
-                        const { data: updated, error: updateError } = await supabaseAdmin
-                            .from("studio_packages")
-                            .update(patch)
-                            .eq("id", pkg.id)
-                            .eq("owner_id", ownerId)
-                            .select("*")
-                            .single()
+                            if (target === "CAROUSEL") {
+                                for (const object of bufferedPartials) {
+                                    send({ type: "partial", target, object })
+                                }
+                            }
 
-                        if (updateError) {
-                            throw updateError
-                        }
+                            const merged = mergeFinalObject(pkg, target, finalObject)
+                            const nextSourcePrompt = pkg.sourcePrompt && pkg.sourcePrompt.trim().length > 0
+                                ? pkg.sourcePrompt
+                                : target === "CAROUSEL" ? message : pkg.sourcePrompt
 
-                        await supabaseAdmin.from("studio_messages").insert([
-                            { package_id: pkg.id, role: "user", content: message, target },
-                            {
-                                package_id: pkg.id,
-                                role: "assistant",
-                                content: "Studio Package Generator: successfully reviewed.",
-                                target,
-                            },
-                        ])
+                            const patch: Record<string, unknown> = {}
+                            if (merged.title) patch.title = merged.title
+                            if (merged.carouselJson) patch.carousel_json = merged.carouselJson
+                            if (merged.captionsJson) patch.captions_json = merged.captionsJson
+                            if (merged.qualityJson) patch.quality_json = merged.qualityJson
+                            if (nextSourcePrompt !== pkg.sourcePrompt) patch.source_prompt = nextSourcePrompt
 
-                        send({ type: "finish", target, item: parseStudioPackageRow(updated) })
-                        controller.close()
-                        return
-                    } catch (streamError) {
-                        lastError = streamError
-                        if (!isStudioModelUnavailable(streamError) || index === modelIds.length - 1) {
+                            const { data: updated, error: updateError } = await supabaseAdmin
+                                .from("studio_packages")
+                                .update(patch)
+                                .eq("id", pkg.id)
+                                .eq("owner_id", ownerId)
+                                .select("*")
+                                .single()
+
+                            if (updateError) {
+                                throw updateError
+                            }
+
+                            await supabaseAdmin.from("studio_messages").insert([
+                                { package_id: pkg.id, role: "user", content: message, target },
+                                {
+                                    package_id: pkg.id,
+                                    role: "assistant",
+                                    content: "Review complete.",
+                                    target,
+                                },
+                            ])
+
+                            send({ type: "finish", target, item: parseStudioPackageRow(updated) })
+                            controller.close()
+                            return
+                        } catch (streamError) {
+                            lastError = streamError
+
+                            if (target === "CAROUSEL" && attempt < maxAttempts - 1 && isStructuredGenerationRetryable(streamError)) {
+                                attemptMessage = buildStructuredRetryMessage(message, targetSlideCount, streamError)
+                                continue
+                            }
+
+                            if (!isStudioModelUnavailable(streamError) && !isStructuredGenerationRetryable(streamError)) {
+                                break
+                            }
+
+                            if (index === modelIds.length - 1) {
+                                break
+                            }
+
                             break
                         }
                     }

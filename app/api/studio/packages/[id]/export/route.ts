@@ -8,7 +8,7 @@ import type { StudioAsset, StudioRatio } from "@/lib/studio/types"
 import type { studioExportPackageTask } from "@/trigger/studio"
 import type { StudioExportCanvasSnapshot } from "@/lib/studio/exportPackage"
 
-export const maxDuration = 600
+export const maxDuration = 300
 
 function parseAssetRow(row: Record<string, unknown>): StudioAsset {
     return {

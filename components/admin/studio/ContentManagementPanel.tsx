@@ -61,7 +61,6 @@ import {
     createDefaultCaptions,
     createDefaultCarouselJson,
     normalizeCaption,
-    type StudioAsset,
     type StudioCaption,
     type StudioCaptionsJson,
     type StudioMessage,
@@ -124,28 +123,6 @@ type StudioExportCanvasSnapshot = {
     }>
 }
 
-type StudioExportResult = {
-    dispatched: boolean
-    taskId: string
-    inline: boolean
-    status?: "pending" | "complete"
-    asset?: StudioAsset
-    assets?: StudioAsset[]
-    downloadUrl?: string
-    filename?: string
-    exportRequestId?: string
-    requestedAt?: string
-    packageUpdatedAt?: string
-}
-
-type StudioExportStatus = {
-    status: "pending" | "complete"
-    asset?: StudioAsset
-    downloadUrl?: string
-    filename?: string
-    exportRequestId?: string
-}
-
 const GRADIENT_BG_CLASS = "bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]"
 const GRADIENT_SHADOW_CLASS = "shadow-[0_12px_32px_-8px_rgba(175,92,233,.45),0_2px_8px_rgba(237,65,91,.18)]"
 const SLIDE_BORDER_CLASS = "bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]"
@@ -184,6 +161,11 @@ const FRAME_CLASS_BY_RATIO: Record<StudioRatio, string> = {
     "1:1": "h-[380px] w-[380px]",
     "4:5": "h-[450px] w-[360px]",
     "9:16": "h-[516px] w-[290px]",
+}
+const CAPTURE_EXPORT_DIMENSIONS: Record<StudioRatio, { width: number; height: number }> = {
+    "1:1": { width: 1080, height: 1080 },
+    "4:5": { width: 1080, height: 1350 },
+    "9:16": { width: 1080, height: 1920 },
 }
 
 const HOOK_STYLE_OPTIONS = ["STAT_LED", "QUESTION_LED", "MYTH_BUST", "CHECKLIST"]
@@ -273,11 +255,36 @@ function normalizeClientCaptions(captions: Partial<Record<PlatformKey, Partial<S
 
 function sanitizeStudioMessage(text: string) {
     return text
-        .replace(/Studio package generated with[\s\S]*$/gi, "Studio Package Generator: successfully reviewed.")
-        .replace(/Studio fragment updated with[\s\S]*$/gi, "Studio Package Generator: successfully reviewed.")
+        .replace(/Studio package generated with[\s\S]*$/gi, "Review complete.")
+        .replace(/Studio fragment updated with[\s\S]*$/gi, "Update complete.")
         .replace(/\b(?:gemini|claude|gpt)[\w.-]*/gi, "studio generator")
         .replace(/\bAI\s+model\b/gi, "studio generator")
         .replace(/\bmodel\b/gi, "generator")
+}
+
+function getStudioProgressStages(target: string | undefined, promptLength: number) {
+    const targeted = Boolean(target)
+    const longPrompt = promptLength > 700
+
+    if (targeted) {
+        return [
+            "Reviewing your selected update…",
+            "Drafting focused improvements…",
+            "Applying changes to the selected slide/caption…",
+            longPrompt
+                ? "Refining a detailed revision. This can take a little longer…"
+                : "Finalizing selected update…",
+        ]
+    }
+
+    return [
+        "Reviewing your prompt…",
+        "Drafting carousel storyline and teaching flow…",
+        "Mapping layouts, hierarchy, and pacing…",
+        longPrompt
+            ? "Polishing an advanced long-form draft. This can take a little longer…"
+            : "Finishing your carousel package…",
+    ]
 }
 
 function captionToText(caption: Partial<StudioCaption> | null | undefined, platform?: PlatformKey) {
@@ -548,10 +555,6 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     return data as T
 }
 
-function sleep(ms: number) {
-    return new Promise((resolve) => window.setTimeout(resolve, ms))
-}
-
 function downloadStudioExport(url: string, filename = "carousel-assets.zip") {
     const link = document.createElement("a")
     link.href = url
@@ -560,6 +563,59 @@ function downloadStudioExport(url: string, filename = "carousel-assets.zip") {
     document.body.appendChild(link)
     link.click()
     link.remove()
+}
+
+function downloadStudioBlob(blob: Blob, filename = "carousel-assets.zip") {
+    const url = URL.createObjectURL(blob)
+    try {
+        downloadStudioExport(url, filename)
+    } finally {
+        window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
+    }
+}
+
+function dataUrlToUint8Array(dataUrl: string) {
+    const [, base64 = ""] = dataUrl.split(",")
+    const binary = window.atob(base64)
+    const bytes = new Uint8Array(binary.length)
+    for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index)
+    }
+    return bytes
+}
+
+function studioExportFilename(title: string, id: string) {
+    const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 64)
+
+    return `${slug || `carousel-${id.slice(0, 8)}`}-canvas-assets.zip`
+}
+
+function waitForCanvasPaint() {
+    return new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                window.setTimeout(resolve, 80)
+            })
+        })
+    })
+}
+
+async function waitForImages(node: HTMLElement) {
+    const images = Array.from(node.querySelectorAll("img"))
+    await Promise.all(images.map((image) => {
+        if (image.complete && image.naturalWidth > 0) {
+            return Promise.resolve()
+        }
+
+        return new Promise<void>((resolve) => {
+            image.addEventListener("load", () => resolve(), { once: true })
+            image.addEventListener("error", () => resolve(), { once: true })
+        })
+    }))
 }
 
 type StudioStreamEvent =
@@ -790,13 +846,18 @@ function SlideFrame({
     return (
         <div className="relative flex flex-col items-center gap-3">
             <span className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-slate-400">{slide.label}</span>
-            <div className={`relative rounded-[18px] p-1 shadow-[0_24px_60px_-12px_rgba(175,92,233,0.35),0_4px_16px_rgba(0,0,0,0.12)] ${SLIDE_BORDER_CLASS}`}>
-                <div className="absolute -top-4 right-3 z-30 flex gap-1">
+            <div
+                data-studio-slide-capture="true"
+                data-studio-slide-id={slide.id}
+                data-studio-slide-ratio={ratio}
+                className={`relative rounded-[18px] p-1 shadow-[0_24px_60px_-12px_rgba(175,92,233,0.35),0_4px_16px_rgba(0,0,0,0.12)] ${SLIDE_BORDER_CLASS}`}
+            >
+                <div data-studio-export-ignore="true" className="absolute -top-4 right-3 z-30 flex gap-1">
                     <IconChip icon={RefreshCw} title="Regenerate slide" label="Regen" disabled={isBusy} onClick={onRegenerate} />
                     <IconChip icon={Copy} title="Duplicate slide" label="Copy" disabled={isBusy} onClick={onDuplicate} />
                     <IconChip icon={X} title="Delete slide" label="Delete" tone="danger" disabled={isBusy} onClick={onDelete} />
                 </div>
-                <div className="absolute -bottom-3 left-1/2 z-20 h-1.5 w-12 -translate-x-1/2 rounded-full bg-slate-300" />
+                <div data-studio-export-ignore="true" className="absolute -bottom-3 left-1/2 z-20 h-1.5 w-12 -translate-x-1/2 rounded-full bg-slate-300" />
                 <div className={`relative overflow-hidden rounded-[14px] ${frameClass}`}>
                     {slide.variant === "heroIcon" && (
                         <div className="relative h-full w-full overflow-hidden bg-white text-[#232536]">
@@ -1848,6 +1909,9 @@ function StudioWorkspace({
             showToast(STUDIO_FEEDBACK.needsPrompt)
             return
         }
+        if (!target) {
+            setPromptDraft("")
+        }
 
         let workingPackage = activePackage
         if (isUnsavedStudioPackage(workingPackage)) {
@@ -1859,18 +1923,39 @@ function StudioWorkspace({
                 return
             }
             workingPackage = saved
+            if (!target) {
+                setPromptDraft("")
+            }
         }
 
+        const packageBeforeStream = workingPackage
         const optimisticUserId = `optimistic-user-${Date.now()}`
         const optimisticAssistantId = `optimistic-assistant-${Date.now()}`
         const nowIso = new Date().toISOString()
         const targetLabel = target ?? "CAROUSEL"
+        const progressStages = getStudioProgressStages(target, message.length)
+        let stageIndex = 0
+        let stageTimer: number | null = null
+        let allowAutoProgress = true
+        const setAssistantStatus = (content: string) => {
+            setMessages((prior) => prior.map((item) => item.id === optimisticAssistantId ? {
+                ...item,
+                content,
+            } : item))
+        }
 
         setMessages((prior) => [
             ...prior,
             { id: optimisticUserId, packageId: workingPackage.id, role: "user", content: message, target: targetLabel, createdAt: nowIso },
-            { id: optimisticAssistantId, packageId: workingPackage.id, role: "assistant", content: "Studio Package Generator: reviewing…", target: targetLabel, createdAt: nowIso },
+            { id: optimisticAssistantId, packageId: workingPackage.id, role: "assistant", content: progressStages[0], target: targetLabel, createdAt: nowIso },
         ])
+        stageTimer = window.setInterval(() => {
+            if (!allowAutoProgress) {
+                return
+            }
+            stageIndex = Math.min(stageIndex + 1, progressStages.length - 1)
+            setAssistantStatus(progressStages[stageIndex])
+        }, 2300)
 
         setIsBusy(true)
         setErrorMessage(null)
@@ -1884,22 +1969,21 @@ function StudioWorkspace({
             await readStudioStream(response, (event) => {
                 if (event.type === "partial") {
                     setActivePackage((current) => current ? mergeStudioPartial(current, event) : current)
-                    setMessages((prior) => prior.map((item) => item.id === optimisticAssistantId ? {
-                        ...item,
-                        content: target ? "Studio Package Generator: updating selected item…" : "Studio Package Generator: structuring carousel…",
-                    } : item))
+                    if (allowAutoProgress) {
+                        setAssistantStatus(target ? "Applying targeted updates…" : "Structuring carousel output…")
+                    }
                 }
 
                 if (event.type === "finish") {
+                    allowAutoProgress = false
                     setActivePackage(event.item)
                     setRatio(event.item.carouselJson.ratio)
+                    setAssistantStatus(target ? "Targeted update complete." : "Carousel package complete.")
                 }
 
                 if (event.type === "status") {
-                    setMessages((prior) => prior.map((item) => item.id === optimisticAssistantId ? {
-                        ...item,
-                        content: event.message,
-                    } : item))
+                    allowAutoProgress = false
+                    setAssistantStatus(event.message)
                 }
 
                 if (event.type === "error") {
@@ -1916,10 +2000,19 @@ function StudioWorkspace({
             }
         } catch (error) {
             setMessages((prior) => prior.filter((item) => item.id !== optimisticUserId && item.id !== optimisticAssistantId))
+            setActivePackage(packageBeforeStream)
+            setRatio(packageBeforeStream.carouselJson.ratio)
+            if (!target) {
+                setPromptDraft("")
+            }
             const errorText = formatStudioError(error, "Failed to generate studio content")
             setErrorMessage(errorText)
             showToast({ type: "error", title: "Review failed", message: errorText })
         } finally {
+            allowAutoProgress = false
+            if (stageTimer) {
+                window.clearInterval(stageTimer)
+            }
             setIsBusy(false)
         }
     }
@@ -1928,26 +2021,126 @@ function StudioWorkspace({
         startBlankSession()
     }
 
-    async function waitForExportBundle(packageId: string) {
-        const maxAttempts = 240
+    async function captureRenderedCanvasExport(item: StudioPackage, exportRequestId: string, requestedAt: string) {
+        const [{ toPng }, JSZipModule] = await Promise.all([
+            import("html-to-image"),
+            import("jszip"),
+        ])
+        const zip = new JSZipModule.default()
+        const originalRatio = ratio
+        const slideIdsByRatio: Record<StudioRatio, string[]> = {
+            "1:1": [],
+            "4:5": [],
+            "9:16": [],
+        }
+        const capturedSlides: Record<StudioRatio, Array<{ slideId: string; width: number; height: number }>> = {
+            "1:1": [],
+            "4:5": [],
+            "9:16": [],
+        }
+        const exportStartedAt = new Date().toISOString()
 
-        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-            await sleep(attempt < 3 ? 1500 : 2500)
-            const status = await fetchJson<StudioExportStatus>(`/api/studio/packages/${packageId}/export`)
+        try {
+            await document.fonts?.ready
 
-            if (status.status === "complete" && status.downloadUrl) {
-                return status
-            }
-
-            if (attempt === 8) {
+            for (const captureRatio of STUDIO_RATIOS) {
                 setExportState({
-                    title: "Exporting…",
-                    detail: "Rendering all carousel ratios and building the ZIP bundle. This can take a few minutes for larger carousels.",
+                    title: "Capturing canvas…",
+                    detail: `Rendering ${captureRatio} directly from the Studio canvas.`,
                 })
+                setRatio(captureRatio)
+                await waitForCanvasPaint()
+
+                const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-studio-slide-capture='true']"))
+                    .filter((node) => node.dataset.studioSlideRatio === captureRatio)
+                const folder = zip.folder(`slides/${captureRatio}`)
+                const dimensions = CAPTURE_EXPORT_DIMENSIONS[captureRatio]
+
+                for (const [index, slide] of item.carouselJson.slides.entries()) {
+                    const node = nodes.find((candidate) => candidate.dataset.studioSlideId === slide.id)
+                    if (!node) {
+                        throw new Error(`Could not capture slide ${index + 1} for ${captureRatio}.`)
+                    }
+
+                    await waitForImages(node)
+                    const dataUrl = await toPng(node, {
+                        cacheBust: true,
+                        backgroundColor: "transparent",
+                        width: node.offsetWidth,
+                        height: node.offsetHeight,
+                        canvasWidth: dimensions.width,
+                        canvasHeight: dimensions.height,
+                        filter: (domNode) => !(domNode instanceof HTMLElement && domNode.dataset.studioExportIgnore === "true"),
+                    })
+                    const bytes = dataUrlToUint8Array(dataUrl)
+                    const fileName = `${String(index + 1).padStart(2, "0")}-${slide.id}.png`
+
+                    folder?.file(fileName, bytes)
+                    slideIdsByRatio[captureRatio].push(slide.id)
+                    capturedSlides[captureRatio].push({
+                        slideId: slide.id,
+                        width: dimensions.width,
+                        height: dimensions.height,
+                    })
+                }
             }
+        } finally {
+            setRatio(originalRatio)
+            await waitForCanvasPaint()
         }
 
-        throw new Error("Export is still running. Please try Export again in a moment to check for the finished ZIP.")
+        const exportCompletedAt = new Date().toISOString()
+        const canvasSnapshot = createCanvasExportSnapshot({ ...item, carouselJson: { ...item.carouselJson, ratio: originalRatio } }, originalRatio)
+        const manifest = {
+            packageId: item.id,
+            exportRequestId,
+            requestedAt,
+            exportStartedAt,
+            exportCompletedAt,
+            renderer: {
+                name: "client-canvas-dom-capture",
+                version: "canvas-capture-v2026.05.02.1",
+                source: "components/admin/studio/ContentManagementPanel.tsx SlideFrame DOM",
+            },
+            ratios: STUDIO_RATIOS,
+            slideIdsByRatio,
+            capturedSlides,
+            canvasAtClick: canvasSnapshot,
+            package: {
+                id: item.id,
+                title: item.title,
+                status: item.status,
+                updatedAt: item.updatedAt,
+                slideCount: item.carouselJson.slides.length,
+                slideIds: item.carouselJson.slides.map((slide) => slide.id),
+                carouselRatio: item.carouselJson.ratio,
+            },
+        }
+
+        zip.file("captions/instagram.txt", captionToText(item.captionsJson.instagram, "instagram"))
+        zip.file("captions/facebook.txt", captionToText(item.captionsJson.facebook, "facebook"))
+        zip.file("captions/linkedin.txt", captionToText(item.captionsJson.linkedin, "linkedin"))
+        zip.file("captions/tiktok.txt", captionToText(item.captionsJson.tiktok, "tiktok"))
+        zip.file("manifest.json", JSON.stringify(manifest, null, 2))
+        zip.file("package.json", JSON.stringify({
+            id: item.id,
+            title: item.title,
+            status: item.status,
+            exportedAt: exportCompletedAt,
+            exportRequestId,
+            renderer: manifest.renderer,
+            ratios: STUDIO_RATIOS,
+            slideIdsByRatio,
+            carouselJson: item.carouselJson,
+            captionsJson: item.captionsJson,
+            manifest,
+        }, null, 2))
+
+        const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" })
+        return {
+            blob,
+            filename: studioExportFilename(item.title, item.id),
+        }
     }
 
     async function exportPackage() {
@@ -1969,10 +2162,6 @@ function StudioWorkspace({
         })
         setErrorMessage(null)
         try {
-            const canvasSnapshot = createCanvasExportSnapshot({
-                ...activePackage,
-                carouselJson: { ...activePackage.carouselJson, ratio },
-            }, ratio)
             const exportRequestId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
                 ? crypto.randomUUID()
                 : `export-${Date.now()}`
@@ -1984,40 +2173,16 @@ function StudioWorkspace({
 
             setIsBusy(true)
             setExportState({
-                title: "Exporting…",
-                detail: "Export job started. Waiting for the ZIP bundle to finish.",
+                title: "Capturing canvas…",
+                detail: "Building the ZIP from the rendered Studio canvas.",
             })
 
-            const result = await fetchJson<StudioExportResult>(`/api/studio/packages/${saved.id}/export`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ratios: STUDIO_RATIOS,
-                    mode: "ALL",
-                    exportRequestId,
-                    requestedAt,
-                    canvasSnapshot,
-                }),
-            })
-            if (result.exportRequestId) {
-                setExportState({
-                    title: "Exporting…",
-                    detail: `Export job is running. Trace ID: ${result.exportRequestId}`,
-                })
-            }
-
-            const finished = result.downloadUrl ? result : await waitForExportBundle(saved.id)
-            if (!finished.downloadUrl) {
-                throw new Error("Export completed but no ZIP download was returned.")
-            }
-
-            downloadStudioExport(finished.downloadUrl, finished.filename)
+            const finished = await captureRenderedCanvasExport(saved, exportRequestId, requestedAt)
+            downloadStudioBlob(finished.blob, finished.filename)
             showToast({
                 type: "success",
                 title: "Export done",
-                message: finished.exportRequestId
-                    ? `ZIP bundle downloaded. Trace ID: ${finished.exportRequestId}`
-                    : "ZIP bundle downloaded with all carousel formats and captions.",
+                message: `Canvas ZIP downloaded. Trace ID: ${exportRequestId}`,
             })
         } catch (error) {
             const message = formatStudioError(error, "Failed to export studio assets")

@@ -220,6 +220,11 @@ export async function runStudioExportPackage(input: StudioExportPackageInput) {
 
     const rows: Array<Record<string, unknown>> = []
     const zip = new JSZip()
+    const renderPathBySlide: Record<StudioRatio, Array<{ slideId: string; renderer: "satori" }>> = {
+        "1:1": [],
+        "4:5": [],
+        "9:16": [],
+    }
     const slideIdsByRatio: Record<StudioRatio, string[]> = {
         "1:1": [],
         "4:5": [],
@@ -243,6 +248,7 @@ export async function runStudioExportPackage(input: StudioExportPackageInput) {
 
                 folder?.file(`${String(index + 1).padStart(2, "0")}-${normalizedSlide.id}.png`, png)
                 slideIdsByRatio[ratio].push(normalizedSlide.id)
+                renderPathBySlide[ratio].push({ slideId: normalizedSlide.id, renderer: "satori" })
                 rows.push({
                     package_id: item.id,
                     kind: "SLIDE_PNG",
@@ -265,13 +271,14 @@ export async function runStudioExportPackage(input: StudioExportPackageInput) {
             exportStartedAt,
             exportCompletedAt,
             renderer: {
-                name: "satori-resvg",
+                name: "satori-server-export",
                 version: STUDIO_RENDERER_VERSION,
                 typography: STUDIO_TYPOGRAPHY,
             },
             mode,
             ratios,
             slideIdsByRatio,
+            renderPathBySlide,
             snapshot: {
                 package: packageSnapshot,
                 packageSnapshotHash,

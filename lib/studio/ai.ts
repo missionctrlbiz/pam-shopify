@@ -3,9 +3,11 @@ import "server-only"
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { generateObject, streamObject } from "ai"
 import {
+    StudioCarouselSchema,
     StudioCaptionGenerationSchema,
     StudioPackageGenerationSchema,
     StudioQualityGateSchema,
+    StudioSlideSchema,
     StudioSlideGenerationSchema,
 } from "@/lib/studio/schemas"
 import type { StudioPackage, StudioSettings } from "@/lib/studio/types"
@@ -31,22 +33,40 @@ function clampSlideCount(value: number) {
     return Math.max(1, Math.min(Math.round(value), 12))
 }
 
-export function getRequestedSlideCount(...inputs: Array<string | null | undefined>) {
-    const message = inputs.filter(Boolean).join("\n")
+function getRequestedSlideCountFromText(input: string) {
+    const message = input.trim()
+    if (!message) {
+        return null
+    }
+
+    const explicitDigitMatch = message.match(/\b(?:exactly|create|build|generate|make|produce)\s+(?:a\s+)?(\d{1,2})\s+(?:carousel\s+)?slides?\b/i)
+    if (explicitDigitMatch?.[1]) {
+        return clampSlideCount(Number(explicitDigitMatch[1]))
+    }
+
     const hyphenatedMatch = message.match(/\b(\d{1,2})\s*[- ]\s*slide\b/i)
     if (hyphenatedMatch?.[1]) {
         return clampSlideCount(Number(hyphenatedMatch[1]))
     }
 
-    const digitMatch = message.match(/\b(\d{1,2})\b(?:\s+[\w-]+){0,4}\s+(?:carousel\s+)?slides?\b/i)
-    if (digitMatch?.[1]) {
-        return clampSlideCount(Number(digitMatch[1]))
+    const digitMatches = Array.from(message.matchAll(/\b(\d{1,2})\b(?:\s+[\w-]+){0,4}\s+(?:carousel\s+)?slides?\b/gi))
+        .map((match) => Number(match[1]))
+        .filter((value) => Number.isFinite(value))
+    const digitMatch = digitMatches.at(-1)
+    if (typeof digitMatch === "number") {
+        return clampSlideCount(digitMatch)
+    }
+
+    const explicitWordMatch = message.match(/\b(?:exactly|create|build|generate|make|produce)\s+(?:a\s+)?(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?:carousel\s+)?slides?\b/i)
+    if (explicitWordMatch?.[1]) {
+        return SLIDE_COUNT_WORDS[explicitWordMatch[1].toLowerCase()]
     }
 
     const wordPattern = Object.keys(SLIDE_COUNT_WORDS).join("|")
-    const wordMatch = message.match(new RegExp(`\\b(${wordPattern})\\b(?:\\s+[\\w-]+){0,4}\\s+(?:carousel\\s+)?slides?\\b`, "i"))
-    if (wordMatch?.[1]) {
-        return SLIDE_COUNT_WORDS[wordMatch[1].toLowerCase()]
+    const wordMatches = Array.from(message.matchAll(new RegExp(`\\b(${wordPattern})\\b(?:\\s+[\\w-]+){0,4}\\s+(?:carousel\\s+)?slides?\\b`, "gi")))
+    const wordMatch = wordMatches.at(-1)?.[1]
+    if (wordMatch) {
+        return SLIDE_COUNT_WORDS[wordMatch.toLowerCase()]
     }
 
     const slideMarkers = Array.from(message.matchAll(/\bslide\s*(?:#|no\.?|number)?\s*(\d{1,2})\b/gi))
@@ -60,6 +80,31 @@ export function getRequestedSlideCount(...inputs: Array<string | null | undefine
     return null
 }
 
+export function getRequestedSlideCount(...inputs: Array<string | null | undefined>) {
+    for (const input of inputs) {
+        if (!input || typeof input !== "string") {
+            continue
+        }
+        const detected = getRequestedSlideCountFromText(input)
+        if (typeof detected === "number") {
+            return detected
+        }
+    }
+
+    return null
+}
+
+export function isStudioSlideCountMismatchError(error: unknown) {
+    if (!(error instanceof Error)) {
+        return false
+    }
+    return /returned \d+ slides,\s*but .* requires \d+/i.test(error.message)
+}
+
+export function getSlideCountMismatchMessage(message: string, expected: number, actual: number) {
+    return `${message}\n\nIMPORTANT: Return exactly ${expected} slides. The previous output returned ${actual}. Do not return fewer or more slides.`
+}
+
 export function getTargetSlideCount(pkg: StudioPackage, settings: StudioSettings, message: string) {
     return getRequestedSlideCount(message, pkg.sourcePrompt, pkg.sourceText) ?? clampSlideCount(settings.defaultSlides || 8)
 }
@@ -70,6 +115,14 @@ function getGoogleModel(modelId: string) {
     })
 
     return google(modelId)
+}
+
+function createPackageSchemaForSlideCount(slideCount: number) {
+    return StudioPackageGenerationSchema.extend({
+        carouselJson: StudioCarouselSchema.extend({
+            slides: StudioSlideSchema.array().length(slideCount),
+        }),
+    })
 }
 
 function buildSharedContext(pkg: StudioPackage, settings: StudioSettings) {
@@ -245,9 +298,11 @@ export function streamStudioGeneration(
         })
     }
 
+    const targetSlideCount = getTargetSlideCount(pkg, settings, message)
+
     return streamObject({
         model,
-        schema: StudioPackageGenerationSchema,
+        schema: createPackageSchemaForSlideCount(targetSlideCount),
         prompt: buildCarouselPrompt(pkg, settings, message),
         temperature: 0.58,
     })

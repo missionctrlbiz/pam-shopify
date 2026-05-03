@@ -25,4 +25,4 @@ export const STUDIO_TYPOGRAPHY = {
     bodyFamily: "Open Sans",
 } as const
 
-export const STUDIO_RENDERER_VERSION = "satori-resvg-v2026.05.02"
+export const STUDIO_RENDERER_VERSION = "satori-server-v2026.05.02.1"
