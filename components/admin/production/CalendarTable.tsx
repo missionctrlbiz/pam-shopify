@@ -63,6 +63,14 @@ export const POST_TYPE_META: Record<PostType, { label: string; icon: React.React
     EMAIL_LESSON: { label: "Email", icon: <BookOpen size={13} /> },
 }
 
+function isPlatform(value: string): value is Platform {
+    return value in PLATFORM_META
+}
+
+function isPostType(value: string): value is PostType {
+    return value in POST_TYPE_META
+}
+
 // ── StatusBadge ───────────────────────────────────────────────────────────────
 export const StatusBadge: React.FC<{ status: PublishStatus }> = ({ status }) => {
     const meta = STATUS_META[status] ?? STATUS_META.DRAFT
@@ -93,7 +101,9 @@ export const QGBadge: React.FC<{ status: QualityGateStatus; score?: number | nul
 
 // ── PlatformIcon ──────────────────────────────────────────────────────────────
 const PlatformChip: React.FC<{ platform: string }> = ({ platform }) => {
-    const meta = (PLATFORM_META as any)[platform] || { label: platform, icon: <FileText size={14} />, color: PROD_BRAND.gray, bg: PROD_BRAND.grayFaint }
+    const meta = isPlatform(platform)
+        ? PLATFORM_META[platform]
+        : { label: platform, icon: <FileText size={14} />, color: PROD_BRAND.gray, bg: PROD_BRAND.grayFaint }
     return (
         <span
             style={{
@@ -112,7 +122,9 @@ const PlatformChip: React.FC<{ platform: string }> = ({ platform }) => {
 
 // ── PostTypeChip ──────────────────────────────────────────────────────────────
 const PostTypeChip: React.FC<{ postType: string }> = ({ postType }) => {
-    const meta = (POST_TYPE_META as any)[postType] || { icon: <FileText size={12} />, label: postType.replace(/_/g, " ") }
+    const meta = isPostType(postType)
+        ? POST_TYPE_META[postType]
+        : { icon: <FileText size={12} />, label: postType.replace(/_/g, " ") }
     return (
         <span
             style={{

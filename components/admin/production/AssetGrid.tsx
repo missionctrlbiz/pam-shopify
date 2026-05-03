@@ -11,6 +11,14 @@ import { PROD_BRAND } from "./CalendarTable"
 import { CarouselPreview } from "./CarouselPreview"
 import { CarouselViewInline } from "./CarouselViewInline"
 
+type CarouselAssetMetadata = {
+    slideUrls?: string[]
+    zipUrl?: string
+    ratioVariants?: Record<string, string[]>
+    topic?: string
+    content?: string
+}
+
 const ASSET_ICON: Record<AssetType, React.ReactNode> = {
     CAROUSEL_PNG: <Image size={16} />,
     VIDEO_MP4: <Video size={16} />,
@@ -18,6 +26,12 @@ const ASSET_ICON: Record<AssetType, React.ReactNode> = {
     EMAIL_HTML: <FileText size={16} />,
     AUDIO_MP3: <Music size={16} />,
     VIDEO_SCRIPT_JSON: <FileText size={16} />,
+}
+
+function cloneAssetIcon(icon: React.ReactNode, size: number) {
+    return React.isValidElement<{ size?: number }>(icon)
+        ? React.cloneElement(icon, { size })
+        : <FileText size={size} />
 }
 
 interface AssetGridProps {
@@ -50,31 +64,52 @@ function CopyButton({ text }: { text: string }) {
 
 function AssetPreviewModal({ asset, onClose }: { asset: ContentAsset, onClose: () => void }) {
     const [content, setContent] = React.useState<string>("");
-    const [loading, setLoading] = React.useState(true);
+    const [loading, setLoading] = React.useState(!asset.assetType.includes("CAROUSEL"));
 
     const isCarousel = asset.assetType === "CAROUSEL_PNG"
     const slideUrls = (asset.metadata?.slideUrls as string[]) ?? []
 
     useEffect(() => {
-        // Carousels don't need text content fetched
-        if (isCarousel) {
-            setLoading(false);
-            return;
+        let cancelled = false;
+
+        async function loadPreviewContent() {
+            if (isCarousel) {
+                if (!cancelled) setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+            const meta = asset.metadata as Record<string, unknown> | null;
+            if (typeof meta?.content === "string") {
+                if (!cancelled) {
+                    setContent(meta.content);
+                    setLoading(false);
+                }
+                return;
+            }
+
+            if (asset.storageUrl) {
+                try {
+                    const response = await fetch(asset.storageUrl);
+                    const text = await response.text();
+                    if (!cancelled) setContent(text);
+                } catch (err) {
+                    if (!cancelled) setContent("Error loading content: " + String(err));
+                } finally {
+                    if (!cancelled) setLoading(false);
+                }
+                return;
+            }
+
+            if (!cancelled) {
+                setContent("");
+                setLoading(false);
+            }
         }
 
-        const meta = asset.metadata as Record<string, unknown> | null;
-        if (meta?.content) {
-            setContent(meta.content as string);
-            setLoading(false);
-        } else if (asset.storageUrl) {
-            fetch(asset.storageUrl)
-                .then(res => res.text())
-                .then(text => setContent(text))
-                .catch(err => setContent("Error loading content: " + String(err)))
-                .finally(() => setLoading(false));
-        } else {
-            setContent("");
-            setLoading(false);
+        void loadPreviewContent();
+        return () => {
+            cancelled = true;
         }
     }, [asset, isCarousel]);
 
@@ -281,7 +316,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                                         ) : isVideo ? (
                                             <video muted src={asset.storageUrl!} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                         ) : (
-                                            <div style={{ opacity: 0.1, color: PROD_BRAND.navy }}>{React.cloneElement(ASSET_ICON[asset.assetType] as any, { size: 64 })}</div>
+                                            <div style={{ opacity: 0.1, color: PROD_BRAND.navy }}>{cloneAssetIcon(ASSET_ICON[asset.assetType], 64)}</div>
                                         )
                                     ) : (
                                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -340,7 +375,7 @@ export const AssetGrid: React.FC<AssetGridProps> = ({
                         assetType: previewAsset.assetType,
                         storageUrl: previewAsset.storageUrl,
                         fileName: previewAsset.fileName,
-                        metadata: previewAsset.metadata as any,
+                        metadata: previewAsset.metadata as CarouselAssetMetadata | null,
                     }}
                     onClose={() => setPreviewAsset(null)}
                 />

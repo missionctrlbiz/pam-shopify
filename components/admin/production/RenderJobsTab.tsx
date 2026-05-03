@@ -114,6 +114,12 @@ const ASSET_TYPE_LABEL: Record<string, string> = {
     VIDEO_SCRIPT_JSON: "Script",
 }
 
+function cloneAssetTypeIcon(icon: React.ReactNode, size: number) {
+    return React.isValidElement<{ size?: number }>(icon)
+        ? React.cloneElement(icon, { size })
+        : <FileText size={size} />
+}
+
 type FilterTab = "all" | "active" | "failed" | "complete" | "incomplete"
 
 const FILTER_TABS: { id: FilterTab; label: string; status?: string }[] = [
@@ -695,7 +701,7 @@ export const RenderJobsTab: React.FC = () => {
                                     }}
                                 >
                                     {React.isValidElement(ASSET_TYPE_ICON[previewAsset.assetType])
-                                        ? React.cloneElement(ASSET_TYPE_ICON[previewAsset.assetType] as any, { size: 28 })
+                                        ? cloneAssetTypeIcon(ASSET_TYPE_ICON[previewAsset.assetType], 28)
                                         : <FileText size={28} />}
                                 </div>
 
@@ -1162,7 +1168,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, isExpanded, onToggle, onRetry, i
                                                     {ASSET_TYPE_ICON[asset.assetType] ?? <FileText size={12} />}
                                                 </span>
                                                 <span style={{ color: PROD_BRAND.navy, fontWeight: 600, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                    {(POST_TYPE_META as any)[asset.assetType] || (ASSET_TYPE_ICON as any)[asset.assetType] ? asset.assetType.replace(/_/g, " ") : "Unknown Asset"}
+                                                    {ASSET_TYPE_LABEL[asset.assetType] ?? asset.assetType.replace(/_/g, " ") ?? "Unknown Asset"}
                                                 </span>
                                                 {isDone && asset.storageUrl && (
                                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
