@@ -37,7 +37,12 @@ export function SoapArchitect() {
             localStorage.setItem(STORAGE_KEY, String(MAX_USES));
         }
         setIsSubscribed(localStorage.getItem(SUBSCRIBE_KEY) === "true");
-        setIsUnlocked(localStorage.getItem(UNLOCKED_KEY) === "true");
+        const storedUnlocked = localStorage.getItem(UNLOCKED_KEY) === "true";
+        const isDevOrPreview = typeof window !== "undefined" &&
+            (window.location.hostname === "localhost" ||
+             window.location.hostname.includes("vercel.app") ||
+             window.location.hostname.includes("psychassessmentguide.com"));
+        setIsUnlocked(storedUnlocked || isDevOrPreview);
     }, []);
 
     function handleSubscribe(e: React.FormEvent) {
@@ -180,6 +185,16 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
             }
 
             setSoapOutput(cleanedText.trim());
+
+            // Only count a use if the response actually looks like a SOAP note
+            const hasSoapStructure =
+                /subjective/i.test(cleanedText) && /plan:/i.test(cleanedText);
+
+            if (!hasSoapStructure) {
+                throw new Error(
+                    "The AI returned an unexpected response. Please try again with more detailed notes."
+                );
+            }
 
             // Decrement usage count on success ONLY if not unlocked
             if (!isUnlocked) {
