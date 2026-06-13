@@ -18,31 +18,58 @@ export function SoapArchitect() {
     const SUBSCRIBE_KEY = "pam_soap_subscribed";
     const UNLOCKED_KEY = "pam_soap_unlocked";
 
-    const [usesLeft, setUsesLeft] = useState<number>(MAX_USES);
-    const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+    const [usesLeft, setUsesLeft] = useState<number>(() => {
+        try {
+            if (typeof window === "undefined") return MAX_USES;
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored !== null ? parseInt(stored, 10) : MAX_USES;
+        } catch {
+            return MAX_USES;
+        }
+    });
+    const [isSubscribed, setIsSubscribed] = useState<boolean>(() => {
+        try {
+            if (typeof window === "undefined") return false;
+            return localStorage.getItem(SUBSCRIBE_KEY) === "true";
+        } catch {
+            return false;
+        }
+    });
     const [subEmail, setSubEmail] = useState("");
     const [subName, setSubName] = useState("");
     const [subError, setSubError] = useState("");
 
-    const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
+    const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+        try {
+            if (typeof window === "undefined") return false;
+            const stored = localStorage.getItem(UNLOCKED_KEY) === "true";
+            const isOwnerDomain =
+                window.location.hostname === "localhost" ||
+                window.location.hostname.includes("vercel.app") ||
+                window.location.hostname.includes("psychassessmentguide.com");
+            return stored || isOwnerDomain;
+        } catch {
+            return false;
+        }
+    });
     const [unlockEmail, setUnlockEmail] = useState("");
     const [isUnlocking, setIsUnlocking] = useState(false);
     const [unlockError, setUnlockError] = useState("");
 
     useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored !== null) {
-            setUsesLeft(parseInt(stored, 10));
-        } else {
-            localStorage.setItem(STORAGE_KEY, String(MAX_USES));
+        try {
+            if (localStorage.getItem(STORAGE_KEY) === null) {
+                localStorage.setItem(STORAGE_KEY, String(MAX_USES));
+            }
+            if (localStorage.getItem(SUBSCRIBE_KEY) === null) {
+                localStorage.setItem(SUBSCRIBE_KEY, "false");
+            }
+            if (localStorage.getItem(UNLOCKED_KEY) === null) {
+                localStorage.setItem(UNLOCKED_KEY, "false");
+            }
+        } catch {
+            // noop: localStorage may be restricted in some browsing contexts
         }
-        setIsSubscribed(localStorage.getItem(SUBSCRIBE_KEY) === "true");
-        const storedUnlocked = localStorage.getItem(UNLOCKED_KEY) === "true";
-        const isDevOrPreview = typeof window !== "undefined" &&
-            (window.location.hostname === "localhost" ||
-             window.location.hostname.includes("vercel.app") ||
-             window.location.hostname.includes("psychassessmentguide.com"));
-        setIsUnlocked(storedUnlocked || isDevOrPreview);
     }, []);
 
     function handleSubscribe(e: React.FormEvent) {
