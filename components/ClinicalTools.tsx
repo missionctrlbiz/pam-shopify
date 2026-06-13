@@ -213,13 +213,10 @@ DO NOT add any text before the title or after the Plan section. Output ONLY the 
 
             setSoapOutput(cleanedText.trim());
 
-            // Only count a use if the response actually looks like a SOAP note
-            const hasSoapStructure =
-                /subjective/i.test(cleanedText) && /plan:/i.test(cleanedText);
-
-            if (!hasSoapStructure) {
+            // Guard against empty or broken responses without burning a free use
+            if ((data.text || "").trim().length < 50) {
                 throw new Error(
-                    "The AI returned an unexpected response. Please try again with more detailed notes."
+                    "The AI returned an empty or too-short response. Please try again."
                 );
             }
 
