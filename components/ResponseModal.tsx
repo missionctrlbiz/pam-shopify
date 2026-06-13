@@ -1,10 +1,10 @@
 "use client";
 
 import { X, Copy, Download, Check } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { marked } from "marked";
 import DOMPurify from "isomorphic-dompurify";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface ResponseModalProps {
     isOpen: boolean;
@@ -38,6 +38,16 @@ export function ResponseModal({
 
     const colorScheme = colors[accentColor];
 
+    const html = useMemo(() => {
+        try {
+            const raw = typeof initialContent === "string" ? initialContent : "";
+            return DOMPurify.sanitize(marked.parse(raw) as string);
+        } catch (e) {
+            console.error("Render error:", e);
+            return '<p class="text-red-400">Unable to display formatted content.</p>';
+        }
+    }, [initialContent]);
+
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(initialContent);
@@ -63,70 +73,63 @@ export function ResponseModal({
     if (!isOpen) return null;
 
     return (
-        <AnimatePresence>
-            <div className="absolute inset-0 z-50 flex items-stretch justify-stretch">
-                {/* Backdrop */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={onClose}
-                    className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                />
-
-                {/* Modal */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full h-full bg-slate-900 rounded-none shadow-none overflow-hidden flex flex-col"
-                >
-                    {/* Header */}
-                    <div className={`${colorScheme.bg} text-white px-6 py-4 flex items-center justify-between`}>
-                        <h2 className="text-xl font-bold">{title}</h2>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleCopy}
-                                className="p-2 hover:bg-white/10 rounded-lg transition"
-                                title="Copy to clipboard"
-                            >
-                                {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                            </button>
-                            <button
-                                onClick={handleDownload}
-                                className="p-2 hover:bg-white/10 rounded-lg transition"
-                                title="Download as text"
-                            >
-                                <Download className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={onClose}
-                                className="p-2 hover:bg-white/10 rounded-lg transition"
-                                title="Close"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-8 bg-slate-900">
-                        <div
-                            className="prose max-w-none text-white **:text-white! prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:leading-relaxed prose-li:my-2 prose-code:text-sm prose-code:bg-slate-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-strong:font-bold"
-                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(initialContent) as string) }}
-                        />
-                    </div>
-
-                    {/* Footer */}
-                    <div className="border-t border-slate-700 px-6 py-4 bg-slate-800">
+        <>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
+                onClick={onClose}
+            />
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="fixed inset-0 z-[60] flex flex-col bg-slate-900"
+            >
+                {/* Header */}
+                <div className={`${colorScheme.bg} text-white px-6 py-4 flex items-center justify-between shrink-0`}>
+                    <h2 className="text-xl font-bold">{title}</h2>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleCopy}
+                            className="p-2 hover:bg-white/10 rounded-lg transition"
+                            title="Copy to clipboard"
+                        >
+                            {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                        </button>
+                        <button
+                            onClick={handleDownload}
+                            className="p-2 hover:bg-white/10 rounded-lg transition"
+                            title="Download as text"
+                        >
+                            <Download className="w-5 h-5" />
+                        </button>
                         <button
                             onClick={onClose}
-                            className={`w-full ${colorScheme.bg} ${colorScheme.hover} text-white px-6 py-3 rounded-lg font-semibold transition`}
+                            className="p-2 hover:bg-white/10 rounded-lg transition"
+                            title="Close"
                         >
-                            Close
+                            <X className="w-5 h-5" />
                         </button>
                     </div>
-                </motion.div>
-            </div>
-        </AnimatePresence>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8 bg-slate-900">
+                    <div
+                        className="prose max-w-none text-white **:text-white! prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:leading-relaxed prose-li:my-2 prose-code:text-sm prose-code:bg-slate-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-strong:font-bold"
+                        dangerouslySetInnerHTML={{ __html: html }}
+                    />
+                </div>
+
+                {/* Footer */}
+                <div className="border-t border-slate-700 px-6 py-4 bg-slate-800 shrink-0">
+                    <button
+                        onClick={onClose}
+                        className={`w-full ${colorScheme.bg} ${colorScheme.hover} text-white px-6 py-3 rounded-lg font-semibold transition`}
+                    >
+                        Close
+                    </button>
+                </div>
+            </motion.div>
+        </>
     );
 }
