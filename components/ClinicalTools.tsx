@@ -45,8 +45,7 @@ export function SoapArchitect() {
             const stored = localStorage.getItem(UNLOCKED_KEY) === "true";
             const isOwnerDomain =
                 window.location.hostname === "localhost" ||
-                window.location.hostname.includes("vercel.app") ||
-                window.location.hostname.includes("psychassessmentguide.com");
+                window.location.hostname.includes("vercel.app");
             return stored || isOwnerDomain;
         } catch {
             return false;
