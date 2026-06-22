@@ -14,13 +14,21 @@
                 "href": "/"
             },
             {
-                "label": "The Gap",
-                "href": "#problem"
+                "label": "SOAP Architect",
+                "href": "/soap-architect",
+                "badge": "Free"
             },
             {
-                "label": "SOAP Architect",
-                "href": "#soap-architect",
-                "badge": "Free"
+                "label": "Assessments",
+                "href": "/assessments"
+            },
+            {
+                "label": "Guides",
+                "href": "/guides"
+            },
+            {
+                "label": "Resources",
+                "href": "/resources"
             },
             {
                 "label": "Contact",
@@ -365,5 +373,161 @@
             "ctaLabel": "View the Mastery Bundle",
             "priceNote": "$69.99 USD · Digital Edition"
         }
+    },
+    "assessmentsPage": {
+        "eyebrow": "Clinical Assessments · PMHNP Ready",
+        "headline": "Clinical Assessments, Demystified.",
+        "headlineAccent": "Practice them. Master them.",
+        "subheadline": "Step-by-step frameworks for the assessments you'll run every day — written in simple English so you can focus on the patient, not the script.",
+        "items": [
+            {
+                "icon": "Brain",
+                "label": "Mental Status Exam",
+                "description": "A clear, structured MSE you can complete in under 10 minutes — appearance, behavior, speech, mood, affect, thought, perception, cognition, insight, judgment.",
+                "tag": "Core Skill"
+            },
+            {
+                "icon": "ClipboardList",
+                "label": "SOAP Notes",
+                "description": "Subjective, Objective, Assessment, Plan — built for psychiatric settings with safety domains highlighted automatically.",
+                "tag": "Documentation"
+            },
+            {
+                "icon": "Search",
+                "label": "Psychiatric Evaluation",
+                "description": "A full intake interview flow, from chief complaint to risk assessment — with plain-English prompts you can actually say out loud.",
+                "tag": "Intake"
+            },
+            {
+                "icon": "Stethoscope",
+                "label": "Differential Diagnosis",
+                "description": "A simple decision tree to rule out look-alike conditions — depression vs. bipolar, anxiety vs. trauma, psychosis vs. delirium.",
+                "tag": "Reasoning"
+            },
+            {
+                "icon": "ShieldAlert",
+                "label": "Risk Assessment",
+                "description": "Suicide, homicide, self-harm — calibrated questions and documentation phrases for the highest-stakes moments of your shift.",
+                "tag": "Safety"
+            },
+            {
+                "icon": "BookOpen",
+                "label": "Case Studies",
+                "description": "Real-world vignettes with sample documentation — read one before clinical and you won't freeze when the patient walks in.",
+                "tag": "Practice"
+            }
+        ],
+        "cta": {
+            "eyebrow": "Get the Bundle",
+            "headline": "Every assessment, in one workbook.",
+            "description": "The Digital Edition includes all six assessment frameworks plus the phrase banks and safety checklists.",
+            "ctaLabel": "Get the Digital Edition",
+            "ctaHref": "/#pricing"
+        },
+        "disclaimer": "Educational content only. Clinical judgment always supersedes any framework."
+    },
+    "guidesPage": {
+        "eyebrow": "Study Guides · Built to Stick",
+        "headline": "Study Guides That Actually Stick.",
+        "headlineAccent": "No fluff. Just the essentials.",
+        "subheadline": "Plain-English study companions for the parts of PMHNP school that the textbooks skip. Print, fold, and carry them in your scrub pocket.",
+        "items": [
+            {
+                "icon": "MessageSquareQuote",
+                "label": "Phrase Banks",
+                "description": "What to actually say when a patient discloses trauma, suicidal thoughts, or refuses medication. Copy-paste ready.",
+                "tag": "Verbatim"
+            },
+            {
+                "icon": "Pill",
+                "label": "Psych Med Cheat Sheets",
+                "description": "Common psychiatric meds at a glance — class, key side effects, monitoring, and what to tell the patient in plain English.",
+                "tag": "Quick Ref"
+            },
+            {
+                "icon": "PenLine",
+                "label": "Documentation Phrases",
+                "description": "Precise clinical phrases for MSE, safety, and risk documentation — preceptor-approved language you can lift straight into the chart.",
+                "tag": "Charts"
+            },
+            {
+                "icon": "Languages",
+                "label": "ESL Glossary",
+                "description": "Every clinical term, defined twice: once in plain English, once in the U.S. clinical context. Built for international nurses.",
+                "tag": "ESL"
+            },
+            {
+                "icon": "FlagTriangleRight",
+                "label": "Preceptor Red Flags",
+                "description": "Common mistakes preceptors flag — and exactly how to avoid them. Written by someone who's graded your work.",
+                "tag": "Caution"
+            },
+            {
+                "icon": "Workflow",
+                "label": "Clinical Workflows",
+                "description": "Step-by-step workflows for med-pass, group therapy, restraint checks, and the first 15 minutes of any new admission.",
+                "tag": "Workflows"
+            }
+        ],
+        "cta": {
+            "eyebrow": "Bundle Discount",
+            "headline": "All guides included in the Mastery Bundle.",
+            "description": "Every guide above — plus the full workbook — comes with the Digital Edition.",
+            "ctaLabel": "View the Bundle",
+            "ctaHref": "/#pricing"
+        },
+        "disclaimer": "Educational content only. Always follow your facility's policies and preceptor guidance."
+    },
+    "resourcesPage": {
+        "eyebrow": "Free Resources · For PMHNP Students",
+        "headline": "Free Resources for PMHNP Students.",
+        "headlineAccent": "Built by a clinician. Free forever.",
+        "subheadline": "Downloadable worksheets, sample notes, and quick-reference tools you can use today — no purchase required.",
+        "items": [
+            {
+                "icon": "FileText",
+                "label": "Sample SOAP Note",
+                "description": "A full, blank SOAP template with safety-domain prompts — print one for every new patient.",
+                "tag": "Template"
+            },
+            {
+                "icon": "ClipboardCheck",
+                "label": "Risk-Assessment Worksheet",
+                "description": "Structured suicide and self-harm screening worksheet with documentation prompts.",
+                "tag": "Worksheet"
+            },
+            {
+                "icon": "ScrollText",
+                "label": "Sample H&P",
+                "description": "A complete History & Physical template built for psychiatric inpatient settings.",
+                "tag": "Template"
+            },
+            {
+                "icon": "BookOpenCheck",
+                "label": "Vocabulary PDF",
+                "description": "Every psychiatric term, defined twice — the ESL-friendly glossary from the workbook.",
+                "tag": "PDF"
+            },
+            {
+                "icon": "Volume2",
+                "label": "Audio Pronunciation Guide",
+                "description": "Hear the clinical terms pronounced by a native English speaker — perfect for ESL learners.",
+                "tag": "Audio"
+            },
+            {
+                "icon": "ListChecks",
+                "label": "Preceptor Checklist",
+                "description": "The 12 things preceptors always look for on day one — print and bring to clinical.",
+                "tag": "Checklist"
+            }
+        ],
+        "cta": {
+            "eyebrow": "Free Forever",
+            "headline": "Need a structured workspace instead?",
+            "description": "Try SOAP Architect free — paste rough notes, get a structured SOAP note back in seconds.",
+            "ctaLabel": "Try SOAP Architect Free",
+            "ctaHref": "/soap-architect"
+        },
+        "disclaimer": "Educational content only. Not a substitute for clinical supervision or professional judgment."
     }
 }
