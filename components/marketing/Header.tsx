@@ -228,7 +228,7 @@ export function Header({
 
 /**
  * Heuristic — given a nav href, return the appropriate transition type.
- * - In-app routes (/assessments, /guides, /resources) → nav-forward
+ * - In-app routes (/soap-architect) → nav-forward
  * - Hash links on same page (#pricing, #about) → no transition
  * - Same page (/) → no transition
  */

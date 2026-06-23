@@ -122,6 +122,18 @@ export function CTAButton({
     className
   );
 
+  // When a link/anchor is disabled we still need to swallow keyboard
+  // activation (Enter / Space) so the disabled state is honoured. Without
+  // an onClick guard, `aria-disabled` is announced but the link still
+  // navigates when activated by keyboard.
+  const handleDisabledNav = (
+    e: React.MouseEvent | React.KeyboardEvent
+  ) => {
+    if (disabled || loading) {
+      e.preventDefault();
+    }
+  };
+
   if (as === "link" && href) {
     return (
       <motion.div
@@ -129,10 +141,12 @@ export function CTAButton({
         className="relative inline-block"
       >
         <Link
-          href={href}
+          href={disabled || loading ? "#" : href}
           className={baseClass}
           aria-label={ariaLabel}
-          aria-disabled={disabled}
+          aria-disabled={disabled || loading}
+          tabIndex={disabled || loading ? -1 : undefined}
+          onClick={handleDisabledNav}
         >
           {content}
         </Link>
@@ -144,10 +158,12 @@ export function CTAButton({
     return (
       <motion.div {...motionProps} className="relative inline-block">
         <a
-          href={href}
+          href={disabled || loading ? undefined : href}
           className={baseClass}
           aria-label={ariaLabel}
-          aria-disabled={disabled}
+          aria-disabled={disabled || loading}
+          tabIndex={disabled || loading ? -1 : undefined}
+          onClick={handleDisabledNav}
         >
           {content}
         </a>

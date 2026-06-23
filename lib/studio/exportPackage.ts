@@ -231,32 +231,45 @@ export async function runStudioExportPackage(input: StudioExportPackageInput) {
         "9:16": [],
     }
 
+    const slideErrors: Array<{ slideId: string; ratio: StudioRatio; index: number; message: string }> = []
+
     if (mode === "SLIDES" || mode === "ALL" || mode === "BUNDLE") {
         for (const ratio of ratios) {
             const folder = zip.folder(`slides/${ratio}`)
             for (const [index, slide] of item.carouselJson.slides.entries()) {
                 const normalizedSlide = normalizeExportSlide(slide, index, item.carouselJson.slides.length)
-                const png = await renderStudioSlideToPng(normalizedSlide, brand, ratio, index, item.carouselJson.slides.length)
-                const storagePath = `${item.id}/slides/${ratio}/${normalizedSlide.id}.png`
+                try {
+                    const png = await renderStudioSlideToPng(normalizedSlide, brand, ratio, index, item.carouselJson.slides.length)
+                    const storagePath = `${item.id}/slides/${ratio}/${normalizedSlide.id}.png`
 
-                const upload = await supabaseAdmin.storage.from("studio").upload(storagePath, png, {
-                    contentType: "image/png",
-                    upsert: true,
-                })
+                    const upload = await supabaseAdmin.storage.from("studio").upload(storagePath, png, {
+                        contentType: "image/png",
+                        upsert: true,
+                    })
 
-                if (upload.error) throw upload.error
+                    if (upload.error) throw upload.error
 
-                folder?.file(`${String(index + 1).padStart(2, "0")}-${normalizedSlide.id}.png`, png)
-                slideIdsByRatio[ratio].push(normalizedSlide.id)
-                renderPathBySlide[ratio].push({ slideId: normalizedSlide.id, renderer: "satori" })
-                rows.push({
-                    package_id: item.id,
-                    kind: "SLIDE_PNG",
-                    ratio,
-                    slide_id: normalizedSlide.id,
-                    storage_path: storagePath,
-                    bytes: png.byteLength,
-                })
+                    folder?.file(`${String(index + 1).padStart(2, "0")}-${normalizedSlide.id}.png`, png)
+                    slideIdsByRatio[ratio].push(normalizedSlide.id)
+                    renderPathBySlide[ratio].push({ slideId: normalizedSlide.id, renderer: "satori" })
+                    rows.push({
+                        package_id: item.id,
+                        kind: "SLIDE_PNG",
+                        ratio,
+                        slide_id: normalizedSlide.id,
+                        storage_path: storagePath,
+                        bytes: png.byteLength,
+                    })
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : "Unknown render error"
+                    console.error(`[studio export] Slide ${index + 1} (${normalizedSlide.id}) @ ${ratio} failed:`, message)
+                    slideErrors.push({
+                        slideId: normalizedSlide.id,
+                        ratio,
+                        index,
+                        message,
+                    })
+                }
             }
         }
     }
@@ -279,6 +292,7 @@ export async function runStudioExportPackage(input: StudioExportPackageInput) {
             ratios,
             slideIdsByRatio,
             renderPathBySlide,
+            ...(slideErrors.length > 0 ? { slideErrors } : {}),
             snapshot: {
                 package: packageSnapshot,
                 packageSnapshotHash,

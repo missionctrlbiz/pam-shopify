@@ -133,6 +133,17 @@ export function buildWebsiteLd(): JsonLdObject {
     name: SITE_CONFIG.name,
     url: SITE_CONFIG.url,
     inLanguage: SITE_CONFIG.locale,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_CONFIG.url}/search?q={search_term_string}`,
+      },
+      // The schema.org spec requires this even though the public site
+      // doesn't currently expose a search UI — Google uses it as the
+      // input name for the sitelinks search box.
+      "query-input": "required name=search_term_string",
+    },
   };
 }
 
@@ -167,8 +178,8 @@ export function buildProductLd(opts?: {
 }
 
 /**
- * BreadcrumbList schema — used on inner pages (/assessments, /guides,
- * /resources) to show breadcrumb snippets in search results.
+ * BreadcrumbList schema — used on inner pages to show breadcrumb
+ * snippets in search results.
  */
 export function buildBreadcrumbLd(
   items: { name: string; url: string }[]

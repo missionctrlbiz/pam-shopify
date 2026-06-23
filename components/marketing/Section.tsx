@@ -5,6 +5,7 @@ import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollReveal } from "./ScrollReveal";
 import { EyebrowBadge } from "./EyebrowBadge";
+import { MotionGrid } from "./MotionGrid";
 
 interface SectionProps {
   id?: string;
@@ -71,7 +72,9 @@ export function Section({
 
   return (
     <section id={id} className={cn(padding, bgClass, className)}>
-      {background === "navy-grid" || background === "slate-grid" ? null : null}
+      {/* Animated motion-grid backdrop for the *-grid backgrounds */}
+      {background === "navy-grid" && <MotionGrid variant="light" />}
+      {background === "slate-grid" && <MotionGrid variant="dark" />}
       <div
         className={cn(
           "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10",

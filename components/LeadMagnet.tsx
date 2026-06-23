@@ -5,6 +5,8 @@ import { useState } from "react";
 import { Download, Loader2, CheckCircle2, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { MotionGrid } from "@/components/marketing/MotionGrid";
+
 type Stage = "form" | "submitting" | "download";
 
 export function LeadMagnet() {
@@ -43,7 +45,18 @@ export function LeadMagnet() {
 
     return (
         <div className="mt-20 bg-[#041f50] rounded-3xl p-8 md:p-12 text-center text-white relative overflow-hidden shadow-2xl">
-            <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
+            {/* Animated motion-grid backdrop (matches Footer) */}
+            <MotionGrid variant="light" fade />
+
+            {/* Ambient colour orbs (matches Footer) */}
+            <div
+                className="absolute -top-32 -left-20 w-[420px] h-[420px] rounded-full bg-psych-purple/20 blur-3xl pointer-events-none"
+                aria-hidden="true"
+            />
+            <div
+                className="absolute -bottom-32 -right-20 w-[480px] h-[480px] rounded-full bg-psych-blue/20 blur-3xl pointer-events-none"
+                aria-hidden="true"
+            />
 
             <AnimatePresence mode="wait">
                 {(stage === "form" || stage === "submitting") && (

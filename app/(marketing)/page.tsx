@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import dynamic from "next/dynamic";
 import {
   CheckCircle2,
   AlertCircle,
@@ -29,14 +28,6 @@ import { StatPill } from "@/components/marketing/StatPill";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-const PDFPreview = dynamic(
-  () =>
-    import("@/components/PDFPreview").then((mod) => ({
-      default: mod.PDFPreview,
-    })),
-  { ssr: false }
-);
 
 const content = siteContent.homePage;
 
@@ -95,7 +86,6 @@ interface SolutionFeature {
 export default function Home() {
   const [loadingProduct, setLoadingProduct] = useState<string | null>(null);
   const [variantIds, setVariantIds] = useState<{ [key: string]: string }>({});
-  const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -595,7 +585,20 @@ export default function Home() {
         id="about"
         className="py-32 bg-slate-50 relative overflow-hidden"
       >
-        <div className="absolute top-0 left-0 w-full h-[36rem] bg-psych-navy -skew-y-3 origin-top-left -translate-y-20 z-0" />
+        {/* Slanted blue banner — only this block carries the motion-grid backdrop (matches Footer) */}
+        <div className="absolute top-0 left-0 w-full h-[36rem] bg-psych-navy -skew-y-3 origin-top-left -translate-y-20 z-0 overflow-hidden">
+          {/* Animated motion-grid backdrop */}
+          <MotionGrid variant="light" />
+          {/* Ambient colour orbs */}
+          <div
+            className="absolute -top-32 -left-20 w-[420px] h-[420px] rounded-full bg-psych-purple/20 blur-3xl pointer-events-none"
+            aria-hidden="true"
+          />
+          <div
+            className="absolute -bottom-32 -right-20 w-[480px] h-[480px] rounded-full bg-psych-blue/20 blur-3xl pointer-events-none"
+            aria-hidden="true"
+          />
+        </div>
 
         <div className="max-w-6xl mx-auto px-4 relative z-10">
           <ScrollReveal direction="up">
@@ -680,11 +683,6 @@ export default function Home() {
         </div>
       </section>
 
-      <PDFPreview
-        isOpen={isPDFPreviewOpen}
-        onClose={() => setIsPDFPreviewOpen(false)}
-        maxPreviewPages={10}
-      />
     </>
   );
 }
@@ -839,14 +837,41 @@ interface FeedbackContent {
 }
 
 function FeedbackForm({ content }: { content: FeedbackContent }) {
-  const [status, setStatus] = useState<"idle" | "submitting" | "success">(
-    "idle"
-  );
+  const [status, setStatus] = useState<
+    "idle" | "submitting" | "success" | "error"
+  >("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [formValues, setFormValues] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("submitting");
-    setTimeout(() => setStatus("success"), 1000);
+    setErrorMessage("");
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formValues.name,
+          email: formValues.email,
+          message: formValues.message,
+        }),
+      });
+      const data = (await res.json()) as { error?: string; success?: boolean };
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Could not send your feedback.");
+      }
+      setStatus("success");
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Could not send your feedback."
+      );
+      setStatus("error");
+    }
   };
 
   if (status === "success") {
@@ -856,7 +881,10 @@ function FeedbackForm({ content }: { content: FeedbackContent }) {
         <h4 className="font-bold text-xl mb-2">{content.successMessage}</h4>
         <button
           type="button"
-          onClick={() => setStatus("idle")}
+          onClick={() => {
+            setStatus("idle");
+            setFormValues({ name: "", email: "", message: "" });
+          }}
           className="mt-6 text-sm font-bold underline hover:no-underline"
         >
           Send another message
@@ -866,18 +894,22 @@ function FeedbackForm({ content }: { content: FeedbackContent }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <div className="grid sm:grid-cols-2 gap-5">
         <FormField
           id="nameInput"
           label={content.nameLabel}
           placeholder={content.namePlaceholder}
+          value={formValues.name}
+          onChange={(v) => setFormValues((p) => ({ ...p, name: v }))}
         />
         <FormField
           id="emailInput"
           label={content.emailLabel}
           placeholder={content.emailPlaceholder}
           type="email"
+          value={formValues.email}
+          onChange={(v) => setFormValues((p) => ({ ...p, email: v }))}
         />
       </div>
       <FormField
@@ -886,7 +918,17 @@ function FeedbackForm({ content }: { content: FeedbackContent }) {
         placeholder={content.messagePlaceholder}
         as="textarea"
         rows={4}
+        value={formValues.message}
+        onChange={(v) => setFormValues((p) => ({ ...p, message: v }))}
       />
+      {status === "error" && errorMessage && (
+        <p
+          role="alert"
+          className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"
+        >
+          {errorMessage}
+        </p>
+      )}
       <CTAButton
         type="submit"
         variant="primary"
@@ -911,6 +953,8 @@ interface FormFieldProps {
   type?: string;
   as?: "input" | "textarea";
   rows?: number;
+  value?: string;
+  onChange?: (value: string) => void;
 }
 
 function FormField({
@@ -920,6 +964,8 @@ function FormField({
   type = "text",
   as = "input",
   rows,
+  value,
+  onChange,
 }: FormFieldProps) {
   const focusRing =
     "focus-within:bg-gradient-psych transition bg-slate-300 rounded-xl p-0.5";
@@ -941,6 +987,8 @@ function FormField({
             required
             rows={rows ?? 3}
             placeholder={placeholder}
+            value={value ?? ""}
+            onChange={(e) => onChange?.(e.target.value)}
             className={`${innerClass} resize-none`}
           />
         ) : (
@@ -949,6 +997,8 @@ function FormField({
             required
             type={type}
             placeholder={placeholder}
+            value={value ?? ""}
+            onChange={(e) => onChange?.(e.target.value)}
             className={innerClass}
           />
         )}

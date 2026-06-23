@@ -36,7 +36,7 @@ const nextConfig: NextConfig = {
     "@resvg/resvg-js-linux-arm64-gnu",
     "@resvg/resvg-js-linux-arm64-musl",
     "@resvg/resvg-js-linux-x64-gnu",
-    "@resvg/resvg-js-linux-arm64-musl",
+    "@resvg/resvg-js-linux-x64-musl",
     "@resvg/resvg-js-win32-arm64-msvc",
     "@resvg/resvg-js-win32-x64-msvc",
   ],

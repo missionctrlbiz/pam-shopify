@@ -173,14 +173,14 @@ export function AdminDashboardClient({ session }: { session: any }) {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("panel") as Tab | null;
   const [activeTab, setActiveTab] = useState<Tab>(normalizeTab(initialTab));
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-
-    return window.localStorage.getItem(ADMIN_SIDEBAR_COLLAPSED_KEY) === "true";
-  });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsSidebarCollapsed(window.localStorage.getItem(ADMIN_SIDEBAR_COLLAPSED_KEY) === "true");
+    }
+  }, []);
 
   const switchTab = useCallback(
     (tab: Tab) => {

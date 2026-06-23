@@ -377,8 +377,8 @@ body {
 }
 
 /* Brand logo morphs across route changes for shared-element feel */
-::view-transition-old(.brand-logo),
-::view-transition-new(.brand-logo) {
+::view-transition-old(brand-logo),
+::view-transition-new(brand-logo) {
   animation: var(--duration-move) ease-in-out both fade;
 }
 

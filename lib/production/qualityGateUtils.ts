@@ -6,6 +6,8 @@
  * without external dependencies (like Google Gen AI).
  */
 
+import { repairJSON } from "@/lib/jsonRepair"
+
 export const QUALITY_GATE_QUESTIONS = [
     "Could this post belong to any generic mental health page, or is it unmistakably specific to psychiatric assessment mastery?",
     "Does this post teach a real, actionable clinical skill that a PMHNP student could apply in their next patient encounter?",
@@ -56,7 +58,7 @@ export function evaluateQualityGateResponse(text: string): QualityGateOutput {
     }
 
     try {
-        raw = JSON.parse(text)
+        raw = repairJSON(text) as typeof raw
     } catch {
         throw new Error(`Quality gate returned non-parseable JSON: ${text.slice(0, 200)}`)
     }

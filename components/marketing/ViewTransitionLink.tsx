@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { forwardRef, type AnchorHTMLAttributes, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import {
+  addTransitionType,
+  forwardRef,
+  startTransition,
+  type AnchorHTMLAttributes,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -23,49 +31,66 @@ interface ViewTransitionLinkProps
  * type on click so the destination page can pick a directional slide.
  *
  * Usage:
- *   <ViewTransitionLink href="/assessments" transitionTypes="nav-forward">
+ *   <ViewTransitionLink href="/soap-architect" transitionTypes="nav-forward">
  *     Assessments
  *   </ViewTransitionLink>
  *
- * Falls back to a plain <a> + next/link on unsupported browsers (the
- * experimental flag in next.config.ts enables wrapping of every <Link>;
- * transitionTypes is a no-op if not supported).
+ * Implementation note: `next/link` does not expose `transitionTypes` in
+ * Next.js 16.1.6 — passing it through leaks the prop onto the DOM <a>
+ * and triggers a React warning. We therefore handle navigation
+ * ourselves via `useRouter` + `startTransition` + `addTransitionType`,
+ * while still rendering through `next/link` for prefetch + ref forwarding.
  */
 export const ViewTransitionLink = forwardRef<
   HTMLAnchorElement,
   ViewTransitionLinkProps
 >(function ViewTransitionLink(
-  { href, transitionTypes, className, children, variant = "default", ...rest },
+  { href, transitionTypes, className, children, variant = "default", onClick, ...rest },
   ref
 ) {
-  const types = Array.isArray(transitionTypes)
-    ? transitionTypes
-    : transitionTypes
-      ? [transitionTypes]
-      : undefined;
+  const router = useRouter();
 
-  // next/link accepts transitionTypes prop when the experimental flag is on.
-  // Cast to any to avoid pulling Next.js's internal type — keeps us
-  // forward-compatible across canary / stable releases.
-  const linkProps = {
-    ref,
-    href,
-    className: cn(
-      "inline-flex items-center gap-1 transition-colors",
-      variant === "default" &&
-        "text-psych-navy font-bold hover:text-psych-purple",
-      variant === "ghost" && "hover:opacity-80",
-      className
-    ),
-    ...rest,
-  } as React.ComponentProps<typeof Link> & {
-    transitionTypes?: TransitionType[];
+  const types = transitionTypes
+    ? Array.isArray(transitionTypes)
+      ? transitionTypes
+      : [transitionTypes]
+    : undefined;
+
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    onClick?.(event);
+    if (event.defaultPrevented) return;
+    // Honor modifier keys, non-primary buttons, new-tab/window targets,
+    // and downloads so the browser handles them natively.
+    if (event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const target = event.currentTarget.target;
+    if (target && target !== "_self") return;
+    if (event.currentTarget.hasAttribute("download")) return;
+
+    event.preventDefault();
+    startTransition(() => {
+      if (types) {
+        for (const t of types) addTransitionType(t);
+      }
+      router.push(href);
+    });
   };
 
-  if (types && types.length > 0) {
-    (linkProps as { transitionTypes?: TransitionType[] }).transitionTypes =
-      types;
-  }
-
-  return <Link {...linkProps}>{children}</Link>;
+  return (
+    <Link
+      ref={ref}
+      href={href}
+      onClick={handleClick}
+      className={cn(
+        "inline-flex items-center gap-1 transition-colors",
+        variant === "default" &&
+          "text-psych-navy font-bold hover:text-psych-purple",
+        variant === "ghost" && "hover:opacity-80",
+        className
+      )}
+      {...rest}
+    >
+      {children}
+    </Link>
+  );
 });

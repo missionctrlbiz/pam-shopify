@@ -2,6 +2,7 @@ import "server-only"
 
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { generateObject, streamObject } from "ai"
+import { z } from "zod"
 import {
     StudioCarouselSchema,
     StudioCaptionGenerationSchema,
@@ -117,12 +118,32 @@ function getGoogleModel(modelId: string) {
     return google(modelId)
 }
 
+const StudioStreamingPackageSchema = StudioPackageGenerationSchema.extend({
+    carouselJson: StudioCarouselSchema.extend({
+        slides: z.array(StudioSlideSchema),
+    }),
+})
+
 function createPackageSchemaForSlideCount(slideCount: number) {
     return StudioPackageGenerationSchema.extend({
         carouselJson: StudioCarouselSchema.extend({
             slides: StudioSlideSchema.array().length(slideCount),
         }),
     })
+}
+
+function validateFinalSlideCount(
+    finalObject: Record<string, unknown>,
+    targetSlideCount: number,
+) {
+    const slides = (finalObject as { carouselJson?: { slides?: Array<unknown> } }).carouselJson?.slides
+    const generated = Array.isArray(slides) ? slides.length : 0
+
+    if (generated !== targetSlideCount) {
+        throw new Error(
+            `The studio generator returned ${generated} slides, but this prompt requires ${targetSlideCount}. Regenerate with the exact requested count.`,
+        )
+    }
 }
 
 function buildSharedContext(pkg: StudioPackage, settings: StudioSettings) {
@@ -300,12 +321,23 @@ export function streamStudioGeneration(
 
     const targetSlideCount = getTargetSlideCount(pkg, settings, message)
 
-    return streamObject({
+    const result = streamObject({
         model,
-        schema: createPackageSchemaForSlideCount(targetSlideCount),
+        schema: StudioStreamingPackageSchema,
         prompt: buildCarouselPrompt(pkg, settings, message),
         temperature: 0.58,
     })
+
+    const originalObject = result.object
+
+    return {
+        ...result,
+        object: originalObject.then((finalObject) => {
+            validateFinalSlideCount(finalObject as Record<string, unknown>, targetSlideCount)
+            return finalObject
+        }),
+        fullStream: result.fullStream,
+    }
 }
 
 export async function runStudioQualityGate(pkg: StudioPackage, settings: StudioSettings) {

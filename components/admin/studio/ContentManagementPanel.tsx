@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useCallback, useEffect, useRef, useState, type ComponentProps, type ComponentType } from "react"
+import { useCallback, useEffect, useRef, useState, type ComponentType } from "react"
 import { motion } from "framer-motion"
 import {
     ArrowRight,
@@ -16,6 +16,7 @@ import {
     Facebook,
     Grip,
     GripVertical,
+    HeartPulse,
     ImagePlus,
     Images,
     Instagram,
@@ -29,6 +30,7 @@ import {
     Palette,
     PencilRuler,
     Plus,
+    RefreshCw,
     Search,
     Settings2,
     ShieldCheck,
@@ -39,8 +41,6 @@ import {
     Upload,
     WandSparkles,
     X,
-    RefreshCw,
-    HeartPulse,
     Zap,
     Bookmark,
     CircleHelp,
@@ -55,6 +55,7 @@ import {
     STUDIO_RATIOS,
     type StudioSlideRenderSpec,
 } from "@/lib/studio/shared"
+import { getSlideLayoutSpec, scaleSpecForDOM, type SlideLayoutSpec } from "@/lib/studio/slideSpec"
 import { STUDIO_FEEDBACK, formatStudioError, type StudioToast } from "@/lib/studio/feedback"
 import {
     applyStudioCarouselVariety,
@@ -75,57 +76,41 @@ import {
     type StudioSlideKind,
     type StudioSlideLayout,
 } from "@/lib/studio/types"
+import {
+    GRADIENT_BG_CLASS,
+    GRADIENT_SHADOW_CLASS,
+    SLIDE_BORDER_CLASS,
+    Music2Icon,
+    EditableText,
+    IconChip,
+    SlideOverlay,
+    DockButton,
+    ChatBubble,
+    ComposerChip,
+    StudioToastStack,
+    StudioConfirmModal,
+    StudioExportOverlay,
+    PillBadge,
+    SurfaceCard,
+    Segment,
+    Field,
+    AssetTile,
+    DistributionCard,
+    StudioErrorBoundary,
+    type PlatformKey,
+    type DraftStatus,
+    type PlatformMeta,
+    type StudioConfirmDialogState,
+    type StudioExportState,
+    type StudioExportCanvasSnapshot,
+    type DraftCardItem,
+    type LibraryCardItem,
+} from "./shared"
 
 type WorkspaceView = "create" | "drafts" | "library" | "settings"
-type PlatformKey = "instagram" | "facebook" | "linkedin" | "tiktok"
 type SettingsTab = "brand" | "voice" | "cta" | "platform" | "quality"
 type ContextTab = "always" | "never"
 
-type DraftStatus = "ready" | "progress" | "draft"
-
-type PlatformMeta = {
-    name: string
-    spec: string
-    swatchClass: string
-    icon: ComponentType<{ size?: number; className?: string }>
-}
-
-type StudioConfirmDialogState = {
-    title: string
-    message: string
-    confirmLabel: string
-    cancelLabel?: string
-    tone?: "default" | "danger"
-    onConfirm: () => void | Promise<void>
-    onCancel?: () => void
-}
-
-type StudioExportState = {
-    title: string
-    detail: string
-}
-
-type StudioExportCanvasSnapshot = {
-    capturedAt: string
-    ratio: StudioRatio
-    slideCount: number
-    typography: {
-        headingFamily: string
-        bodyFamily: string
-        metaFont: string
-    }
-    slides: Array<{
-        id: string
-        kind: StudioSlideKind
-        layout: StudioSlideLayout
-        bg: StudioSlideBackground
-        variant: StudioSlideRenderSpec["variant"]
-    }>
-}
-
-const GRADIENT_BG_CLASS = "bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]"
-const GRADIENT_SHADOW_CLASS = "shadow-[0_12px_32px_-8px_rgba(175,92,233,.45),0_2px_8px_rgba(237,65,91,.18)]"
-const SLIDE_BORDER_CLASS = "bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]"
 const UNSAVED_PACKAGE_PREFIX = "unsaved-studio-package"
 const PLATFORM_HASHTAG_FLOORS: Record<PlatformKey, number> = {
     instagram: 20,
@@ -162,11 +147,6 @@ const FRAME_CLASS_BY_RATIO: Record<StudioRatio, string> = {
     "4:5": "h-[450px] w-[360px]",
     "9:16": "h-[516px] w-[290px]",
 }
-const CAPTURE_EXPORT_DIMENSIONS: Record<StudioRatio, { width: number; height: number }> = {
-    "1:1": { width: 1080, height: 1080 },
-    "4:5": { width: 1080, height: 1350 },
-    "9:16": { width: 1080, height: 1920 },
-}
 
 const HOOK_STYLE_OPTIONS = ["STAT_LED", "QUESTION_LED", "MYTH_BUST", "CHECKLIST"]
 
@@ -197,9 +177,7 @@ const PLATFORM_META: Record<PlatformKey, PlatformMeta> = {
     },
 }
 
-function Music2Icon(props: ComponentProps<typeof Zap>) {
-    return <Zap {...props} />
-}
+const EMPTY_MESSAGES: StudioMessage[] = []
 
 const SETTINGS_TABS: Array<{ key: SettingsTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = [
     { key: "brand", label: "Brand Brief", icon: Bookmark },
@@ -215,8 +193,6 @@ const TONE_CARDS = [
     { title: "Direct", note: "Academic · concise · bullet-driven." },
     { title: "Practitioner", note: "Conversational · POV · field notes." },
 ]
-
-const EMPTY_MESSAGES: StudioMessage[] = []
 
 function statusToDraftStatus(status: StudioPackageStatus): DraftStatus {
     if (status === "READY" || status === "APPROVED" || status === "PUBLISHED") {
@@ -452,27 +428,6 @@ function createCanvasExportSnapshot(item: StudioPackage, ratio: StudioRatio): St
     }
 }
 
-type DraftCardItem = {
-    id: string
-    title: string
-    status: DraftStatus
-    slides: string
-    score: string
-    platforms: Array<ComponentType<{ size?: number; className?: string }>>
-    cover: "book" | "progress" | "empty" | "text"
-    stat?: string
-    note: string
-    button: string
-}
-
-type LibraryCardItem = {
-    title: string
-    meta: string
-    score: string
-    platforms: Array<ComponentType<{ size?: number; className?: string }>>
-    variant: "book" | "text" | "stat"
-}
-
 function getPackagePlatformIcons() {
     return [Instagram, Facebook, Linkedin, Music2Icon]
 }
@@ -565,25 +520,6 @@ function downloadStudioExport(url: string, filename = "carousel-assets.zip") {
     link.remove()
 }
 
-function downloadStudioBlob(blob: Blob, filename = "carousel-assets.zip") {
-    const url = URL.createObjectURL(blob)
-    try {
-        downloadStudioExport(url, filename)
-    } finally {
-        window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
-    }
-}
-
-function dataUrlToUint8Array(dataUrl: string) {
-    const [, base64 = ""] = dataUrl.split(",")
-    const binary = window.atob(base64)
-    const bytes = new Uint8Array(binary.length)
-    for (let index = 0; index < binary.length; index += 1) {
-        bytes[index] = binary.charCodeAt(index)
-    }
-    return bytes
-}
-
 function studioExportFilename(title: string, id: string) {
     const slug = title
         .toLowerCase()
@@ -591,31 +527,7 @@ function studioExportFilename(title: string, id: string) {
         .replace(/^-+|-+$/g, "")
         .slice(0, 64)
 
-    return `${slug || `carousel-${id.slice(0, 8)}`}-canvas-assets.zip`
-}
-
-function waitForCanvasPaint() {
-    return new Promise<void>((resolve) => {
-        window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(() => {
-                window.setTimeout(resolve, 80)
-            })
-        })
-    })
-}
-
-async function waitForImages(node: HTMLElement) {
-    const images = Array.from(node.querySelectorAll("img"))
-    await Promise.all(images.map((image) => {
-        if (image.complete && image.naturalWidth > 0) {
-            return Promise.resolve()
-        }
-
-        return new Promise<void>((resolve) => {
-            image.addEventListener("load", () => resolve(), { once: true })
-            image.addEventListener("error", () => resolve(), { once: true })
-        })
-    }))
+    return `${slug || `carousel-${id.slice(0, 8)}`}-assets.zip`
 }
 
 type StudioStreamEvent =
@@ -720,101 +632,6 @@ function mergeStudioPartial(item: StudioPackage, event: StudioStreamEvent): Stud
     }
 }
 
-function PillBadge({ status }: { status: DraftStatus }) {
-    if (status === "ready") {
-        return (
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-amber-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Ready
-            </span>
-        )
-    }
-
-    if (status === "progress") {
-        return (
-            <span className="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-purple-700">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500" />
-                In progress
-            </span>
-        )
-    }
-
-    return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-            Draft
-        </span>
-    )
-}
-
-function SurfaceCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return <div className={`rounded-[20px] border border-slate-200 bg-white ${className}`}>{children}</div>
-}
-
-/**
- * Inline-editable text that commits on blur or Enter, cancels on Escape.
- * Uses contentEditable so the styled span retains its full appearance (gradient text, etc.).
- */
-function EditableText({
-    value,
-    onCommit,
-    multiline = false,
-    placeholder,
-    className = "",
-    ariaLabel,
-}: {
-    value: string
-    onCommit: (next: string) => void
-    multiline?: boolean
-    placeholder?: string
-    className?: string
-    ariaLabel?: string
-}) {
-    const ref = useRef<HTMLSpanElement>(null)
-    const lastCommittedRef = useRef(value)
-
-    useEffect(() => {
-        if (ref.current && document.activeElement !== ref.current && ref.current.textContent !== value) {
-            ref.current.textContent = value
-        }
-        lastCommittedRef.current = value
-    }, [value])
-
-    return (
-        <span
-            ref={ref}
-            role="textbox"
-            aria-label={ariaLabel}
-            data-placeholder={placeholder}
-            contentEditable
-            suppressContentEditableWarning
-            spellCheck
-            onKeyDown={(event) => {
-                if (!multiline && event.key === "Enter") {
-                    event.preventDefault()
-                    ;(event.currentTarget as HTMLSpanElement).blur()
-                }
-                if (event.key === "Escape") {
-                    event.preventDefault()
-                    ;(event.currentTarget as HTMLSpanElement).textContent = lastCommittedRef.current
-                    ;(event.currentTarget as HTMLSpanElement).blur()
-                }
-            }}
-            onBlur={(event) => {
-                const next = (event.currentTarget.textContent ?? "").replace(/​/g, "")
-                if (next !== lastCommittedRef.current) {
-                    lastCommittedRef.current = next
-                    onCommit(next)
-                }
-            }}
-            className={`outline-none transition focus:ring-2 focus:ring-purple-300/60 focus:bg-white/10 rounded-sm ${value ? "" : "before:content-[attr(data-placeholder)] before:text-current/40"} ${className}`}
-            suppressHydrationWarning
-        >
-            {value}
-        </span>
-    )
-}
-
 function SlideFrame({
     ratio,
     slide,
@@ -840,6 +657,18 @@ function SlideFrame({
         return { term, description }
     })
     const rows = getRows(slide.body ?? [])
+    const specLayout = slide.variant === "heroIcon" || slide.variant === "cover" ? "HERO_ICON"
+        : slide.variant === "featureCards" ? "FEATURE_CARDS"
+        : slide.variant === "titleCard" ? "TITLE_CARD"
+        : slide.variant === "taxonomyList" ? "TAXONOMY_LIST"
+        : slide.variant === "scienceSplit" ? "SCIENCE_SPLIT"
+        : slide.variant === "darkInsight" ? "DARK_NOTE"
+        : slide.variant === "stat" ? "STAT_CARD"
+        : slide.variant === "quote" ? "QUOTE_CARD"
+        : slide.variant === "checklist" ? "CHECKLIST"
+        : slide.variant === "cta" ? "CTA"
+        : "INSIGHT"
+    const spec = scaleSpecForDOM(getSlideLayoutSpec(specLayout, ratio), ratio)
     const cardIcons = [Brain, Search, ShieldCheck, TableProperties, HeartPulse]
     const footerCue = ratio === "1:1" ? null : <span className="text-[7.5px] font-bold tracking-wider">{slide.footer}</span>
 
@@ -863,14 +692,14 @@ function SlideFrame({
                         <div className="relative h-full w-full overflow-hidden bg-white text-[#232536]">
                             <div className="absolute left-6 top-6 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Psych Mastery</div>
                             <div className="relative z-10 flex h-full flex-col items-center justify-center px-8 text-center">
-                                <h2 className="mb-4 text-[22px] font-black leading-[1.05] text-[#232536]">
+                                <h2 className="mb-4 font-black leading-[1.05] text-[#232536]" style={{ fontSize: spec.headlineSize, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Hero headline" multiline ariaLabel="Slide headline" />
                                 </h2>
-                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(237,65,91,.12)_0%,rgba(236,81,133,.14)_48%,rgba(175,92,233,.18)_100%)] text-[#af5ce9]">
-                                    <Brain size={34} strokeWidth={1.8} />
+                                <div className="mb-4 flex items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(237,65,91,.12)_0%,rgba(236,81,133,.14)_48%,rgba(175,92,233,.18)_100%)] text-[#af5ce9]" style={{ width: spec.iconSize, height: spec.iconSize }}>
+                                    <Brain size={Math.round(spec.iconSize * 0.46)} strokeWidth={1.8} />
                                 </div>
                                 <div className="h-px w-full bg-slate-200" />
-                                <p className="mt-5 text-[13px] leading-relaxed text-slate-500">
+                                <p className="mt-5 leading-relaxed text-slate-500" style={{ fontSize: spec.bodySize, lineHeight: 1.45 }}>
                                     <EditableText value={(slide.body ?? []).join("\n")} onCommit={(next) => onEditField("body", next)} placeholder="Trusted clinical resource" multiline ariaLabel="Hero body" />
                                 </p>
                             </div>
@@ -883,7 +712,7 @@ function SlideFrame({
                         <div className="relative h-full w-full overflow-hidden bg-white text-[#232536]">
                             <div className="relative z-10 flex h-full flex-col px-7 pb-10 pt-10">
                                 <div className="mb-5 text-center text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Psych Mastery</div>
-                                <h2 className="mb-4 text-center text-[23px] font-black leading-[1.07]">
+                                <h2 className="mb-4 text-center font-black leading-[1.07]" style={{ fontSize: spec.headlineSize }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Feature headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="mb-4 h-0.5 w-full bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]" />
@@ -913,11 +742,11 @@ function SlideFrame({
                                     <Brain size={36} strokeWidth={1.6} />
                                 </div>
                                 <div className="h-px w-full bg-slate-300" />
-                                <h2 className="my-4 border-l-4 border-transparent bg-[linear-gradient(white,white)_padding-box,linear-gradient(135deg,#ed415b,#ec5185,#af5ce9)_border-box] pl-4 text-[23px] font-black leading-[1.07]">
+                                <h2 className="my-4 border-l-4 border-transparent bg-[linear-gradient(white,white)_padding-box,linear-gradient(135deg,#ed415b,#ec5185,#af5ce9)_border-box] pl-4 font-black leading-[1.07]" style={{ fontSize: spec.headlineSize }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Title card headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="h-px w-full bg-slate-300" />
-                                <p className="mt-5 text-[14px] font-semibold leading-relaxed text-slate-500">
+                                <p className="mt-5 font-semibold leading-relaxed text-slate-500" style={{ fontSize: spec.bodySize }}>
                                     <EditableText value={(slide.body ?? []).join("\n")} onCommit={(next) => onEditField("body", next)} placeholder="Short explanation" multiline ariaLabel="Title card body" />
                                 </p>
                             </div>
@@ -926,11 +755,11 @@ function SlideFrame({
                     {slide.variant === "taxonomyList" && (
                         <div className="relative h-full w-full overflow-hidden bg-white text-[#232536]">
                             <div className="relative z-10 flex h-full flex-col px-7 py-10">
-                                <h2 className="mb-6 text-center text-[24px] font-black uppercase leading-none tracking-[0.06em]">
+                                <h2 className="mb-6 text-center font-black uppercase leading-none tracking-[0.06em]" style={{ fontSize: spec.headlineSize }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Types headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="space-y-0 overflow-hidden rounded-sm bg-slate-100">
-                                    {(rows.length ? rows : [{ term: "Type one", description: "Short clinical definition." }]).slice(0, 4).map((row, index) => (
+                                    {(rows.length ? rows : [{ term: "Type one", description: "Short clinical definition." }]).slice(0, Math.min(4, spec.maxBodyLines || 4)).map((row, index) => (
                                         <div key={`tax-${index}`} className="flex min-h-[74px] items-center gap-4 border-b border-slate-300/70 px-5 py-3 last:border-b-0">
                                             <span className="h-6 w-6 shrink-0 rounded-full bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]" />
                                             <span>
@@ -955,10 +784,10 @@ function SlideFrame({
                                 </div>
                                 <div className="grid flex-1 grid-cols-[1fr_1.05fr] gap-5">
                                     <div className="flex flex-col justify-center border-l-4 border-transparent bg-[linear-gradient(white,white)_padding-box,linear-gradient(135deg,#ed415b,#ec5185,#af5ce9)_border-box] pl-4">
-                                        <h2 className="mb-3 text-[22px] font-black leading-[1.04]">
+                                        <h2 className="mb-3 font-black leading-[1.04]" style={{ fontSize: spec.headlineSize }}>
                                             <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Mechanism headline" multiline ariaLabel="Slide headline" />
                                         </h2>
-                                        <p className="text-[12px] font-semibold leading-relaxed text-slate-600">
+                                        <p className="font-semibold leading-relaxed text-slate-600" style={{ fontSize: spec.bodySize }}>
                                             <EditableText value={(slide.body ?? []).slice(0, 2).join("\n")} onCommit={(next) => onEditField("body", next)} placeholder="Mechanism explanation" multiline ariaLabel="Science body" />
                                         </p>
                                     </div>
@@ -987,14 +816,14 @@ function SlideFrame({
                             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(175,92,233,.08),transparent_58%)]" />
                             <div className="absolute left-6 top-6 z-10 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Psych Mastery</div>
                             <div className="relative z-10 flex h-full flex-col items-center justify-center px-8 text-center">
-                                <h2 className="mb-4 text-[22px] font-black leading-[1.05] text-[#232536]">
+                                <h2 className="mb-4 font-black leading-[1.05] text-[#232536]" style={{ fontSize: spec.headlineSize, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Carousel cover headline" multiline ariaLabel="Slide headline" />
                                 </h2>
-                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(237,65,91,.12)_0%,rgba(236,81,133,.14)_48%,rgba(175,92,233,.18)_100%)] text-[#af5ce9]">
-                                    <Brain size={34} strokeWidth={1.8} />
+                                <div className="mb-4 flex items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(237,65,91,.12)_0%,rgba(236,81,133,.14)_48%,rgba(175,92,233,.18)_100%)] text-[#af5ce9]" style={{ width: spec.iconSize, height: spec.iconSize }}>
+                                    <Brain size={Math.round(spec.iconSize * 0.46)} strokeWidth={1.8} />
                                 </div>
                                 <div className="h-px w-full bg-slate-200" />
-                                <p className="mt-5 text-[13px] leading-relaxed text-slate-500">
+                                <p className="mt-5 leading-relaxed text-slate-500" style={{ fontSize: spec.bodySize }}>
                                     <EditableText value={(slide.body ?? []).join("\n")} onCommit={(next) => onEditField("body", next)} placeholder="Short supporting line" multiline ariaLabel="Cover body" />
                                 </p>
                             </div>
@@ -1011,10 +840,10 @@ function SlideFrame({
                             </SlideOverlay>
                             <div className="relative z-10 flex h-full flex-col justify-center px-7 pb-12 pt-12">
                                 <div className="mb-5 h-1 w-9 rounded-full bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)]" />
-                                <h2 className="mb-4 text-[24px] font-black leading-[1.05] text-[#041f50]">
+                                <h2 className="mb-4 font-black leading-[1.05] text-[#041f50]" style={{ fontSize: spec.headlineSize }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Insight headline" multiline ariaLabel="Slide headline" />
                                 </h2>
-                                <div className="text-[12.5px] leading-relaxed text-slate-600">
+                                <div className="leading-relaxed text-slate-600" style={{ fontSize: spec.bodySize }}>
                                     <EditableText
                                         value={(slide.body ?? []).join("\n")}
                                         onCommit={(next) => onEditField("body", next)}
@@ -1053,12 +882,12 @@ function SlideFrame({
                                 <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-[12px] font-black text-white ring-1 ring-white/10">
                                     <Sparkles size={16} />
                                 </div>
-                                <h2 className="mb-4 text-[23px] font-black leading-[1.05] text-white">
+                                <h2 className="mb-4 font-black leading-[1.05] text-white" style={{ fontSize: spec.headlineSize }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Deep dive headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="space-y-2">
-                                    {(slide.body ?? []).slice(0, 4).map((line, index) => (
-                                        <div key={`dark-${index}`} className="rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-[11px] font-semibold leading-snug text-white/78">
+                                    {(slide.body ?? []).slice(0, spec.maxBodyLines).map((line, index) => (
+                                        <div key={`dark-${index}`} className="rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 font-semibold leading-snug text-white/78" style={{ fontSize: spec.bodySize }}>
                                             {line}
                                         </div>
                                     ))}
@@ -1076,16 +905,16 @@ function SlideFrame({
                                 <Image src="/favicon-white.png" alt="PAM" width={20} height={20} className="h-5 w-5 object-contain opacity-80" />
                             </SlideOverlay>
                             <div className="relative z-10 flex h-full flex-col justify-center px-7 pb-12 pt-12">
-                                <div className="mb-2 text-[48px] font-black leading-none text-white drop-shadow-sm">
+                                <div className="mb-2 font-black leading-none text-white drop-shadow-sm" style={{ fontSize: spec.statSize }}>
                                     <EditableText value={slide.stat ?? ""} onCommit={(next) => onEditField("stat", next)} placeholder="01" ariaLabel="Stat value" />
                                 </div>
-                                <p className="mb-5 max-w-[80%] text-[11px] font-bold uppercase tracking-[0.08em] text-white/70">
+                                <p className="mb-5 max-w-[80%] font-bold uppercase tracking-[0.08em] text-white/70" style={{ fontSize: spec.labelSize }}>
                                     <EditableText value={slide.statNote ?? ""} onCommit={(next) => onEditField("statNote", next)} placeholder="Clinical checkpoint" multiline ariaLabel="Stat label" />
                                 </p>
-                                <h2 className="max-w-[88%] text-[22px] font-black leading-[1.05] text-white">
+                                <h2 className="max-w-[88%] font-black leading-[1.05] text-white" style={{ fontSize: spec.headlineSize }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Stat headline" multiline ariaLabel="Slide headline" />
                                 </h2>
-                                <p className="mt-4 max-w-[86%] text-[11.5px] font-semibold leading-relaxed text-white/72">
+                                <p className="mt-4 max-w-[86%] font-semibold leading-relaxed text-white/72" style={{ fontSize: spec.bodySize }}>
                                     <EditableText value={(slide.body ?? []).join("\n")} onCommit={(next) => onEditField("body", next)} placeholder="Why this matters" multiline ariaLabel="Stat body" />
                                 </p>
                             </div>
@@ -1102,10 +931,10 @@ function SlideFrame({
                             </SlideOverlay>
                             <div className="relative z-10 flex h-full flex-col justify-center px-7 pb-12 pt-12 text-center">
                                 <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.08] text-[34px] font-black leading-none text-white/70">“</div>
-                                <h2 className="text-[23px] font-black leading-[1.08] text-white">
+                                <h2 className="font-black leading-[1.08] text-white" style={{ fontSize: spec.headlineSize }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Field note headline" multiline ariaLabel="Slide headline" />
                                 </h2>
-                                <p className="mx-auto mt-5 max-w-[86%] text-[12px] font-semibold leading-relaxed text-white/62">
+                                <p className="mx-auto mt-5 max-w-[86%] font-semibold leading-relaxed text-white/62" style={{ fontSize: spec.bodySize }}>
                                     <EditableText value={(slide.body ?? []).join("\n")} onCommit={(next) => onEditField("body", next)} placeholder="Short field note" multiline ariaLabel="Quote body" />
                                 </p>
                             </div>
@@ -1121,12 +950,12 @@ function SlideFrame({
                                 <Image src="/logo.webp" alt="PAM" width={68} height={16} className="h-4 w-auto object-contain opacity-90" />
                             </SlideOverlay>
                             <div className="relative z-10 flex h-full flex-col justify-center px-7 pb-12 pt-12">
-                                <h2 className="mb-4 text-[22px] font-black leading-[1.05] text-[#041f50]">
+                                <h2 className="mb-4 font-black leading-[1.05] text-[#041f50]" style={{ fontSize: spec.headlineSize }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="Checklist headline" multiline ariaLabel="Slide headline" />
                                 </h2>
                                 <div className="space-y-2">
-                                    {(slide.body ?? []).slice(0, 5).map((line, index) => (
-                                        <div key={`check-${index}`} className="flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[11.5px] font-semibold leading-snug text-slate-600">
+                                    {(slide.body ?? []).slice(0, spec.maxBodyLines).map((line, index) => (
+                                        <div key={`check-${index}`} className="flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 font-semibold leading-snug text-slate-600" style={{ fontSize: spec.bodySize }}>
                                             <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-white ${GRADIENT_BG_CLASS}`}>
                                                 <Check size={9} />
                                             </span>
@@ -1148,10 +977,10 @@ function SlideFrame({
                             </SlideOverlay>
                             <div className="relative z-10 flex h-full flex-col items-center justify-center px-7 text-center">
                                 <Image src="/1.png" alt="PAM Book" width={88} height={114} className="mb-4 h-[114px] w-[88px] rounded-md object-cover ring-1 ring-white/15 shadow-[0_22px_50px_-10px_rgba(0,0,0,0.6),0_6px_14px_rgba(175,92,233,0.4)]" />
-                                <h2 className="mb-1 text-[18px] font-black leading-tight text-white">
+                                <h2 className="mb-1 font-black leading-tight text-white" style={{ fontSize: spec.headlineSize }}>
                                     <EditableText value={slide.headline ?? ""} onCommit={(next) => onEditField("headline", next)} placeholder="CTA headline" multiline ariaLabel="CTA headline" />
                                 </h2>
-                                <p className="mb-5 text-[10.5px] text-white/45">
+                                <p className="mb-5 text-white/45" style={{ fontSize: spec.bodySize }}>
                                     <EditableText value={slide.body?.[0] ?? ""} onCommit={(next) => onEditField("body", next)} placeholder="CTA body" ariaLabel="CTA body" />
                                 </p>
                                 <div className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[11.5px] font-bold text-white ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
@@ -1164,149 +993,6 @@ function SlideFrame({
                             </SlideOverlay>
                         </div>
                     )}
-                </div>
-            </div>
-        </div>
-    )
-}
-
-function IconChip({
-    icon: Icon,
-    title,
-    label,
-    tone = "default",
-    disabled = false,
-    onClick,
-}: {
-    icon: React.ComponentType<{ size?: number; className?: string }>
-    title: string
-    label: string
-    tone?: "default" | "danger"
-    disabled?: boolean
-    onClick?: () => void
-}) {
-    return (
-        <button
-            type="button"
-            onClick={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                onClick?.()
-            }}
-            title={title}
-            aria-label={title}
-            disabled={disabled}
-            className={`flex h-8 items-center justify-center gap-1 rounded-[10px] bg-white px-2 text-[10.5px] font-bold shadow-[0_6px_16px_-4px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 ${tone === "danger" ? "text-rose-500 hover:text-rose-600" : "text-slate-600 hover:text-purple-600"}`}
-        >
-            <Icon size={13} />
-            <span>{label}</span>
-        </button>
-    )
-}
-
-function SlideOverlay({ top, bottom, dark = false, label, children }: { top?: boolean; bottom?: boolean; dark?: boolean; label: string; children: React.ReactNode }) {
-    return (
-        <div className={`absolute left-0 right-0 z-20 flex items-center justify-between px-[18px] ${top ? "top-0 pt-[14px]" : ""} ${bottom ? "bottom-0 pb-[14px]" : ""}`}>
-            <span className={`rounded-md px-2 py-0.5 text-[8.5px] font-bold uppercase tracking-[0.22em] ${dark ? "border border-white/10 bg-white/10 text-white/80" : "text-purple-500"}`}>
-                {label}
-            </span>
-            {children}
-        </div>
-    )
-}
-
-function StudioToastStack({ toasts, onDismiss }: { toasts: StudioToast[]; onDismiss: (id: string) => void }) {
-    if (toasts.length === 0) {
-        return null
-    }
-
-    return (
-        <div className="fixed bottom-5 right-5 z-[100] flex w-[min(360px,calc(100vw-2rem))] flex-col gap-2">
-            {toasts.map((toast) => (
-                <div key={toast.id} className={`rounded-2xl border bg-white p-4 shadow-[0_18px_50px_-20px_rgba(15,23,42,.45)] ${toast.type === "error" ? "border-rose-200" : toast.type === "success" ? "border-emerald-200" : "border-slate-200"}`}>
-                    <div className="flex items-start gap-3">
-                        <span className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${toast.type === "error" ? "bg-rose-500" : toast.type === "success" ? "bg-emerald-500" : "bg-purple-500"}`} />
-                        <div className="min-w-0 flex-1">
-                            <p className="text-sm font-black text-[#041f50]">{toast.title}</p>
-                            {toast.message ? <p className="mt-1 text-xs leading-relaxed text-slate-500">{toast.message}</p> : null}
-                        </div>
-                        <button type="button" onClick={() => onDismiss(toast.id)} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Dismiss notification">
-                            <X size={13} />
-                        </button>
-                    </div>
-                </div>
-            ))}
-        </div>
-    )
-}
-
-function StudioConfirmModal({ dialog, onClose }: { dialog: StudioConfirmDialogState | null; onClose: () => void }) {
-    if (!dialog) {
-        return null
-    }
-
-    const confirmClass = dialog.tone === "danger"
-        ? "bg-rose-600 text-white shadow-[0_14px_32px_-12px_rgba(225,29,72,.55)] hover:bg-rose-500"
-        : `${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS} text-white hover:opacity-95`
-
-    return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
-            <div role="dialog" aria-modal="true" aria-labelledby="studio-confirm-title" className="w-full max-w-md overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_34px_90px_-32px_rgba(15,23,42,.65)]">
-                <div className={`h-1.5 ${dialog.tone === "danger" ? "bg-rose-500" : GRADIENT_BG_CLASS}`} />
-                <div className="p-6">
-                    <div className="mb-4 flex items-start gap-3">
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white ${dialog.tone === "danger" ? "bg-rose-500" : GRADIENT_BG_CLASS}`}>
-                            {dialog.tone === "danger" ? <Trash2 size={17} /> : <Check size={17} />}
-                        </div>
-                        <div className="min-w-0">
-                            <h2 id="studio-confirm-title" className="text-base font-black tracking-tight text-[#041f50]">{dialog.title}</h2>
-                            <p className="mt-2 text-sm leading-relaxed text-slate-500">{dialog.message}</p>
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                dialog.onCancel?.()
-                                onClose()
-                            }}
-                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 hover:text-[#041f50]"
-                        >
-                            {dialog.cancelLabel ?? "Cancel"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const result = dialog.onConfirm()
-                                onClose()
-                                void result
-                            }}
-                            className={`rounded-xl px-4 py-2 text-sm font-black transition ${confirmClass}`}
-                        >
-                            {dialog.confirmLabel}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-function StudioExportOverlay({ state }: { state: StudioExportState | null }) {
-    if (!state) {
-        return null
-    }
-
-    return (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-[#041f50]/35 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-[24px] border border-white/70 bg-white p-6 text-center shadow-[0_24px_80px_-24px_rgba(15,23,42,.55)]">
-                <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-white ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}>
-                    <RefreshCw size={24} className="animate-spin" />
-                </div>
-                <h2 className="mt-5 text-[16px] font-black tracking-tight text-[#041f50]">{state.title}</h2>
-                <p className="mt-2 text-[12.5px] leading-relaxed text-slate-500">{state.detail}</p>
-                <div className="mt-5 overflow-hidden rounded-full bg-slate-100">
-                    <div className={`h-1.5 w-2/3 animate-pulse rounded-full ${GRADIENT_BG_CLASS}`} />
                 </div>
             </div>
         </div>
@@ -1733,6 +1419,7 @@ function StudioWorkspace({
     const [confirmDialog, setConfirmDialog] = useState<StudioConfirmDialogState | null>(null)
     const [exportState, setExportState] = useState<StudioExportState | null>(null)
     const manualPackageOpenRef = useRef(false)
+    const autosaveTimerRef = useRef<number | null>(null)
 
     const showToast = useCallback((toast: Omit<StudioToast, "id">) => {
         const id = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `toast-${Date.now()}`
@@ -2021,126 +1708,51 @@ function StudioWorkspace({
         startBlankSession()
     }
 
-    async function captureRenderedCanvasExport(item: StudioPackage, exportRequestId: string, requestedAt: string) {
-        const [{ toPng }, JSZipModule] = await Promise.all([
-            import("html-to-image"),
-            import("jszip"),
-        ])
-        const zip = new JSZipModule.default()
-        const originalRatio = ratio
-        const slideIdsByRatio: Record<StudioRatio, string[]> = {
-            "1:1": [],
-            "4:5": [],
-            "9:16": [],
-        }
-        const capturedSlides: Record<StudioRatio, Array<{ slideId: string; width: number; height: number }>> = {
-            "1:1": [],
-            "4:5": [],
-            "9:16": [],
-        }
-        const exportStartedAt = new Date().toISOString()
+    async function pollExportStatus(packageId: string, title: string, exportRequestId: string) {
+        const maxAttempts = 150
+        const intervalMs = 2500
+        let attempt = 0
 
-        try {
-            await document.fonts?.ready
+        while (attempt < maxAttempts) {
+            attempt += 1
+            await new Promise<void>((resolve) => { window.setTimeout(resolve, intervalMs) })
 
-            for (const captureRatio of STUDIO_RATIOS) {
+            try {
+                const result = await fetchJson<{
+                    status?: string
+                    downloadUrl?: string
+                    filename?: string
+                    exportRequestId?: string
+                    error?: string
+                }>(`/api/studio/packages/${packageId}/export`)
+
+                if (result.error) {
+                    throw new Error(result.error)
+                }
+
+                if (result.status === "complete" && result.downloadUrl) {
+                    setExportState({ title: "Downloading…", detail: "Export complete. Starting download…" })
+                    downloadStudioExport(result.downloadUrl, result.filename ?? studioExportFilename(title, packageId))
+                    showToast({
+                        type: "success",
+                        title: "Export done",
+                        message: `Satori-rendered ZIP downloaded. Trace ID: ${exportRequestId}`,
+                    })
+                    return
+                }
+
                 setExportState({
-                    title: "Capturing canvas…",
-                    detail: `Rendering ${captureRatio} directly from the Studio canvas.`,
+                    title: "Rendering slides…",
+                    detail: `Waiting for Satori export pipeline. Check ${attempt} of ${maxAttempts}…`,
                 })
-                setRatio(captureRatio)
-                await waitForCanvasPaint()
-
-                const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-studio-slide-capture='true']"))
-                    .filter((node) => node.dataset.studioSlideRatio === captureRatio)
-                const folder = zip.folder(`slides/${captureRatio}`)
-                const dimensions = CAPTURE_EXPORT_DIMENSIONS[captureRatio]
-
-                for (const [index, slide] of item.carouselJson.slides.entries()) {
-                    const node = nodes.find((candidate) => candidate.dataset.studioSlideId === slide.id)
-                    if (!node) {
-                        throw new Error(`Could not capture slide ${index + 1} for ${captureRatio}.`)
-                    }
-
-                    await waitForImages(node)
-                    const dataUrl = await toPng(node, {
-                        cacheBust: true,
-                        backgroundColor: "transparent",
-                        width: node.offsetWidth,
-                        height: node.offsetHeight,
-                        canvasWidth: dimensions.width,
-                        canvasHeight: dimensions.height,
-                        filter: (domNode) => !(domNode instanceof HTMLElement && domNode.dataset.studioExportIgnore === "true"),
-                    })
-                    const bytes = dataUrlToUint8Array(dataUrl)
-                    const fileName = `${String(index + 1).padStart(2, "0")}-${slide.id}.png`
-
-                    folder?.file(fileName, bytes)
-                    slideIdsByRatio[captureRatio].push(slide.id)
-                    capturedSlides[captureRatio].push({
-                        slideId: slide.id,
-                        width: dimensions.width,
-                        height: dimensions.height,
-                    })
+            } catch (error) {
+                if (attempt >= maxAttempts) {
+                    throw error
                 }
             }
-        } finally {
-            setRatio(originalRatio)
-            await waitForCanvasPaint()
         }
 
-        const exportCompletedAt = new Date().toISOString()
-        const canvasSnapshot = createCanvasExportSnapshot({ ...item, carouselJson: { ...item.carouselJson, ratio: originalRatio } }, originalRatio)
-        const manifest = {
-            packageId: item.id,
-            exportRequestId,
-            requestedAt,
-            exportStartedAt,
-            exportCompletedAt,
-            renderer: {
-                name: "client-canvas-dom-capture",
-                version: "canvas-capture-v2026.05.02.1",
-                source: "components/admin/studio/ContentManagementPanel.tsx SlideFrame DOM",
-            },
-            ratios: STUDIO_RATIOS,
-            slideIdsByRatio,
-            capturedSlides,
-            canvasAtClick: canvasSnapshot,
-            package: {
-                id: item.id,
-                title: item.title,
-                status: item.status,
-                updatedAt: item.updatedAt,
-                slideCount: item.carouselJson.slides.length,
-                slideIds: item.carouselJson.slides.map((slide) => slide.id),
-                carouselRatio: item.carouselJson.ratio,
-            },
-        }
-
-        zip.file("captions/instagram.txt", captionToText(item.captionsJson.instagram, "instagram"))
-        zip.file("captions/facebook.txt", captionToText(item.captionsJson.facebook, "facebook"))
-        zip.file("captions/linkedin.txt", captionToText(item.captionsJson.linkedin, "linkedin"))
-        zip.file("captions/tiktok.txt", captionToText(item.captionsJson.tiktok, "tiktok"))
-        zip.file("manifest.json", JSON.stringify(manifest, null, 2))
-        zip.file("package.json", JSON.stringify({
-            id: item.id,
-            title: item.title,
-            status: item.status,
-            exportedAt: exportCompletedAt,
-            exportRequestId,
-            renderer: manifest.renderer,
-            ratios: STUDIO_RATIOS,
-            slideIdsByRatio,
-            carouselJson: item.carouselJson,
-            captionsJson: item.captionsJson,
-            manifest,
-        }, null, 2))
-
-        const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" })
-        return {
-            blob,
-            filename: studioExportFilename(item.title, item.id),
-        }
+        throw new Error("Export timed out waiting for render pipeline to finish")
     }
 
     async function exportPackage() {
@@ -2158,7 +1770,7 @@ function StudioWorkspace({
         setIsBusy(true)
         setExportState({
             title: "Exporting…",
-            detail: "Rendering all carousel formats, collecting captions, and preparing the ZIP download.",
+            detail: "Saving package and preparing export…",
         })
         setErrorMessage(null)
         try {
@@ -2171,19 +1783,53 @@ function StudioWorkspace({
                 return
             }
 
-            setIsBusy(true)
+            const canvasSnapshot = createCanvasExportSnapshot(saved, ratio)
+
             setExportState({
-                title: "Capturing canvas…",
-                detail: "Building the ZIP from the rendered Studio canvas.",
+                title: "Rendering…",
+                detail: "Sending to Satori export pipeline…",
             })
 
-            const finished = await captureRenderedCanvasExport(saved, exportRequestId, requestedAt)
-            downloadStudioBlob(finished.blob, finished.filename)
-            showToast({
-                type: "success",
-                title: "Export done",
-                message: `Canvas ZIP downloaded. Trace ID: ${exportRequestId}`,
+            const result = await fetchJson<{
+                dispatched?: boolean
+                inline?: boolean
+                downloadUrl?: string
+                filename?: string
+                exportRequestId?: string
+                error?: string
+            }>(`/api/studio/packages/${saved.id}/export`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ratios: STUDIO_RATIOS,
+                    mode: "ALL",
+                    exportRequestId,
+                    requestedAt,
+                    canvasSnapshot,
+                }),
             })
+
+            if (result.error) {
+                throw new Error(result.error)
+            }
+
+            if (result.downloadUrl) {
+                setExportState({ title: "Downloading…", detail: "Export complete. Starting download…" })
+                downloadStudioExport(result.downloadUrl, result.filename ?? studioExportFilename(saved.title, saved.id))
+                showToast({
+                    type: "success",
+                    title: "Export done",
+                    message: `Satori-rendered ZIP downloaded. Trace ID: ${exportRequestId}`,
+                })
+            } else if (result.dispatched) {
+                setExportState({
+                    title: "Rendering slides…",
+                    detail: "Export dispatched to Satori pipeline. Waiting for completion…",
+                })
+                await pollExportStatus(saved.id, saved.title, exportRequestId)
+            } else {
+                throw new Error("Export did not return a download URL or dispatch confirmation")
+            }
         } catch (error) {
             const message = formatStudioError(error, "Failed to export studio assets")
             setErrorMessage(message)
@@ -2238,7 +1884,13 @@ function StudioWorkspace({
 
         setActivePackage(nextItem)
         if (!isUnsavedStudioPackage(nextItem)) {
-            await savePackage(nextItem)
+            if (autosaveTimerRef.current !== null) {
+                window.clearTimeout(autosaveTimerRef.current)
+            }
+            autosaveTimerRef.current = window.setTimeout(() => {
+                autosaveTimerRef.current = null
+                void savePackage(nextItem)
+            }, 800)
         }
     }
 
@@ -2647,6 +2299,7 @@ function StudioWorkspace({
 
             <div className="flex-1 overflow-hidden bg-[#f6f7fb] p-4 md:p-6">
                 {workspaceView === "create" && activePackage && (
+                    <StudioErrorBoundary viewName="Canvas">
                     <ContentStudioCreate
                         packageItem={activePackage}
                         messages={messages}
@@ -2681,10 +2334,12 @@ function StudioWorkspace({
                         onTitleChange={(next) => void changeTitle(next)}
                         siteUrl={settings.brandJson.site_url}
                     />
+                    </StudioErrorBoundary>
                 )}
-                {workspaceView === "drafts" && <DraftsView packageItems={packages} activePackageId={activePackageId} onOpenDraft={(id) => { void openExistingPackage(id) }} onCreateNew={() => void createPackage()} />}
-                {workspaceView === "library" && <LibraryView packageItems={packages} onUseTemplate={(id) => { void openExistingPackage(id) }} />}
+                {workspaceView === "drafts" && <StudioErrorBoundary viewName="Drafts"><DraftsView packageItems={packages} activePackageId={activePackageId} onOpenDraft={(id) => { void openExistingPackage(id) }} onCreateNew={() => void createPackage()} /></StudioErrorBoundary>}
+                {workspaceView === "library" && <StudioErrorBoundary viewName="Library"><LibraryView packageItems={packages} onUseTemplate={(id) => { void openExistingPackage(id) }} /></StudioErrorBoundary>}
                 {workspaceView === "settings" && (
+                    <StudioErrorBoundary viewName="Settings">
                     <SettingsView
                         settings={settings}
                         onAssetUpload={(assetKind, file) => void uploadBrandAsset(assetKind, file)}
@@ -2698,6 +2353,7 @@ function StudioWorkspace({
                         onSave={() => void saveSettings(settings)}
                         isSaving={isBusy}
                     />
+                    </StudioErrorBoundary>
                 )}
             </div>
         </div>
@@ -3202,111 +2858,6 @@ function SettingsView({
                 </div>
             </div>
         </div>
-    )
-}
-
-function Segment({ active = false, label, count, icon: Icon }: { active?: boolean; label: string; count: string; icon: React.ComponentType<{ size?: number; className?: string }> }) {
-    return (
-        <button className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11.5px] font-semibold transition ${active ? "bg-[#0a0e1f] text-white" : "text-slate-500 hover:text-slate-900"}`}>
-            <Icon size={10} className={active ? "text-white" : ""} />
-            {label}
-            <span className="opacity-60">{count}</span>
-        </button>
-    )
-}
-
-function Field({ label, value, asSelect = false, options, onChange }: { label: string; value: string; asSelect?: boolean; options?: string[]; onChange?: (value: string) => void }) {
-    return (
-        <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</label>
-            {asSelect ? (
-                <select title={label} value={value} onChange={(event) => onChange?.(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12.5px] font-semibold text-[#041f50] outline-none focus:border-purple-400">
-                    {(options ?? [value]).map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                    ))}
-                </select>
-            ) : (
-                <input title={label} value={value} onChange={(event) => onChange?.(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12.5px] font-semibold text-[#041f50] outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100" />
-            )}
-        </div>
-    )
-}
-
-function AssetTile({ label, path, previewSrc, onUpload }: { label: string; path: string; previewSrc?: string; onUpload: (file: File) => void }) {
-    const inputRef = useRef<HTMLInputElement>(null)
-    return (
-        <div className="group relative flex h-32 flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-center transition hover:border-purple-300">
-            <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" title={`${label} upload`} onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (file) {
-                    onUpload(file)
-                    event.target.value = ""
-                }
-            }} />
-            <button title={`${label} upload`} onClick={() => inputRef.current?.click()} className="absolute inset-0 rounded-xl" />
-            {previewSrc ? <Image src={previewSrc} alt={label} width={112} height={56} className="h-14 w-auto object-contain" /> : <ImagePlus size={20} className="text-slate-300" />}
-            <p className="text-[10px] font-semibold text-[#041f50]">{label}</p>
-            <p className="line-clamp-2 text-[9px] text-slate-400">{path}</p>
-            <span className="absolute right-2 top-2 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-purple-600 opacity-0 transition group-hover:opacity-100">Upload</span>
-        </div>
-    )
-}
-
-function DistributionCard({ name, detail, icon: Icon, bgClass }: { name: string; detail: string; icon: React.ComponentType<{ size?: number; className?: string }>; bgClass: string }) {
-    return (
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5 transition hover:border-purple-300">
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm ${bgClass}`}>
-                <Icon size={16} />
-            </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-[12.5px] font-bold text-[#041f50]">{name}</p>
-                <p className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-                    {detail}
-                </p>
-            </div>
-            <span className="rounded-lg bg-purple-50 px-2.5 py-1 text-[10px] font-bold text-purple-600">Copy ready</span>
-        </div>
-    )
-}
-
-function ChatBubble({ user = false, assistant = false, text, highlight }: { user?: boolean; assistant?: boolean; text: string; highlight?: string }) {
-    return (
-        <div className={`flex gap-2 ${assistant ? "flex-row-reverse" : ""}`}>
-            <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${user ? "bg-slate-100 text-slate-500" : `text-white ${GRADIENT_BG_CLASS} ${GRADIENT_SHADOW_CLASS}`}`}>
-                {user ? <Circle size={9} /> : <WandSparkles size={9} />}
-            </div>
-            <div className={`max-w-[88%] rounded-2xl px-3 py-2 leading-snug ${assistant ? "rounded-tr-sm bg-[#041f50] text-white" : "rounded-tl-sm border border-slate-200/70 bg-slate-50 text-slate-700"}`}>
-                {highlight ? text.split(highlight).map((part, index, arr) => (
-                    <span key={`${part}-${index}`}>
-                        {part}
-                        {index < arr.length - 1 ? <span className="font-bold text-transparent bg-[linear-gradient(135deg,#ed415b_0%,#ec5185_50%,#af5ce9_100%)] bg-clip-text">{highlight}</span> : null}
-                    </span>
-                )) : text}
-            </div>
-        </div>
-    )
-}
-
-function ComposerChip({ icon: Icon, tone, title, onClick }: { icon: React.ComponentType<{ size?: number; className?: string }>; tone: "red" | "emerald" | "blue"; title: string; onClick?: () => void }) {
-    const tones = {
-        red: "hover:text-red-500",
-        emerald: "hover:text-emerald-600",
-        blue: "hover:text-blue-500",
-    }
-    return (
-        <button onClick={onClick} title={title} aria-label={title} className={`flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 ${tones[tone]}`}>
-            <Icon size={12} />
-        </button>
-    )
-}
-
-function DockButton({ icon: Icon, label, onClick }: { icon: React.ComponentType<{ size?: number; className?: string }>; label: string; onClick?: () => void }) {
-    return (
-        <button onClick={onClick} className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11.5px] font-semibold text-slate-700 transition hover:bg-slate-100">
-            <Icon size={11} />
-            {label}
-        </button>
     )
 }
 

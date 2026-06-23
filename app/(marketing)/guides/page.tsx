@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 
 import siteContent from "@/content/site-content.json";
 import { Section } from "@/components/marketing/Section";
@@ -17,6 +16,15 @@ export const metadata: Metadata = buildMetadata({
 
 export default function GuidesPage() {
   const content = siteContent.guidesPage;
+
+  // JSON-LD should be a plain inline <script> — next/script is intended for
+  // executable JS, and `afterInteractive` defers structured-data parsing.
+  const breadcrumbLd = serialiseJsonLd(
+    buildBreadcrumbLd([
+      { name: "Home", url: "/" },
+      { name: "Guides", url: "/guides" },
+    ])
+  );
 
   return (
     <>
@@ -41,18 +49,11 @@ export default function GuidesPage() {
         disclaimer={content.disclaimer}
       />
 
-      <Script
+      <script
         id="ld-breadcrumb-guides"
         type="application/ld+json"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: serialiseJsonLd(
-            buildBreadcrumbLd([
-              { name: "Home", url: "/" },
-              { name: "Guides", url: "/guides" },
-            ])
-          ),
-        }}
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: breadcrumbLd }}
       />
     </>
   );

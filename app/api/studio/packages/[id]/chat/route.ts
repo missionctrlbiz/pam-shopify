@@ -223,15 +223,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                             }
 
                             const result = streamStudioGeneration(pkg, settings, attemptMessage, target, modelId)
-                            const bufferedPartials: StudioGeneratedObject[] = []
 
                             for await (const part of result.fullStream) {
                                 if (part.type === "object") {
-                                    if (target === "CAROUSEL") {
-                                        bufferedPartials.push(part.object as StudioGeneratedObject)
-                                    } else {
-                                        send({ type: "partial", target, object: part.object })
-                                    }
+                                    send({ type: "partial", target, object: part.object })
                                 } else if (part.type === "error") {
                                     throw part.error
                                 }
@@ -242,12 +237,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                                 const generatedSlideCount = getGeneratedSlideCount(finalObject)
                                 if (generatedSlideCount !== targetSlideCount) {
                                     throw new Error(`The studio generator returned ${generatedSlideCount} slides, but this prompt requires ${targetSlideCount}. Regenerate with the exact requested count.`)
-                                }
-                            }
-
-                            if (target === "CAROUSEL") {
-                                for (const object of bufferedPartials) {
-                                    send({ type: "partial", target, object })
                                 }
                             }
 

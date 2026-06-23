@@ -64,7 +64,7 @@ interface ContentTileGridProps {
 /**
  * Renders a responsive grid of ContentTile cards.
  * Each card has a lucide icon, a tag pill, a title, and a description.
- * Used by /assessments, /guides, /resources pages.
+ * Used on content listing surfaces.
  */
 export function ContentTileGrid({ items, layout = "3col" }: ContentTileGridProps) {
   const gridClass =

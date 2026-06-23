@@ -18,39 +18,13 @@ export function SoapArchitect() {
     const SUBSCRIBE_KEY = "pam_soap_subscribed";
     const UNLOCKED_KEY = "pam_soap_unlocked";
 
-    const [usesLeft, setUsesLeft] = useState<number>(() => {
-        try {
-            if (typeof window === "undefined") return MAX_USES;
-            const stored = localStorage.getItem(STORAGE_KEY);
-            return stored !== null ? parseInt(stored, 10) : MAX_USES;
-        } catch {
-            return MAX_USES;
-        }
-    });
-    const [isSubscribed, setIsSubscribed] = useState<boolean>(() => {
-        try {
-            if (typeof window === "undefined") return false;
-            return localStorage.getItem(SUBSCRIBE_KEY) === "true";
-        } catch {
-            return false;
-        }
-    });
+    const [usesLeft, setUsesLeft] = useState<number>(MAX_USES);
+    const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
     const [subEmail, setSubEmail] = useState("");
     const [subName, setSubName] = useState("");
     const [subError, setSubError] = useState("");
 
-    const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
-        try {
-            if (typeof window === "undefined") return false;
-            const stored = localStorage.getItem(UNLOCKED_KEY) === "true";
-            const isOwnerDomain =
-                window.location.hostname === "localhost" ||
-                window.location.hostname.includes("vercel.app");
-            return stored || isOwnerDomain;
-        } catch {
-            return false;
-        }
-    });
+    const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
     const [unlockEmail, setUnlockEmail] = useState("");
     const [isUnlocking, setIsUnlocking] = useState(false);
     const [unlockError, setUnlockError] = useState("");
@@ -59,12 +33,23 @@ export function SoapArchitect() {
         try {
             if (localStorage.getItem(STORAGE_KEY) === null) {
                 localStorage.setItem(STORAGE_KEY, String(MAX_USES));
+            } else {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored !== null) setUsesLeft(parseInt(stored, 10));
             }
             if (localStorage.getItem(SUBSCRIBE_KEY) === null) {
                 localStorage.setItem(SUBSCRIBE_KEY, "false");
+            } else {
+                setIsSubscribed(localStorage.getItem(SUBSCRIBE_KEY) === "true");
             }
             if (localStorage.getItem(UNLOCKED_KEY) === null) {
                 localStorage.setItem(UNLOCKED_KEY, "false");
+            } else {
+                const stored = localStorage.getItem(UNLOCKED_KEY) === "true";
+                const isOwnerDomain =
+                    window.location.hostname === "localhost" ||
+                    window.location.hostname.includes("vercel.app");
+                setIsUnlocked(stored || isOwnerDomain);
             }
         } catch {
             // noop: localStorage may be restricted in some browsing contexts

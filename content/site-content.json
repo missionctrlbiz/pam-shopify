@@ -14,21 +14,13 @@
                 "href": "/"
             },
             {
+                "label": "The Gap",
+                "href": "#problem"
+            },
+            {
                 "label": "SOAP Architect",
                 "href": "/soap-architect",
                 "badge": "Free"
-            },
-            {
-                "label": "Assessments",
-                "href": "/assessments"
-            },
-            {
-                "label": "Guides",
-                "href": "/guides"
-            },
-            {
-                "label": "Resources",
-                "href": "/resources"
             },
             {
                 "label": "Contact",

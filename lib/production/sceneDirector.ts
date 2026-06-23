@@ -21,6 +21,7 @@
  */
 
 import { getAI, FALLBACK_MODEL } from "@/lib/ai"
+import { repairJSON } from "@/lib/jsonRepair"
 import {
     PRODUCTION_MODEL,
     ContentIdeaMasterJson,
@@ -229,7 +230,7 @@ export async function expandToSceneDirectorScript(
                 contents: prompt,
             })
             const text = response.text ?? "{}"
-            const parsed = JSON.parse(text) as SceneDirectorResult
+            const parsed = repairJSON(text) as SceneDirectorResult
 
             // Enforce duration bounds server-side
             parsed.scenes = enforceDurationBounds(parsed.scenes)

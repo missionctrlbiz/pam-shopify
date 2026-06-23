@@ -6,6 +6,7 @@ import { join } from "node:path"
 import { createElement, isValidElement, type ReactElement, type ReactNode } from "react"
 import satori from "satori"
 import { STUDIO_PAM_GRADIENT, STUDIO_TYPOGRAPHY } from "@/lib/studio/shared"
+import { getSlideLayoutSpec, STUDIO_FRAME_DIMENSIONS, type SlideLayoutSpec } from "@/lib/studio/slideSpec"
 import type { StudioRatio, StudioSlideLayout } from "@/lib/studio/types"
 
 export interface StudioRenderDimensions {
@@ -118,10 +119,18 @@ function sanitizeSatoriNode(node: ReactNode): ReactNode {
     return createElement(node.type, sanitizedProps, children)
 }
 
-function ratioCompactness(ratio: StudioRatio) {
-    if (ratio === "1:1") return 0.7
-    if (ratio === "4:5") return 0.86
-    return 0.94
+const LAYOUT_BASE_HEADLINE: Record<string, number> = {
+    HERO_ICON: 52,
+    FEATURE_CARDS: 48,
+    TITLE_CARD: 38,
+    TAXONOMY_LIST: 46,
+    SCIENCE_SPLIT: 36,
+    DARK_NOTE: 66,
+}
+
+function compactForSpec(spec: SlideLayoutSpec, layout: string): number {
+    const base = LAYOUT_BASE_HEADLINE[layout] ?? 52
+    return spec.headlineSize / base
 }
 
 function footerCue(index: number) {
@@ -158,26 +167,59 @@ function getResvg(): ResvgConstructor {
     return Resvg
 }
 
+async function fetchWithTimeout(url: string, timeoutMs = 10000): Promise<Response> {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+        return await fetch(url, { signal: controller.signal })
+    } finally {
+        clearTimeout(timer)
+    }
+}
+
 async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuffer> {
     const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}`
-    const css = await fetch(url).then((response) => response.text())
+
+    let css: string
+    try {
+        css = await fetchWithTimeout(url, 10000).then((response) => response.text())
+    } catch {
+        throw new Error(`Failed to fetch font CSS for ${family} ${weight}`)
+    }
+
     const match = css.match(/src: url\(([^)]+)\) format\('(opentype|truetype|woff2)'\)/)
 
     if (!match) {
         throw new Error(`Unable to resolve font ${family} ${weight}`)
     }
 
-    return fetch(match[1]).then((response) => response.arrayBuffer())
+    try {
+        return await fetchWithTimeout(match[1], 15000).then((response) => response.arrayBuffer())
+    } catch {
+        throw new Error(`Failed to download font file for ${family} ${weight}`)
+    }
 }
 
 async function getFonts() {
     if (!cachedFonts) {
-        const [heading, body, bodyBold] = await Promise.all([
-            loadGoogleFont("Montserrat", 800),
-            loadGoogleFont("Open Sans", 400),
-            loadGoogleFont("Open Sans", 700),
-        ])
-        cachedFonts = { heading, body, bodyBold }
+        let lastError: unknown
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+                const [heading, body, bodyBold] = await Promise.all([
+                    loadGoogleFont("Montserrat", 800),
+                    loadGoogleFont("Open Sans", 400),
+                    loadGoogleFont("Open Sans", 700),
+                ])
+                cachedFonts = { heading, body, bodyBold }
+                return cachedFonts
+            } catch (error) {
+                lastError = error
+                if (attempt === 0) {
+                    await new Promise<void>((resolve) => { setTimeout(resolve, 1500) })
+                }
+            }
+        }
+        throw lastError
     }
 
     return cachedFonts
@@ -272,7 +314,7 @@ function renderLogo(src: string | null, size: { w: number; h: number }, opacity 
     })
 }
 
-type IconName = "brain" | "search" | "clipboard" | "shield" | "list" | "pulse"
+type IconName = "brain" | "search" | "clipboard" | "shield" | "list" | "pulse" | "sparkle"
 
 function iconPaths(name: IconName) {
     if (name === "search") return [
@@ -300,7 +342,10 @@ function iconPaths(name: IconName) {
     if (name === "pulse") return [
         createElement("path", { key: "p", d: "M3 13 H7 L9 7 L13 18 L16 11 H21" }),
     ]
-
+    if (name === "sparkle") return [
+        createElement("path", { key: "s", d: "M12 2 L13.5 8.5 L12 7 L10.5 8.5 Z M12 22 L13.5 15.5 L12 17 L10.5 15.5 Z M2 12 L8.5 10.5 L7 12 L8.5 13.5 Z M22 12 L15.5 10.5 L17 12 L15.5 13.5 Z" }),
+    ]
+    // brain (default)
     return [
         createElement("path", { key: "b1", d: "M12 5 C9 2 5 4 5 8 C2 9 2 14 6 15 C6 19 11 20 12 16" }),
         createElement("path", { key: "b2", d: "M12 5 C15 2 19 4 19 8 C22 9 22 14 18 15 C18 19 13 20 12 16" }),
@@ -733,9 +778,10 @@ function renderMinimalFrame(children: ReactNode, options: { border?: "full" | "s
     )
 }
 
-function renderHeroIconLayout(slide: StudioRenderableSlide, brand: StudioRenderBrand, ratio: StudioRatio, isCta: boolean) {
+function renderHeroIconLayout(slide: StudioRenderableSlide, brand: StudioRenderBrand, ratio: StudioRatio, spec: SlideLayoutSpec) {
+    const isCta = slide.kind === "CTA"
     const dark = isCta || slide.bg !== "WHITE"
-    const compact = ratioCompactness(ratio)
+    const compact = compactForSpec(spec, "HERO_ICON")
     if (dark) {
         return createElement(
             "div",
@@ -799,8 +845,8 @@ function renderHeroIconLayout(slide: StudioRenderableSlide, brand: StudioRenderB
     )
 }
 
-function renderFeatureCardsLayout(slide: StudioRenderableSlide, ratio: StudioRatio) {
-    const compact = ratioCompactness(ratio)
+function renderFeatureCardsLayout(slide: StudioRenderableSlide, ratio: StudioRatio, spec: SlideLayoutSpec) {
+    const compact = compactForSpec(spec, "FEATURE_CARDS")
     const rows = getContentRows(slide.body).slice(0, 3)
     const icons: IconName[] = ["brain", "search", "clipboard"]
 
@@ -828,8 +874,8 @@ function renderFeatureCardsLayout(slide: StudioRenderableSlide, ratio: StudioRat
     )
 }
 
-function renderTitleCardLayout(slide: StudioRenderableSlide, ratio: StudioRatio) {
-    const compact = ratioCompactness(ratio)
+function renderTitleCardLayout(slide: StudioRenderableSlide, ratio: StudioRatio, spec: SlideLayoutSpec) {
+    const compact = compactForSpec(spec, "TITLE_CARD")
     return renderMinimalFrame(
         createElement(
             "div",
@@ -846,8 +892,8 @@ function renderTitleCardLayout(slide: StudioRenderableSlide, ratio: StudioRatio)
     )
 }
 
-function renderTaxonomyListLayout(slide: StudioRenderableSlide, ratio: StudioRatio) {
-    const compact = ratioCompactness(ratio)
+function renderTaxonomyListLayout(slide: StudioRenderableSlide, ratio: StudioRatio, spec: SlideLayoutSpec) {
+    const compact = compactForSpec(spec, "TAXONOMY_LIST")
     const rows = getContentRows(slide.body).slice(0, 4)
     return renderMinimalFrame(
         createElement(
@@ -870,8 +916,8 @@ function renderTaxonomyListLayout(slide: StudioRenderableSlide, ratio: StudioRat
     )
 }
 
-function renderScienceSplitLayout(slide: StudioRenderableSlide, ratio: StudioRatio, index: number) {
-    const compact = ratioCompactness(ratio)
+function renderScienceSplitLayout(slide: StudioRenderableSlide, ratio: StudioRatio, index: number, spec: SlideLayoutSpec) {
+    const compact = compactForSpec(spec, "SCIENCE_SPLIT")
     const rows = getContentRows(slide.body)
     const lines = getBodyLines(slide.body)
     const subtitle = rows[0]?.term && rows[0]?.description ? rows[0].term : lines[0] ?? "Clinical mechanism"
@@ -882,23 +928,72 @@ function renderScienceSplitLayout(slide: StudioRenderableSlide, ratio: StudioRat
         return renderMinimalFrame(
             createElement(
                 "div",
-                { style: { display: "flex", flex: 1, flexDirection: "column", padding: "46px 54px", color: "#1f2430" } },
-                createElement("div", { style: { display: "flex", alignItems: "center", gap: 16, marginBottom: 26 } },
-                    renderLineIcon("brain", 36, STUDIO_THEME.purple),
-                    createElement("div", { style: { fontFamily: "Montserrat", fontWeight: 800, fontSize: 32, color: "#1f2430", lineHeight: 1.08 } }, slide.headline),
+                {
+                    style: {
+                        display: "flex",
+                        flex: 1,
+                        flexDirection: "column",
+                        padding: `${spec.paddingY}px ${spec.paddingX}px`,
+                        color: "#1f2430",
+                    },
+                },
+                createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: Math.round(32 * compact) } },
+                    renderLineIcon("brain", Math.round(spec.iconSize * 0.72), STUDIO_THEME.purple),
+                    createElement("div", { style: { fontFamily: "Montserrat", fontWeight: 800, fontSize: spec.headlineSize, color: "#1f2430", lineHeight: 1.08 } }, slide.headline),
                 ),
-                createElement("div", { style: { display: "flex", gap: 24, marginBottom: 22 } },
-                    createElement("div", { style: { width: 10, borderRadius: 999, backgroundImage: STUDIO_THEME.gradient, flexShrink: 0 } }),
-                    createElement("div", { style: { display: "flex", flexDirection: "column" } },
-                        createElement("div", { style: { fontFamily: "Montserrat", fontSize: 34, fontWeight: 800, lineHeight: 1.04, color: "#1f2430", marginBottom: 12 } }, subtitle),
-                        createElement("div", { style: { fontFamily: "Open Sans", fontSize: 19, lineHeight: 1.34, color: "#3f4652" } }, explanation),
+                createElement(
+                    "div",
+                    {
+                        style: {
+                            display: "flex",
+                            flex: 1,
+                            gap: Math.round(30 * compact),
+                        },
+                    },
+                    createElement(
+                        "div",
+                        {
+                            style: {
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "center",
+                                width: "48%",
+                            },
+                        },
+                        createElement("div", { style: { display: "flex", gap: 14 } },
+                            createElement("div", { style: { width: 10, borderRadius: 999, backgroundImage: STUDIO_THEME.gradient, flexShrink: 0 } }),
+                            createElement("div", { style: { display: "flex", flexDirection: "column" } },
+                                createElement("div", { style: { fontFamily: "Montserrat", fontSize: spec.headlineSize, fontWeight: 800, lineHeight: 1.04, color: "#1f2430", marginBottom: 10 } }, subtitle),
+                                createElement("div", { style: { fontFamily: "Open Sans", fontSize: spec.bodySize, lineHeight: 1.34, color: "#3f4652" } }, explanation),
+                            ),
+                        ),
                     ),
-                ),
-                createElement("div", { style: { display: "flex", flexDirection: "column", gap: 11 } },
-                    ...labels.map((row, labelIndex) => createElement("div", { key: `compact-label-${labelIndex}`, style: { display: "flex", alignItems: "flex-start", gap: 12, fontFamily: "Open Sans", fontWeight: 700, fontSize: 17, lineHeight: 1.28, color: "#1f2430" } },
-                        createElement("div", { style: { width: 13, height: 13, marginTop: 7, borderRadius: 999, backgroundImage: STUDIO_THEME.gradient, flexShrink: 0 } }),
-                        createElement("div", null, `${row.term}${row.description ? `: ${row.description}` : ""}`),
-                    )),
+                    createElement(
+                        "div",
+                        {
+                            style: {
+                                display: "flex",
+                                flex: 1,
+                                flexDirection: "column",
+                                justifyContent: "center",
+                                borderRadius: 26,
+                                border: "2px solid #d7dce5",
+                                padding: Math.round(28 * compact),
+                                boxShadow: "0 18px 44px rgba(15,23,42,0.10)",
+                            },
+                        },
+                        createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", marginBottom: Math.round(16 * compact) } },
+                            createElement("div", { style: { display: "flex", width: Math.round(140 * compact), height: Math.round(92 * compact), border: "4px solid #8d9aaa", borderRadius: "50%", alignItems: "center", justifyContent: "center", backgroundColor: "#f8fbff" } },
+                                renderLineIcon("brain", Math.round(56 * compact), "#7f8a99"),
+                            ),
+                        ),
+                        createElement("div", { style: { display: "flex", flexDirection: "column", gap: Math.round(12 * compact) } },
+                            ...labels.map((row, labelIndex) => createElement("div", { key: `label-${labelIndex}`, style: { display: "flex", alignItems: "center", gap: 12, fontFamily: "Open Sans", fontWeight: 700, fontSize: spec.labelSize, color: "#1f2430" } },
+                                createElement("div", { style: { width: 12, height: 12, borderRadius: 999, backgroundImage: STUDIO_THEME.gradient } }),
+                                createElement("div", null, `${row.term}${row.description ? ` (${row.description})` : ""}`),
+                            )),
+                        ),
+                    ),
                 ),
             ),
             { border: "sides" },
@@ -939,8 +1034,83 @@ function renderScienceSplitLayout(slide: StudioRenderableSlide, ratio: StudioRat
     )
 }
 
+function renderDarkNoteLayout(slide: StudioRenderableSlide, ratio: StudioRatio, spec: SlideLayoutSpec) {
+    const compact = compactForSpec(spec, "DARK_NOTE")
+    const bodyLines = getBodyLines(slide.body).slice(0, spec.maxBodyLines)
+
+    return renderMinimalFrame(
+        createElement(
+            "div",
+            {
+                style: {
+                    display: "flex",
+                    flex: 1,
+                    flexDirection: "column",
+                    padding: `${spec.paddingY}px ${spec.paddingX}px`,
+                },
+            },
+            createElement(
+                "div",
+                {
+                    style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: spec.iconSize,
+                        height: spec.iconSize,
+                        borderRadius: 20,
+                        backgroundColor: "rgba(255,255,255,0.08)",
+                        border: "1px solid rgba(255,255,255,0.10)",
+                        marginBottom: Math.round(38 * compact),
+                        color: "#a78bfa",
+                    },
+                },
+                renderLineIcon("sparkle", Math.round(spec.iconSize * 0.5), "#a78bfa"),
+            ),
+            createElement(
+                "div",
+                {
+                    style: {
+                        fontSize: spec.headlineSize,
+                        fontFamily: "Montserrat",
+                        fontWeight: 800,
+                        color: "#ffffff",
+                        lineHeight: 1.08,
+                        marginBottom: Math.round(34 * compact),
+                    },
+                },
+                slide.headline,
+            ),
+            createElement(
+                "div",
+                { style: { display: "flex", flexDirection: "column", gap: Math.round(16 * compact) } },
+                ...bodyLines.map((line, i) =>
+                    createElement(
+                        "div",
+                        {
+                            key: `dark-note-${i}`,
+                            style: {
+                                padding: `${Math.round(20 * compact)}px ${Math.round(22 * compact)}px`,
+                                borderRadius: 18,
+                                border: "1px solid rgba(255,255,255,0.10)",
+                                backgroundColor: "rgba(255,255,255,0.08)",
+                                fontSize: spec.bodySize,
+                                fontFamily: "Open Sans",
+                                fontWeight: 600,
+                                color: "rgba(255,255,255,0.78)",
+                                lineHeight: 1.36,
+                            },
+                        },
+                        line,
+                    ),
+                ),
+            ),
+        ),
+    )
+}
+
 function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand, ratio: StudioRatio, index: number, totalSlides: number) {
-    const frame = STUDIO_RATIO_DIMENSIONS[ratio]
+    const frame = STUDIO_FRAME_DIMENSIONS[ratio]
     const normalizedSlide: StudioRenderableSlide = {
         ...slide,
         id: safeText(slide.id, `slide-${index + 1}`),
@@ -955,17 +1125,23 @@ function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand
         assets: slide.assets,
     }
     slide = normalizedSlide
-    const isVertical = ratio === "9:16"
-    const isPortrait = ratio === "4:5"
     const isLast = index === totalSlides - 1
     const dark = !(slide.bg === "WHITE")
     const eyebrow = eyebrowFor(slide, index, totalSlides, isLast)
 
-    const fontScale = isVertical ? 1.02 : isPortrait ? 0.9 : 0.72
-    const headlineSize = Math.round((slide.kind === "CTA" ? 64 : 72) * fontScale)
-    const statSize = Math.round((isVertical ? 200 : 160) * fontScale)
-    const labelSize = Math.round(28 * fontScale)
-    const ctaSize = Math.round(38 * fontScale)
+    const layout = effectiveLayout(slide, index, totalSlides)
+    const spec = getSlideLayoutSpec(layout, ratio)
+
+    const headlineSize = spec.headlineSize
+    const bodySize = spec.bodySize
+    const iconSize = spec.iconSize
+    const statSize = spec.statSize
+    const labelSize = spec.labelSize
+
+    const isVertical = ratio === "9:16"
+    const isPortrait = ratio === "4:5"
+    const fontScale = spec.headlineSize / (slide.kind === "CTA" ? 64 : 72)
+    const ctaSize = headlineSize
 
     const overlayBackground = getOverlay(slide.kind, slide.bg)
     const baseBackground = getBaseBackground(slide.kind, slide.bg)
@@ -975,28 +1151,31 @@ function makeSlideElement(slide: StudioRenderableSlide, brand: StudioRenderBrand
     const heroLabel = slide.stat?.label
     const headline = slide.headline
     const bodyText = slide.body
-    const layout = effectiveLayout(slide, index, totalSlides)
 
     const useGradientStat = !!heroStat && slide.bg !== "WHITE"
 
     if (layout === "HERO_ICON" && slide.kind !== "CTA") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderHeroIconLayout(slide, brand, ratio, false))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderHeroIconLayout(slide, brand, ratio, spec))
     }
 
     if (layout === "FEATURE_CARDS") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderFeatureCardsLayout(slide, ratio))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderFeatureCardsLayout(slide, ratio, spec))
     }
 
     if (layout === "TITLE_CARD") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderTitleCardLayout(slide, ratio))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderTitleCardLayout(slide, ratio, spec))
     }
 
     if (layout === "TAXONOMY_LIST") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderTaxonomyListLayout(slide, ratio))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderTaxonomyListLayout(slide, ratio, spec))
     }
 
     if (layout === "SCIENCE_SPLIT") {
-        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderScienceSplitLayout(slide, ratio, index))
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderScienceSplitLayout(slide, ratio, index, spec))
+    }
+
+    if (layout === "DARK_NOTE") {
+        return createElement("div", { style: { width: frame.width, height: frame.height, display: "flex", position: "relative", overflow: "hidden", fontFamily: "Open Sans" } }, renderDarkNoteLayout(slide, ratio, spec))
     }
 
     const main = (() => {

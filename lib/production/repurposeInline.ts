@@ -1,6 +1,11 @@
 /**
  * Inline generation — runs all Gemini jobs directly inside the
- * Runs as Trigger.dev background tasks, with an inline fallback for local dev.
+ * Trigger.dev background tasks, with an inline fallback for local dev.
+ *
+ * LEGACY PIPELINE — actively used by the production calendar batch-asset workflow.
+ * Do NOT remove. Runs via Trigger.dev cloud (production-carousel task) or inline
+ * fallback from /api/production/assets/generate. Separate from the Carousel Studio
+ * interactive pipeline (components/admin/studio/ContentManagementPanel.tsx).
  *
  * Covers:
  *   REPURPOSE  → IG / FB / TikTok / LinkedIn / Email captions
@@ -12,6 +17,7 @@
 
 import { getAI, PRODUCTION_MODEL } from "@/lib/ai"
 import { supabaseAdmin } from "@/lib/supabase"
+import { parseGeminiJSON } from "@/lib/jsonRepair"
 import { createHash } from "node:crypto"
 import { createRequire } from "node:module"
 import { callElevenLabsWithRetry, stripESLMarkers } from "@/lib/audio/elevenLabs"
@@ -237,6 +243,11 @@ async function callGemini(prompt: string): Promise<string> {
     return response.text ?? "{}"
 }
 
+async function callGeminiJSON<T = unknown>(prompt: string, fallback?: T): Promise<T> {
+    const raw = await callGemini(prompt)
+    return parseGeminiJSON<T>(raw, fallback ?? ({} as unknown as T))
+}
+
 // ---------------------------------------------------------------------------
 // Supabase Storage helper
 // ---------------------------------------------------------------------------
@@ -383,8 +394,7 @@ export async function runRepurposeInline(input: RepurposeInlineInput): Promise<v
     }
 
     try {
-        const raw = await callGemini(buildRepurposePrompt(input))
-        const captions = JSON.parse(raw) as PlatformCaptions
+        const captions = await callGeminiJSON<PlatformCaptions>(buildRepurposePrompt(input))
         const { date, slug } = makeSlug(entryDate, topic)
 
         for (const mapping of PLATFORM_MAP) {
@@ -700,8 +710,7 @@ export async function runCarouselInline(input: RepurposeInlineInput): Promise<vo
     }
 
     try {
-        const raw = await callGemini(buildCarouselPrompt(input))
-        const script = JSON.parse(raw) as CarouselScript
+        const script = await callGeminiJSON<CarouselScript>(buildCarouselPrompt(input))
 
         script.title = cleanText(script.title)
         script.coverText = cleanText(script.coverText)
@@ -971,8 +980,7 @@ export async function runVideoScriptInline(input: RepurposeInlineInput): Promise
             console.log(`[videoScriptInline] 🔄 Reusing existing video script for content idea: ${contentIdeaId}`)
             script = (existingScriptAsset.metadata as any).script as VideoScript
         } else {
-            const raw = await callGemini(buildVideoPrompt(input))
-            script = JSON.parse(raw) as VideoScript
+            script = await callGeminiJSON<VideoScript>(buildVideoPrompt(input))
             script.title = cleanText(script.title)
             script.hook = cleanText(script.hook)
             script.ctaOutro = cleanText(script.ctaOutro)

@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "trigger:dev": "trigger.dev dev",
-    "trigger:deploy": "trigger.dev deploy",
-    "trigger:deploy:staging": "trigger.dev deploy --env staging"
+    "dev": "node ./node_modules/next/dist/bin/next dev",
+    "build": "node ./node_modules/next/dist/bin/next build",
+    "start": "node ./node_modules/next/dist/bin/next start",
+    "lint": "node ./node_modules/eslint/bin/eslint.js",
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit",
+    "trigger:dev": "npx --no-install trigger.dev@4.4.3 dev",
+    "trigger:deploy": "npx --no-install trigger.dev@4.4.3 deploy",
+    "trigger:deploy:staging": "npx --no-install trigger.dev@4.4.3 deploy --env staging"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.66",
@@ -94,5 +95,13 @@
     "@resvg/resvg-js-linux-x64-musl": "2.6.2",
     "@resvg/resvg-js-win32-arm64-msvc": "2.6.2",
     "@resvg/resvg-js-win32-x64-msvc": "2.6.2"
+  },
+  "allowScripts": {
+    "esbuild@0.27.3": true,
+    "esbuild@0.25.0": true,
+    "sharp@0.34.5": true,
+    "unrs-resolver@1.11.1": true,
+    "protobufjs@7.5.4": true,
+    "puppeteer@24.40.0": true
   }
 }
