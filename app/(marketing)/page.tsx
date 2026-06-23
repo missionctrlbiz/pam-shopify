@@ -12,6 +12,10 @@ import {
   Sparkles,
   Package,
   Send,
+  Workflow,
+  Brain,
+  ClipboardCheck,
+  ShieldAlert,
 } from "lucide-react";
 
 import siteContent from "@/content/site-content.json";
@@ -54,6 +58,41 @@ const pricingCtaIcons = {
   cart: ShoppingCart,
   download: Download,
 } as const;
+
+const heroFeatures = [
+  {
+    title: "DSM-5-TR Trees",
+    description: "Differential Diagnostics",
+    icon: Workflow,
+    iconColor: "text-psych-purple bg-psych-purple/10",
+    desktopClass: "top-[18%] lg:-left-16",
+    animationDelay: "0s",
+  },
+  {
+    title: "MSE Auto-Fill",
+    description: "Mental Status Exams",
+    icon: Brain,
+    iconColor: "text-psych-blue bg-psych-blue/10",
+    desktopClass: "bottom-[22%] lg:-left-20",
+    animationDelay: "0.5s",
+  },
+  {
+    title: "SOAP Templates",
+    description: "EHR-Ready Notes",
+    icon: ClipboardCheck,
+    iconColor: "text-psych-pink bg-psych-pink/10",
+    desktopClass: "top-[26%] lg:-right-20",
+    animationDelay: "1s",
+  },
+  {
+    title: "Safety Checks",
+    description: "Suicide Risk Screening",
+    icon: ShieldAlert,
+    iconColor: "text-emerald-500 bg-emerald-500/10",
+    desktopClass: "bottom-[18%] lg:-right-16",
+    animationDelay: "1.5s",
+  },
+];
 
 interface PricingItem {
   text: string;
@@ -229,46 +268,75 @@ export default function Home() {
             </div>
 
             <ScrollReveal direction="right" duration={0.8} delay={0.15}>
-              <div className="flex justify-center items-center relative py-8">
-                <div className="relative w-full max-w-[320px] sm:max-w-[400px] aspect-9/16 rounded-2xl md:rounded-4xl overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] bg-white -rotate-2 hover:rotate-0 transition-transform duration-500 ring-1 ring-slate-200">
-                  <div
-                    className="absolute top-0 left-0 w-full h-[22%] z-10 pointer-events-none"
-                    style={{
-                      background:
-                        "linear-gradient(to bottom, #ffffff 40%, transparent 100%)",
-                    }}
-                  />
-                  <div
-                    className="absolute bottom-0 left-0 w-full h-[22%] z-10 pointer-events-none"
-                    style={{
-                      background:
-                        "linear-gradient(to top, #ffffff 40%, transparent 100%)",
-                    }}
-                  />
-                  <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    aria-label="Animated preview of the Psychiatric Assessment Mastery workbook being flipped through"
-                    className="absolute inset-0 w-full h-full object-cover scale-[1.35] [object-position:center_48%]"
-                    poster="/1.png"
-                  >
-                    <source src="/Mockup.webm" type="video/webm" />
-                  </video>
+              <div className="flex flex-col items-center w-full">
+                <div className="flex justify-center items-center relative py-8 w-full max-w-[320px] sm:max-w-[400px] lg:max-w-[650px] mx-auto">
+                  <div className="relative w-full max-w-[320px] sm:max-w-[400px] aspect-9/16 rounded-2xl md:rounded-4xl overflow-hidden shadow-[0_20px_50px_-12px_rgba(4,31,80,0.3)] bg-white -rotate-2 hover:rotate-0 transition-transform duration-500 ring-1 ring-slate-200">
+                    <div
+                      className="absolute top-0 left-0 w-full h-[22%] z-10 pointer-events-none"
+                      style={{
+                        background:
+                          "linear-gradient(to bottom, #ffffff 40%, transparent 100%)",
+                      }}
+                    />
+                    <div
+                      className="absolute bottom-0 left-0 w-full h-[22%] z-10 pointer-events-none"
+                      style={{
+                        background:
+                          "linear-gradient(to top, #ffffff 40%, transparent 100%)",
+                      }}
+                    />
+                    <video
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      aria-label="Animated preview of the Psychiatric Assessment Mastery workbook being flipped through"
+                      className="absolute inset-0 w-full h-full object-cover scale-[1.35] [object-position:center_48%]"
+                      poster="/1.png"
+                    >
+                      <source src="/Mockup.webm" type="video/webm" />
+                    </video>
+                  </div>
+
+                  {/* Desktop Floating Badges (Two Left, Two Right) */}
+                  {heroFeatures.map((feature) => (
+                    <div
+                      key={feature.title}
+                      className={cn(
+                        "hidden lg:block absolute z-20 animate-float-slow",
+                        feature.desktopClass
+                      )}
+                      style={{ animationDelay: feature.animationDelay }}
+                    >
+                      <div className="flex items-center gap-3 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:scale-[1.03] transition-all duration-300 w-[215px]">
+                        <div className={cn("p-2 rounded-xl flex items-center justify-center shrink-0", feature.iconColor)}>
+                          <feature.icon className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-extrabold text-slate-800 text-sm leading-tight">{feature.title}</div>
+                          <div className="text-slate-500 font-medium text-xs mt-0.5 leading-none">{feature.description}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="hidden lg:block absolute top-12 -left-6 glass-dark rounded-2xl px-4 py-3 text-xs font-bold text-white shadow-xl animate-float-slow">
-                  <div className="flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
-                    MSE Auto-Filled
-                  </div>
-                </div>
-                <div className="hidden lg:block absolute bottom-16 -right-8 glass-dark rounded-2xl px-4 py-3 text-xs font-bold text-white shadow-xl">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="size-3.5 text-emerald-300" aria-hidden="true" />
-                    Safety Domains ✓
-                  </div>
+                {/* Mobile/Tablet 2x2 Grid Layout */}
+                <div className="grid grid-cols-2 gap-3 mt-6 lg:hidden w-full max-w-[400px] px-2">
+                  {heroFeatures.map((feature) => (
+                    <div
+                      key={feature.title}
+                      className="flex items-center gap-2.5 bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm"
+                    >
+                      <div className={cn("p-1.5 rounded-lg flex items-center justify-center shrink-0", feature.iconColor)}>
+                        <feature.icon className="w-4 h-4" />
+                      </div>
+                      <div className="text-left min-w-0">
+                        <div className="font-bold text-slate-800 text-xs leading-tight truncate">{feature.title}</div>
+                        <div className="text-slate-500 text-[10px] mt-0.5 leading-none truncate">{feature.description}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </ScrollReveal>
