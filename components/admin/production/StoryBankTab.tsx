@@ -144,7 +144,8 @@ export function StoryBankTab({ entries, onRefresh }: StoryBankTabProps) {
     // ── Filter logic ─────────────────────────────────────────────────────────
     const filtered = useMemo(() => {
         const q = search.toLowerCase().trim()
-        return entries.filter((e) => {
+        const validEntries = Array.isArray(entries) ? entries : [];
+        return validEntries.filter((e) => {
             if (platformFilter !== "ALL" && e.platform !== platformFilter) return false
             if (postTypeFilter !== "ALL" && e.postType !== postTypeFilter) return false
             if (statusFilter !== "ALL" && e.publishStatus !== statusFilter) return false
